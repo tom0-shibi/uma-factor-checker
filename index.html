@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uma Skill Checker</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>Uma Skill Checker</h1>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-button active" data-tab="requirements">
+      スキル要件
+    </button>
+
+    <button class="tab-button" data-tab="images">
+      画像登録
+    </button>
+
+    <button class="tab-button" data-tab="results">
+      判定結果
+    </button>
+  </nav>
+
+  <main class="app-main">
+
+    <!-- スキル要件 -->
+    <section id="requirements" class="tab-content active">
+
+      <h2>スキル要件</h2>
+
+      <p class="description">
+        優先度ごとに、1行につき1スキルを入力してください。
+      </p>
+
+      <div class="priority-grid">
+
+        <div class="priority-panel">
+          <div class="priority-header rank-s">
+            S
+          </div>
+
+          <textarea
+            id="input-s"
+            placeholder="垂れウマ回避&#10;仕掛け抜群"
+          ></textarea>
+
+          <div id="cards-s" class="skill-cards"></div>
+        </div>
+
+        <div class="priority-panel">
+          <div class="priority-header rank-a">
+            A
+          </div>
+
+          <textarea
+            id="input-a"
+            placeholder="布石&#10;切れ味"
+          ></textarea>
+
+          <div id="cards-a" class="skill-cards"></div>
+        </div>
+
+        <div class="priority-panel">
+          <div class="priority-header rank-b">
+            B
+          </div>
+
+          <textarea
+            id="input-b"
+            placeholder="影踏み"
+          ></textarea>
+
+          <div id="cards-b" class="skill-cards"></div>
+        </div>
+
+        <div class="priority-panel">
+          <div class="priority-header rank-c">
+            C
+          </div>
+
+          <textarea
+            id="input-c"
+            placeholder="その他のスキル"
+          ></textarea>
+
+          <div id="cards-c" class="skill-cards"></div>
+        </div>
+
+      </div>
+
+      <div class="action-area">
+        <button id="apply-requirements" class="primary-button">
+          スキル要件を反映
+        </button>
+      </div>
+
+    </section>
+
+    <!-- 画像登録 -->
+    <section id="images" class="tab-content">
+      <h2>画像登録</h2>
+      <p>この画面は次の工程で作成します。</p>
+    </section>
+
+    <!-- 判定結果 -->
+    <section id="results" class="tab-content">
+      <h2>判定結果</h2>
+      <p>この画面は後の工程で作成します。</p>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
