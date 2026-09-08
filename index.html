@@ -3,309 +3,164 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Uma Skill Checker</title>
-
+  <title>Uma Factor Checker</title>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
 
+<body>
   <header class="app-header">
-    <h1>Uma Skill Checker</h1>
+    <h1>Uma Factor Checker</h1>
   </header>
 
   <nav class="tabs">
-    <button class="tab-button active" data-tab="requirements">
-      スキル要件
-    </button>
-
-    <button class="tab-button" data-tab="images">
-      画像登録
-    </button>
-
-    <button class="tab-button" data-tab="results">
-      判定結果
-    </button>
+    <button class="tab-button active" data-tab="requirements">スキル要件</button>
+    <button class="tab-button" data-tab="images">画像登録</button>
+    <button class="tab-button" data-tab="results">判定結果</button>
   </nav>
 
   <main class="app-main">
 
     <!-- スキル要件 -->
     <section id="requirements" class="tab-content active">
-
       <h2>スキル要件</h2>
-
-      <p class="description">
-        優先度ごとに、1行につき1スキルを入力してください。
-      </p>
+      <p class="description">優先度ごとに、1行につき1スキルを入力してください。</p>
 
       <div class="priority-grid">
-
         <div class="priority-panel">
-          <div class="priority-header rank-s">
-            S
-          </div>
-
-          <textarea
-            id="input-s"
-            placeholder="垂れウマ回避&#10;仕掛け抜群"
-          ></textarea>
-
+          <div class="priority-header">S</div>
+          <textarea id="input-s" placeholder="垂れウマ回避&#10;仕掛け抜群"></textarea>
           <div id="cards-s" class="skill-cards"></div>
         </div>
 
         <div class="priority-panel">
-          <div class="priority-header rank-a">
-            A
-          </div>
-
-          <textarea
-            id="input-a"
-            placeholder="布石&#10;切れ味"
-          ></textarea>
-
+          <div class="priority-header">A</div>
+          <textarea id="input-a" placeholder="布石&#10;切れ味"></textarea>
           <div id="cards-a" class="skill-cards"></div>
         </div>
 
         <div class="priority-panel">
-          <div class="priority-header rank-b">
-            B
-          </div>
-
-          <textarea
-            id="input-b"
-            placeholder="影踏み"
-          ></textarea>
-
+          <div class="priority-header">B</div>
+          <textarea id="input-b" placeholder="影踏み"></textarea>
           <div id="cards-b" class="skill-cards"></div>
         </div>
 
         <div class="priority-panel">
-          <div class="priority-header rank-c">
-            C
-          </div>
-
-          <textarea
-            id="input-c"
-            placeholder="その他のスキル"
-          ></textarea>
-
+          <div class="priority-header">C</div>
+          <textarea id="input-c" placeholder="その他のスキル"></textarea>
           <div id="cards-c" class="skill-cards"></div>
         </div>
-
       </div>
 
       <div class="action-area">
-        <button id="apply-requirements" class="primary-button">
-          スキル要件を反映
-        </button>
+        <button id="apply-requirements" class="primary-button">スキル要件を反映</button>
       </div>
-
     </section>
 
     <!-- 画像登録 -->
     <section id="images" class="tab-content">
-    
       <h2>画像登録</h2>
-    
+
       <p class="description">
-        チェックしたい因子画像を登録してください。
-        1人分だけでも、最大6人分でも使用できます。
+        チェックしたい因子画像を登録してください。1人分だけでも、最大6人分でも使用できます。
       </p>
-    
+
       <p class="description">
-        各枠には複数画像を登録できます。
-        ファイル選択・ドラッグ＆ドロップ・クリップボード貼り付けに対応します。
+        各枠には複数画像を登録できます。ファイル選択・ドラッグ＆ドロップ・クリップボード貼り付けに対応します。
       </p>
-    
+
       <div id="member-grid" class="member-grid">
-    
+
         <div class="member-panel" data-member="parentA">
           <h3>親A</h3>
-    
           <div class="image-drop-zone" data-member="parentA">
             <p>画像をここにドロップ</p>
             <p class="drop-sub-text">またはクリックして選択</p>
-    
-            <input
-              type="file"
-              class="image-file-input"
-              data-member="parentA"
-              accept="image/*"
-              multiple
-            >
+            <input type="file" class="image-file-input" data-member="parentA" accept="image/*" multiple>
           </div>
-    
-          <div
-            id="preview-parentA"
-            class="image-preview-list"
-          ></div>
+          <div id="preview-parentA" class="image-preview-list"></div>
         </div>
-    
-    
+
         <div class="member-panel" data-member="grandA1">
           <h3>親A-祖1</h3>
-    
           <div class="image-drop-zone" data-member="grandA1">
             <p>画像をここにドロップ</p>
             <p class="drop-sub-text">またはクリックして選択</p>
-    
-            <input
-              type="file"
-              class="image-file-input"
-              data-member="grandA1"
-              accept="image/*"
-              multiple
-            >
+            <input type="file" class="image-file-input" data-member="grandA1" accept="image/*" multiple>
           </div>
-    
-          <div
-            id="preview-grandA1"
-            class="image-preview-list"
-          ></div>
+          <div id="preview-grandA1" class="image-preview-list"></div>
         </div>
-    
-    
+
         <div class="member-panel" data-member="grandA2">
           <h3>親A-祖2</h3>
-    
           <div class="image-drop-zone" data-member="grandA2">
             <p>画像をここにドロップ</p>
             <p class="drop-sub-text">またはクリックして選択</p>
-    
-            <input
-              type="file"
-              class="image-file-input"
-              data-member="grandA2"
-              accept="image/*"
-              multiple
-            >
+            <input type="file" class="image-file-input" data-member="grandA2" accept="image/*" multiple>
           </div>
-    
-          <div
-            id="preview-grandA2"
-            class="image-preview-list"
-          ></div>
+          <div id="preview-grandA2" class="image-preview-list"></div>
         </div>
-    
-    
+
         <div class="member-panel" data-member="parentB">
           <h3>親B</h3>
-    
           <div class="image-drop-zone" data-member="parentB">
             <p>画像をここにドロップ</p>
             <p class="drop-sub-text">またはクリックして選択</p>
-    
-            <input
-              type="file"
-              class="image-file-input"
-              data-member="parentB"
-              accept="image/*"
-              multiple
-            >
+            <input type="file" class="image-file-input" data-member="parentB" accept="image/*" multiple>
           </div>
-    
-          <div
-            id="preview-parentB"
-            class="image-preview-list"
-          ></div>
+          <div id="preview-parentB" class="image-preview-list"></div>
         </div>
-    
-    
+
         <div class="member-panel" data-member="grandB1">
           <h3>親B-祖1</h3>
-    
           <div class="image-drop-zone" data-member="grandB1">
             <p>画像をここにドロップ</p>
             <p class="drop-sub-text">またはクリックして選択</p>
-    
-            <input
-              type="file"
-              class="image-file-input"
-              data-member="grandB1"
-              accept="image/*"
-              multiple
-            >
+            <input type="file" class="image-file-input" data-member="grandB1" accept="image/*" multiple>
           </div>
-    
-          <div
-            id="preview-grandB1"
-            class="image-preview-list"
-          ></div>
+          <div id="preview-grandB1" class="image-preview-list"></div>
         </div>
-    
-    
+
         <div class="member-panel" data-member="grandB2">
           <h3>親B-祖2</h3>
-    
           <div class="image-drop-zone" data-member="grandB2">
             <p>画像をここにドロップ</p>
             <p class="drop-sub-text">またはクリックして選択</p>
-    
-            <input
-              type="file"
-              class="image-file-input"
-              data-member="grandB2"
-              accept="image/*"
-              multiple
-            >
+            <input type="file" class="image-file-input" data-member="grandB2" accept="image/*" multiple>
           </div>
-    
-          <div
-            id="preview-grandB2"
-            class="image-preview-list"
-          ></div>
+          <div id="preview-grandB2" class="image-preview-list"></div>
         </div>
-    
       </div>
-    
-    
+
       <div class="paste-guide">
         <strong>クリップボードから貼り付け</strong>
         <p>
-          貼り付け先にしたい人物の枠をクリックしてから、
-          Ctrl+V / Cmd+V で画像を貼り付けてください。
+          貼り付け先にしたい人物の枠をクリックしてから、Ctrl+V / Cmd+V で画像を貼り付けてください。
         </p>
-    
-        <p>
-          現在の貼り付け先：
-          <span id="paste-target-label">親A</span>
-        </p>
+        <p>現在の貼り付け先：<strong id="paste-target-label">親A</strong></p>
       </div>
-    
-    
+
       <div class="image-summary">
-        登録画像：
-        <strong id="total-image-count">0</strong>
-        枚
+        登録画像：<strong id="total-image-count">0</strong> 枚
       </div>
-    
-    
+
       <div class="action-area">
-        <button
-          id="analyze-images"
-          class="primary-button"
-          disabled
-        >
-          画像を解析
-        </button>
+        <button id="analyze-images" class="primary-button" disabled>画像を解析</button>
       </div>
-    
     </section>
 
     <!-- 判定結果 -->
     <section id="results" class="tab-content">
       <h2>判定結果</h2>
+      <p class="description">
+        現在は因子カードの検出・色判定を確認するデバッグ段階です。
+      </p>
       <div id="analysis-debug"></div>
     </section>
-
   </main>
 
+  <!-- 画像解析専用。元画像サイズに合わせてJS側でサイズ変更する -->
+  <canvas id="analysis-canvas" hidden></canvas>
+
   <script src="app.js"></script>
-  <canvas
-    id="analysis-canvas"
-    width="1029"
-    height="1611"
-    hidden
-  ></canvas>
 </body>
 </html>
