@@ -169,14 +169,28 @@ body {
 }
 
 .member-panel {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 16px;
+  cursor: pointer;
+  transition:
+    outline 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+
+.member-panel:hover {
+  background: #fafafa;
 }
 
 .member-panel.active-paste-target {
-  outline: 3px solid #555;
+  outline: 3px solid #333;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.member-panel.active-paste-target h3::after {
+  content: "  貼り付け先";
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: normal;
+  color: #666;
 }
 
 .member-panel h3 {
