@@ -25,14 +25,14 @@ let pasteTargetMember = "parentA";
 
 /* =========================================================
    画像解析設定
-   固定ピクセルではなく画像サイズに対する割合を使用する。
-   因子カードの行数は固定せず、画像内から動的に検出する。
+   因子カードの位置・サイズを固定せず、画像サイズに対する割合と
+   カード間の明暗差を利用して動的に検出する。
    ========================================================= */
 
 const ANALYSIS_CONFIG = {
   factorArea: {
     fallbackTopRatio: 0.18,
-    bottomRatio: 0.92
+    bottomRatio: 0.93
   },
 
   columns: {
@@ -46,14 +46,19 @@ const ANALYSIS_CONFIG = {
     }
   },
 
-  scanXPositions: [0.68, 0.80, 0.91],
+  // カード右側の「文字や星が少ない位置」を見る
+  scanXPositions: [0.72, 0.82, 0.92],
 
-  cardScoreThreshold: 6,
-  minimumCardHeightRatio: 0.010,
-  maximumCardHeightRatio: 0.050,
-  mergeGapRatio: 0.004
+  // カードとカードの間は明るいため、明るさを使って区切る
+  gapLuminanceThreshold: 239,
+
+  // 最低何px分「明るい隙間」が続いたらカード境界とみなすか
+  minimumGapRatio: 0.003,
+
+  // 正常なカード高さの許容範囲
+  minimumCardHeightRatio: 0.014,
+  maximumCardHeightRatio: 0.045
 };
-
 
 /* =========================================================
    タブ切り替え処理
@@ -508,22 +513,26 @@ function getAverageColor(ctx, x, y, width, height) {
 
 
 /* =========================================================
-   「所持因子」の緑色ヘッダーを探す処理
-   画像サイズや縦方向のレイアウト差に対応するため、
-   firstRowYの固定値ではなく緑色の横帯を画像内から検出する。
+   「所持因子」の緑色ヘッダーを検出する処理
 
-   画面上部にも緑色の「因子一覧」ヘッダーが存在するため、
-   候補が複数ある場合は下側の緑帯を採用する。
+   画面上には
+   ・上部の「因子一覧」ヘッダー
+   ・「所持因子」ヘッダー
+   ・緑因子カード
+   が存在する。
+
+   緑因子カードは左右どちらか片方にしか存在しないため、
+   画面中央付近まで横長に続く緑色だけを「所持因子」候補とする。
    ========================================================= */
 
 function detectFactorHeader(ctx, width, height) {
-  const startY = Math.floor(height * 0.08);
-  const endY = Math.floor(height * 0.45);
+  const startY = Math.floor(height * 0.12);
+  const endY = Math.floor(height * 0.35);
 
   const startX = Math.floor(width * 0.14);
   const endX = Math.floor(width * 0.86);
-  const stepX = Math.max(2, Math.floor(width / 250));
 
+  const stepX = Math.max(2, Math.floor(width / 300));
   const matchingRows = [];
 
   for (let y = startY; y < endY; y += 2) {
@@ -549,7 +558,11 @@ function detectFactorHeader(ctx, width, height) {
       total++;
     }
 
-    if (greenCount / total > 0.22) {
+    /*
+      所持因子ヘッダーは横幅の大半が緑。
+      緑因子カードは片列だけなので、割合が大きくならない。
+    */
+    if (greenCount / total > 0.55) {
       matchingRows.push(y);
     }
   }
@@ -572,13 +585,17 @@ function detectFactorHeader(ctx, width, height) {
 
   groups.push(current);
 
-  const validGroups = groups.filter(group => group.length >= 2);
+  const validGroups = groups.filter(group => group.length >= 3);
 
   if (validGroups.length === 0) {
     return null;
   }
 
-  const target = validGroups[validGroups.length - 1];
+  /*
+    探索範囲を画面中央より下に限定しているので、
+    通常はここに「所持因子」だけが残る。
+  */
+  const target = validGroups[0];
 
   return {
     top: target[0],
@@ -588,101 +605,47 @@ function detectFactorHeader(ctx, width, height) {
 
 
 /* =========================================================
-   あるY座標が「因子カードらしいか」を数値化する処理
-   カード右側の文字・星が少ない場所を複数点サンプリングする。
+   指定Y座標におけるカード右側の平均明るさを取得する処理
 
-   白因子は背景より少し暗く、青赤緑因子は彩度が高いため、
-   明るさと彩度の両方からcardScoreを作る。
+   カード内部は灰色・青・赤・緑などで少し暗く、
+   カードとカードの隙間は白に近く明るい。
+
+   複数X座標を平均することで、文字・星・装飾の影響を減らす。
    ========================================================= */
 
-function getCardRowScore(ctx, columnX, columnWidth, y, width) {
-  const patchSize = Math.max(2, Math.floor(width * 0.004));
+function getRowLuminance(ctx, columnX, columnWidth, y, imageWidth) {
+  const patchSize = Math.max(2, Math.floor(imageWidth * 0.003));
 
-  let totalScore = 0;
+  let total = 0;
 
   ANALYSIS_CONFIG.scanXPositions.forEach(position => {
-    const x = columnX + columnWidth * position;
-
     const color = getAverageColor(
       ctx,
-      x,
+      columnX + columnWidth * position,
       y,
       patchSize,
       patchSize
     );
 
-    const luminance = getLuminance(color.r, color.g, color.b);
-    const saturation = getSaturation(color.r, color.g, color.b);
-
-    const darknessScore = Math.max(0, 248 - luminance);
-    const saturationScore = saturation * 60;
-
-    totalScore += darknessScore + saturationScore;
+    total += getLuminance(
+      color.r,
+      color.g,
+      color.b
+    );
   });
 
-  return totalScore / ANALYSIS_CONFIG.scanXPositions.length;
-}
-
-
-/* =========================================================
-   カード判定スコアを平滑化する処理
-   文字・影・アンチエイリアスなどによる1～2px程度のノイズを抑える。
-   ========================================================= */
-
-function smoothScores(scores, radius = 2) {
-  return scores.map((item, index) => {
-    let total = 0;
-    let count = 0;
-
-    for (
-      let i = Math.max(0, index - radius);
-      i <= Math.min(scores.length - 1, index + radius);
-      i++
-    ) {
-      total += scores[i].score;
-      count++;
-    }
-
-    return {
-      y: item.y,
-      score: total / count
-    };
-  });
-}
-
-
-/* =========================================================
-   近接した検出領域をまとめる処理
-   カード内部でスコアが一瞬閾値を下回って分断された場合に、
-   同じ1枚のカードとして再結合する。
-   ========================================================= */
-
-function mergeNearbyRanges(ranges, maximumGap) {
-  if (ranges.length === 0) {
-    return [];
-  }
-
-  const merged = [{ ...ranges[0] }];
-
-  for (let i = 1; i < ranges.length; i++) {
-    const previous = merged[merged.length - 1];
-    const current = ranges[i];
-
-    if (current.top - previous.bottom <= maximumGap) {
-      previous.bottom = current.bottom;
-    } else {
-      merged.push({ ...current });
-    }
-  }
-
-  return merged;
+  return total / ANALYSIS_CONFIG.scanXPositions.length;
 }
 
 
 /* =========================================================
    1列分の因子カードを動的検出する処理
-   行数は18などに固定せず、因子領域の上端から下端まで走査して
-   カードらしい連続領域をすべて取得する。
+
+   因子カードそのものではなく、
+   「カード間の明るい隙間」を先に検出する。
+
+   隙間と隙間の間を1枚のカードとして扱うため、
+   行数が18・22・それ以上でも固定値なしで対応できる。
    ========================================================= */
 
 function detectCardsInColumn(
@@ -695,19 +658,28 @@ function detectCardsInColumn(
 ) {
   const column = ANALYSIS_CONFIG.columns[columnName];
 
-  const columnX = width * column.xRatio;
-  const columnWidth = width * column.widthRatio;
+  const columnX =
+    width * column.xRatio;
 
-  const scores = [];
+  const columnWidth =
+    width * column.widthRatio;
+
+  const minimumGapHeight =
+    Math.max(
+      2,
+      height * ANALYSIS_CONFIG.minimumGapRatio
+    );
+
+  const samples = [];
 
   for (
     let y = factorAreaTop;
     y < factorAreaBottom;
     y += 2
   ) {
-    scores.push({
+    samples.push({
       y,
-      score: getCardRowScore(
+      luminance: getRowLuminance(
         ctx,
         columnX,
         columnWidth,
@@ -717,128 +689,225 @@ function detectCardsInColumn(
     });
   }
 
-  const smoothed = smoothScores(scores);
+  /*
+    明るい領域＝カード間の隙間を抽出する。
+  */
+  const gaps = [];
+  let gapStart = null;
 
-  const rawRanges = [];
-  let start = null;
+  samples.forEach(sample => {
+    const isGap =
+      sample.luminance >=
+      ANALYSIS_CONFIG.gapLuminanceThreshold;
 
-  smoothed.forEach(item => {
-    const isCard =
-      item.score >= ANALYSIS_CONFIG.cardScoreThreshold;
-
-    if (isCard && start === null) {
-      start = item.y;
+    if (isGap && gapStart === null) {
+      gapStart = sample.y;
     }
 
-    if (!isCard && start !== null) {
-      rawRanges.push({
-        top: start,
-        bottom: item.y
-      });
+    if (!isGap && gapStart !== null) {
+      const gapHeight =
+        sample.y - gapStart;
 
-      start = null;
+      if (gapHeight >= minimumGapHeight) {
+        gaps.push({
+          top: gapStart,
+          bottom: sample.y
+        });
+      }
+
+      gapStart = null;
     }
   });
 
-  if (start !== null) {
-    rawRanges.push({
-      top: start,
-      bottom: factorAreaBottom
+  if (gapStart !== null) {
+    const gapHeight =
+      factorAreaBottom - gapStart;
+
+    if (gapHeight >= minimumGapHeight) {
+      gaps.push({
+        top: gapStart,
+        bottom: factorAreaBottom
+      });
+    }
+  }
+
+  /*
+    因子領域の開始点・終了点も仮想的な境界として追加する。
+  */
+  const boundaries = [
+    factorAreaTop,
+    ...gaps.map(
+      gap => (gap.top + gap.bottom) / 2
+    ),
+    factorAreaBottom
+  ];
+
+  const minimumCardHeight =
+    height *
+    ANALYSIS_CONFIG.minimumCardHeightRatio;
+
+  const maximumCardHeight =
+    height *
+    ANALYSIS_CONFIG.maximumCardHeightRatio;
+
+  const cards = [];
+
+  for (
+    let i = 0;
+    i < boundaries.length - 1;
+    i++
+  ) {
+    const top =
+      boundaries[i];
+
+    const bottom =
+      boundaries[i + 1];
+
+    const cardHeight =
+      bottom - top;
+
+    if (
+      cardHeight < minimumCardHeight ||
+      cardHeight > maximumCardHeight
+    ) {
+      continue;
+    }
+
+    /*
+      境界線そのものを含めないよう、
+      上下を少しだけ内側へ寄せる。
+    */
+    const padding =
+      Math.max(
+        1,
+        Math.round(height * 0.0015)
+      );
+
+    cards.push({
+      column: columnName,
+      row: cards.length + 1,
+
+      x: Math.round(columnX),
+
+      y: Math.round(
+        top + padding
+      ),
+
+      width: Math.round(
+        columnWidth
+      ),
+
+      height: Math.round(
+        cardHeight -
+        padding * 2
+      )
     });
   }
 
-  const mergedRanges = mergeNearbyRanges(
-    rawRanges,
-    height * ANALYSIS_CONFIG.mergeGapRatio
-  );
-
-  const minimumHeight =
-    height * ANALYSIS_CONFIG.minimumCardHeightRatio;
-
-  const maximumHeight =
-    height * ANALYSIS_CONFIG.maximumCardHeightRatio;
-
-  return mergedRanges
-    .filter(range => {
-      const cardHeight = range.bottom - range.top;
-
-      return (
-        cardHeight >= minimumHeight &&
-        cardHeight <= maximumHeight
-      );
-    })
-    .map((range, index) => ({
-      column: columnName,
-      row: index + 1,
-      x: Math.round(columnX),
-      y: Math.round(range.top),
-      width: Math.round(columnWidth),
-      height: Math.round(range.bottom - range.top)
-    }));
+  return cards;
 }
 
 
 /* =========================================================
-   因子カードの色を判定する処理
-   カード右上寄りの背景部分を複数箇所サンプリングする。
+   検出済み因子カードの色を判定する処理
 
-   青・赤・緑だけを明確に判定し、
-   それ以外の「カードとして検出済みの項目」は白因子として扱う。
+   今回の目的は白因子の抽出なので、
+   青・赤・緑だけを明確な場合に除外し、
+   それ以外は白因子候補として扱う。
+
+   文字や★を避けるため、カード右上側を複数点確認する。
    ========================================================= */
 
 function classifyDetectedCard(ctx, card) {
-  const sampleY =
-    card.y + card.height * 0.28;
-
   const patchSize =
-    Math.max(2, Math.floor(card.width * 0.025));
+    Math.max(
+      2,
+      Math.floor(card.width * 0.025)
+    );
 
   const samplePositions = [
-    0.68,
-    0.78,
-    0.88
+    {
+      x: 0.68,
+      y: 0.25
+    },
+    {
+      x: 0.80,
+      y: 0.25
+    },
+    {
+      x: 0.90,
+      y: 0.25
+    }
   ];
 
-  const colors = samplePositions.map(position => {
-    return getAverageColor(
-      ctx,
-      card.x + card.width * position,
-      sampleY,
-      patchSize,
-      patchSize
-    );
-  });
+  const colors =
+    samplePositions.map(position => {
+      return getAverageColor(
+        ctx,
+        card.x +
+          card.width *
+          position.x,
+
+        card.y +
+          card.height *
+          position.y,
+
+        patchSize,
+        patchSize
+      );
+    });
 
   const color = {
     r: Math.round(
-      colors.reduce((sum, item) => sum + item.r, 0) /
+      colors.reduce(
+        (sum, item) =>
+          sum + item.r,
+        0
+      ) /
       colors.length
     ),
+
     g: Math.round(
-      colors.reduce((sum, item) => sum + item.g, 0) /
+      colors.reduce(
+        (sum, item) =>
+          sum + item.g,
+        0
+      ) /
       colors.length
     ),
+
     b: Math.round(
-      colors.reduce((sum, item) => sum + item.b, 0) /
+      colors.reduce(
+        (sum, item) =>
+          sum + item.b,
+        0
+      ) /
       colors.length
     )
   };
 
   let factorType = "white";
 
+  // 青因子
   if (
     color.b > 170 &&
-    color.b > color.r + 30 &&
-    color.b > color.g + 12
+    color.b > color.r + 35 &&
+    color.b > color.g + 10
   ) {
     factorType = "blue";
-  } else if (
+  }
+
+  // 赤因子
+  else if (
     color.r > 190 &&
     color.r > color.g + 30 &&
-    color.r > color.b + 20
+    color.b > 120
   ) {
     factorType = "red";
-  } else if (
+  }
+
+  // 緑因子
+  else if (
     color.g > 140 &&
     color.g > color.r + 25 &&
     color.g > color.b + 25
@@ -856,54 +925,73 @@ function classifyDetectedCard(ctx, card) {
 
 /* =========================================================
    因子一覧画像全体を解析する処理
-   1. 「所持因子」の緑ヘッダーを探す
-   2. その下を因子カード領域とする
-   3. 左右列を別々に動的検出する
-   4. 各カードを青・赤・緑・白に分類する
+
+   1. 「所持因子」の緑ヘッダーを検出
+   2. その直下から画像下部までを因子領域とする
+   3. 左右列でカードを動的検出
+   4. 各カードを青・赤・緑・白へ分類
    ========================================================= */
 
-function analyzeFactorImage(ctx, width, height) {
-  const header = detectFactorHeader(
-    ctx,
-    width,
-    height
-  );
+function analyzeFactorImage(
+  ctx,
+  width,
+  height
+) {
+  const header =
+    detectFactorHeader(
+      ctx,
+      width,
+      height
+    );
 
-  const factorAreaTop = header
-    ? Math.round(
-        header.bottom + height * 0.008
+  const factorAreaTop =
+    header
+      ? Math.round(
+          header.bottom +
+          height * 0.008
+        )
+      : Math.round(
+          height *
+          ANALYSIS_CONFIG.factorArea
+            .fallbackTopRatio
+        );
+
+  const factorAreaBottom =
+    Math.round(
+      height *
+      ANALYSIS_CONFIG.factorArea
+        .bottomRatio
+    );
+
+  const leftCards =
+    detectCardsInColumn(
+      ctx,
+      width,
+      height,
+      "left",
+      factorAreaTop,
+      factorAreaBottom
+    ).map(card =>
+      classifyDetectedCard(
+        ctx,
+        card
       )
-    : Math.round(
-        height *
-        ANALYSIS_CONFIG.factorArea.fallbackTopRatio
-      );
+    );
 
-  const factorAreaBottom = Math.round(
-    height *
-    ANALYSIS_CONFIG.factorArea.bottomRatio
-  );
-
-  const leftCards = detectCardsInColumn(
-    ctx,
-    width,
-    height,
-    "left",
-    factorAreaTop,
-    factorAreaBottom
-  ).map(card =>
-    classifyDetectedCard(ctx, card)
-  );
-
-  const rightCards = detectCardsInColumn(
-    ctx,
-    width,
-    height,
-    "right",
-    factorAreaTop,
-    factorAreaBottom
-  ).map(card =>
-    classifyDetectedCard(ctx, card)
-  );
+  const rightCards =
+    detectCardsInColumn(
+      ctx,
+      width,
+      height,
+      "right",
+      factorAreaTop,
+      factorAreaBottom
+    ).map(card =>
+      classifyDetectedCard(
+        ctx,
+        card
+      )
+    );
 
   return {
     header,
