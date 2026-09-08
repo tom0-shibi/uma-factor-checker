@@ -809,11 +809,13 @@ function detectCardsInColumn(
 
 
 /* =========================================================
-   検出された領域が本当に因子カードか確認する処理
+   因子カード左端の丸アイコンが存在するか確認する処理
 
-   因子カード左端には必ず青白い丸型アイコンが存在する。
-   その領域に「青成分が強く、ある程度明るいピクセル」が
-   一定量存在するかを調べ、空白などの誤検出を除外する。
+   通常の青白い因子アイコンだけでなく、
+   緑因子に使われる黄色系アイコンにも対応する。
+
+   「閉じる」ボタンなどの白背景は除外できるよう、
+   単なる明るさではなく青系・黄系の色差を確認する。
    ========================================================= */
 
 function hasFactorIcon(ctx, card) {
@@ -837,7 +839,7 @@ function hasFactorIcon(ctx, card) {
     height
   ).data;
 
-  let iconLikePixels = 0;
+  let iconPixels = 0;
   let totalPixels = 0;
 
   for (let i = 0; i < data.length; i += 4) {
@@ -845,28 +847,262 @@ function hasFactorIcon(ctx, card) {
     const g = data[i + 1];
     const b = data[i + 2];
 
-    /*
-      因子アイコンに含まれる
-      青～水色～白っぽい部分を広めに拾う。
-    */
-    const isIconLike =
-      b >= r &&
-      b >= g &&
-      b > 145 &&
-      r > 100 &&
-      g > 110;
+    // 通常の青～水色系アイコン
+    const isBlueIcon =
+      b - r > 8 &&
+      b - g > 4 &&
+      b > 150 &&
+      r < 240;
 
-    if (isIconLike) {
-      iconLikePixels++;
+    // 緑因子で使用される黄～金色系アイコン
+    const isGoldIcon =
+      r > 180 &&
+      g > 120 &&
+      r - g > 15 &&
+      g - b > 25;
+
+    if (isBlueIcon || isGoldIcon) {
+      iconPixels++;
     }
 
     totalPixels++;
   }
 
   const ratio =
-    iconLikePixels / totalPixels;
+    iconPixels / totalPixels;
 
-  return ratio > 0.06;
+  return ratio > 0.12;
+}
+
+
+/* =========================================================
+   左右列で検出したカード候補から、
+   因子カード共通の縦方向ピッチを算出する処理。
+
+   同じ行の左右カードはほぼ同じY座標にあるため、
+   Y座標を統合し、カード間隔の中央値を求める。
+   ========================================================= */
+
+function calculateRowPitch(cards) {
+  const yValues = [
+    ...new Set(
+      cards
+        .map(card => card.y)
+        .sort((a, b) => a - b)
+    )
+  ];
+
+  const differences = [];
+
+  for (let i = 1; i < yValues.length; i++) {
+    const diff =
+      yValues[i] - yValues[i - 1];
+
+    /*
+      左右同一行の数px差や、
+      大きく飛んだ誤検出は除外する。
+    */
+    if (diff >= 40 && diff <= 120) {
+      differences.push(diff);
+    }
+  }
+
+  if (differences.length === 0) {
+    return null;
+  }
+
+  differences.sort((a, b) => a - b);
+
+  return differences[
+    Math.floor(differences.length / 2)
+  ];
+}
+
+
+/* =========================================================
+   左右列で検出したカード候補から、
+   因子カード共通の縦方向ピッチを算出する処理。
+
+   同じ行の左右カードはほぼ同じY座標にあるため、
+   Y座標を統合し、カード間隔の中央値を求める。
+   ========================================================= */
+
+function calculateRowPitch(cards) {
+  const yValues = [
+    ...new Set(
+      cards
+        .map(card => card.y)
+        .sort((a, b) => a - b)
+    )
+  ];
+
+  const differences = [];
+
+  for (let i = 1; i < yValues.length; i++) {
+    const diff =
+      yValues[i] - yValues[i - 1];
+
+    /*
+      左右同一行の数px差や、
+      大きく飛んだ誤検出は除外する。
+    */
+    if (diff >= 40 && diff <= 120) {
+      differences.push(diff);
+    }
+  }
+
+  if (differences.length === 0) {
+    return null;
+  }
+
+  differences.sort((a, b) => a - b);
+
+  return differences[
+    Math.floor(differences.length / 2)
+  ];
+}
+
+
+/* =========================================================
+   因子一覧の行位置を生成する処理
+
+   最初のカード位置とカード間隔から、
+   「次の行」を順番に確認する。
+
+   左右どちらにも因子アイコンが存在しない行が出たら終了するため、
+   因子一覧より下の「閉じる」ボタンまで誤検出しない。
+   ========================================================= */
+
+function buildFactorRows(
+  ctx,
+  width,
+  height,
+  initialCards,
+  factorAreaBottom
+) {
+  if (initialCards.length === 0) {
+    return [];
+  }
+
+  const pitch =
+    calculateRowPitch(initialCards);
+
+  if (!pitch) {
+    return [];
+  }
+
+  const firstY =
+    Math.min(
+      ...initialCards.map(card => card.y)
+    );
+
+  /*
+    実際のカード高さはピッチより少し小さい。
+  */
+  const typicalHeights =
+    initialCards
+      .map(card => card.height)
+      .filter(height =>
+        height >= pitch * 0.65 &&
+        height <= pitch * 1.2
+      )
+      .sort((a, b) => a - b);
+
+  const cardHeight =
+    typicalHeights.length > 0
+      ? typicalHeights[
+          Math.floor(
+            typicalHeights.length / 2
+          )
+        ]
+      : pitch * 0.9;
+
+  const rows = [];
+
+  for (
+    let rowIndex = 0;
+    ;
+    rowIndex++
+  ) {
+    const y =
+      firstY + pitch * rowIndex;
+
+    if (
+      y + cardHeight >
+      factorAreaBottom
+    ) {
+      break;
+    }
+
+    const leftCard = {
+      column: "left",
+      row: rowIndex + 1,
+      x: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.left.xRatio
+      ),
+      y: Math.round(y),
+      width: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.left.widthRatio
+      ),
+      height: Math.round(cardHeight)
+    };
+
+    const rightCard = {
+      column: "right",
+      row: rowIndex + 1,
+      x: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.right.xRatio
+      ),
+      y: Math.round(y),
+      width: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.right.widthRatio
+      ),
+      height: Math.round(cardHeight)
+    };
+
+    const hasLeft =
+      hasFactorIcon(
+        ctx,
+        leftCard
+      );
+
+    const hasRight =
+      hasFactorIcon(
+        ctx,
+        rightCard
+      );
+
+    /*
+      左右ともカードが存在しない行に来たら、
+      因子一覧は終了したと判断する。
+    */
+    if (!hasLeft && !hasRight) {
+      break;
+    }
+
+    rows.push({
+      row: rowIndex + 1,
+      y: Math.round(y),
+      leftCard:
+        hasLeft
+          ? leftCard
+          : null,
+      rightCard:
+        hasRight
+          ? rightCard
+          : null
+    });
+  }
+
+  return {
+    pitch,
+    cardHeight,
+    rows
+  };
 }
 
 /* =========================================================
@@ -988,9 +1224,14 @@ function classifyDetectedCard(ctx, card) {
    因子一覧画像全体を解析する処理
 
    1. 「所持因子」の緑ヘッダーを検出
-   2. その直下から画像下部までを因子領域とする
-   3. 左右列でカードを動的検出
-   4. 各カードを青・赤・緑・白へ分類
+   2. 左右列から初期カード候補を取得
+   3. 候補から行間隔を算出
+   4. 左右共通の行位置を生成
+   5. 各行について左右それぞれカード有無を判定
+   6. 存在するカードだけ色分類する
+
+   左右別々に最下段を検出しないため、
+   「左だけ取れる・右だけ最終行を落とす」を防止する。
    ========================================================= */
 
 function analyzeFactorImage(
@@ -1024,7 +1265,12 @@ function analyzeFactorImage(
         .bottomRatio
     );
 
-  const leftCards =
+  /*
+    まず従来方式でカード候補を得る。
+    ここでは最終結果ではなく、
+    行位置とピッチを求めるためだけに使用する。
+  */
+  const initialLeft =
     detectCardsInColumn(
       ctx,
       width,
@@ -1033,18 +1279,10 @@ function analyzeFactorImage(
       factorAreaTop,
       factorAreaBottom
     ).filter(card =>
-      hasFactorIcon(
-        ctx,
-        card
-      )
-    ).map(card =>
-      classifyDetectedCard(
-        ctx,
-        card
-      )
+      hasFactorIcon(ctx, card)
     );
 
-  const rightCards =
+  const initialRight =
     detectCardsInColumn(
       ctx,
       width,
@@ -1053,21 +1291,65 @@ function analyzeFactorImage(
       factorAreaTop,
       factorAreaBottom
     ).filter(card =>
-      hasFactorIcon(
-        ctx,
-        card
-      )
-    ).map(card =>
-      classifyDetectedCard(
-        ctx,
-        card
-      )
+      hasFactorIcon(ctx, card)
     );
+
+  const initialCards = [
+    ...initialLeft,
+    ...initialRight
+  ];
+
+  const rowResult =
+    buildFactorRows(
+      ctx,
+      width,
+      height,
+      initialCards,
+      factorAreaBottom
+    );
+
+  if (
+    !rowResult ||
+    rowResult.rows.length === 0
+  ) {
+    return {
+      header,
+      factorAreaTop,
+      factorAreaBottom,
+      pitch: null,
+      leftCards: [],
+      rightCards: []
+    };
+  }
+
+  const leftCards = [];
+  const rightCards = [];
+
+  rowResult.rows.forEach(row => {
+    if (row.leftCard) {
+      leftCards.push(
+        classifyDetectedCard(
+          ctx,
+          row.leftCard
+        )
+      );
+    }
+
+    if (row.rightCard) {
+      rightCards.push(
+        classifyDetectedCard(
+          ctx,
+          row.rightCard
+        )
+      );
+    }
+  });
 
   return {
     header,
     factorAreaTop,
     factorAreaBottom,
+    pitch: rowResult.pitch,
     leftCards,
     rightCards
   };
@@ -1142,6 +1424,7 @@ function renderAnalysisDebug(
     <span>左列：${analysis.leftCards.length}件</span>
     <span>右列：${analysis.rightCards.length}件</span>
     <span>所持因子開始Y：${analysis.factorAreaTop}</span>
+    <span>行間隔：${analysis.pitch ?? "-"}</span>
   `;
 
   section.appendChild(summary);
