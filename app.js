@@ -37,9 +37,38 @@ const members = {
   }
 };
 
-
 let pasteTargetMember = "parentA";
 
+const ANALYSIS_CONFIG = {
+
+  width: 1029,
+  height: 1611,
+
+  // 因子欄の左右位置
+  columns: {
+    left: {
+      x: 160,
+      width: 330
+    },
+
+    right: {
+      x: 502,
+      width: 330
+    }
+  },
+
+  // 一覧の最初の行付近
+  firstRowY: 365,
+
+  // 1行の縦間隔
+  rowPitch: 61,
+
+  // 因子1項目の高さ
+  rowHeight: 48,
+
+  // 最大検出行数
+  maxRows: 18
+};
 
 // -----------------------------
 // タブ切り替え
@@ -672,3 +701,272 @@ document
 setPasteTarget("parentA");
 
 updateImageSummary();
+
+
+// -----------------------------
+// 画像読込み
+// -----------------------------
+
+async function loadImageElement(file) {
+
+  return new Promise((resolve, reject) => {
+
+    const image = new Image();
+
+    const url =
+      URL.createObjectURL(file);
+
+    image.onload = () => {
+
+      URL.revokeObjectURL(url);
+
+      resolve(image);
+
+    };
+
+    image.onerror = error => {
+
+      URL.revokeObjectURL(url);
+
+      reject(error);
+
+    };
+
+    image.src = url;
+
+  });
+
+}
+
+
+// -----------------------------
+// 画像描画
+// -----------------------------
+
+async function drawNormalizedImage(file) {
+
+  const canvas =
+    document.getElementById(
+      "analysis-canvas"
+    );
+
+  const ctx =
+    canvas.getContext("2d", {
+      willReadFrequently: true
+    });
+
+
+  const image =
+    await loadImageElement(file);
+
+
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  ctx.drawImage(
+    image,
+    0,
+    0,
+    image.width,
+    image.height,
+    0,
+    0,
+    ANALYSIS_CONFIG.width,
+    ANALYSIS_CONFIG.height
+  );
+
+
+  return {
+    canvas,
+    ctx
+  };
+
+}
+
+
+// -----------------------------
+// 因子の色判定
+// -----------------------------
+
+function classifyFactorColor(
+  r,
+  g,
+  b
+) {
+
+  // 青
+  if (
+    b > 180 &&
+    b > r + 40 &&
+    b > g
+  ) {
+    return "blue";
+  }
+
+
+  // 赤
+  if (
+    r > 200 &&
+    b > 130 &&
+    r > g + 50
+  ) {
+    return "red";
+  }
+
+
+  // 緑
+  if (
+    g > 150 &&
+    g > r + 30 &&
+    g > b + 40
+  ) {
+    return "green";
+  }
+
+
+  // 白因子
+  if (
+    Math.abs(r - g) < 25 &&
+    Math.abs(g - b) < 25 &&
+    r > 180
+  ) {
+    return "white";
+  }
+
+
+  return "unknown";
+
+}
+
+// -----------------------------
+// 色の平均取得
+// -----------------------------
+
+function getAverageColor(
+  ctx,
+  x,
+  y,
+  width = 10,
+  height = 10
+) {
+
+  const data =
+    ctx.getImageData(
+      x,
+      y,
+      width,
+      height
+    ).data;
+
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  let count = 0;
+
+
+  for (
+    let i = 0;
+    i < data.length;
+    i += 4
+  ) {
+
+    r += data[i];
+    g += data[i + 1];
+    b += data[i + 2];
+
+    count++;
+
+  }
+
+
+  return {
+    r: Math.round(r / count),
+    g: Math.round(g / count),
+    b: Math.round(b / count)
+  };
+
+}
+
+// -----------------------------
+// 因子一覧行読み取り
+// -----------------------------
+
+function detectFactorRows(ctx) {
+
+  const factors = [];
+
+
+  for (
+    const [columnName, column]
+    of Object.entries(
+      ANALYSIS_CONFIG.columns
+    )
+  ) {
+
+    for (
+      let row = 0;
+      row < ANALYSIS_CONFIG.maxRows;
+      row++
+    ) {
+
+      const y =
+        ANALYSIS_CONFIG.firstRowY +
+        row *
+        ANALYSIS_CONFIG.rowPitch;
+
+
+      // 項目左寄りの背景色を見る
+      const sampleX =
+        column.x + 140;
+
+      const sampleY =
+        y + 20;
+
+
+      const color =
+        getAverageColor(
+          ctx,
+          sampleX,
+          sampleY,
+          10,
+          10
+        );
+
+
+      const factorType =
+        classifyFactorColor(
+          color.r,
+          color.g,
+          color.b
+        );
+
+
+      factors.push({
+        column: columnName,
+        row,
+        x: column.x,
+        y,
+        width: column.width,
+        height:
+          ANALYSIS_CONFIG.rowHeight,
+
+        factorType,
+
+        color
+      });
+
+    }
+
+  }
+
+
+  return factors;
+
+}
