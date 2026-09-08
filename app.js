@@ -5,6 +5,41 @@ const requirements = {
   C: []
 };
 
+const members = {
+  parentA: {
+    label: "親A",
+    images: []
+  },
+
+  grandA1: {
+    label: "親A-祖1",
+    images: []
+  },
+
+  grandA2: {
+    label: "親A-祖2",
+    images: []
+  },
+
+  parentB: {
+    label: "親B",
+    images: []
+  },
+
+  grandB1: {
+    label: "親B-祖1",
+    images: []
+  },
+
+  grandB2: {
+    label: "親B-祖2",
+    images: []
+  }
+};
+
+
+let pasteTargetMember = "parentA";
+
 
 // -----------------------------
 // タブ切り替え
