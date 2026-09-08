@@ -104,8 +104,192 @@
 
     <!-- 画像登録 -->
     <section id="images" class="tab-content">
+    
       <h2>画像登録</h2>
-      <p>この画面は次の工程で作成します。</p>
+    
+      <p class="description">
+        チェックしたい因子画像を登録してください。
+        1人分だけでも、最大6人分でも使用できます。
+      </p>
+    
+      <p class="description">
+        各枠には複数画像を登録できます。
+        ファイル選択・ドラッグ＆ドロップ・クリップボード貼り付けに対応します。
+      </p>
+    
+      <div id="member-grid" class="member-grid">
+    
+        <div class="member-panel" data-member="parentA">
+          <h3>親A</h3>
+    
+          <div class="image-drop-zone" data-member="parentA">
+            <p>画像をここにドロップ</p>
+            <p class="drop-sub-text">またはクリックして選択</p>
+    
+            <input
+              type="file"
+              class="image-file-input"
+              data-member="parentA"
+              accept="image/*"
+              multiple
+            >
+          </div>
+    
+          <div
+            id="preview-parentA"
+            class="image-preview-list"
+          ></div>
+        </div>
+    
+    
+        <div class="member-panel" data-member="grandA1">
+          <h3>親A-祖1</h3>
+    
+          <div class="image-drop-zone" data-member="grandA1">
+            <p>画像をここにドロップ</p>
+            <p class="drop-sub-text">またはクリックして選択</p>
+    
+            <input
+              type="file"
+              class="image-file-input"
+              data-member="grandA1"
+              accept="image/*"
+              multiple
+            >
+          </div>
+    
+          <div
+            id="preview-grandA1"
+            class="image-preview-list"
+          ></div>
+        </div>
+    
+    
+        <div class="member-panel" data-member="grandA2">
+          <h3>親A-祖2</h3>
+    
+          <div class="image-drop-zone" data-member="grandA2">
+            <p>画像をここにドロップ</p>
+            <p class="drop-sub-text">またはクリックして選択</p>
+    
+            <input
+              type="file"
+              class="image-file-input"
+              data-member="grandA2"
+              accept="image/*"
+              multiple
+            >
+          </div>
+    
+          <div
+            id="preview-grandA2"
+            class="image-preview-list"
+          ></div>
+        </div>
+    
+    
+        <div class="member-panel" data-member="parentB">
+          <h3>親B</h3>
+    
+          <div class="image-drop-zone" data-member="parentB">
+            <p>画像をここにドロップ</p>
+            <p class="drop-sub-text">またはクリックして選択</p>
+    
+            <input
+              type="file"
+              class="image-file-input"
+              data-member="parentB"
+              accept="image/*"
+              multiple
+            >
+          </div>
+    
+          <div
+            id="preview-parentB"
+            class="image-preview-list"
+          ></div>
+        </div>
+    
+    
+        <div class="member-panel" data-member="grandB1">
+          <h3>親B-祖1</h3>
+    
+          <div class="image-drop-zone" data-member="grandB1">
+            <p>画像をここにドロップ</p>
+            <p class="drop-sub-text">またはクリックして選択</p>
+    
+            <input
+              type="file"
+              class="image-file-input"
+              data-member="grandB1"
+              accept="image/*"
+              multiple
+            >
+          </div>
+    
+          <div
+            id="preview-grandB1"
+            class="image-preview-list"
+          ></div>
+        </div>
+    
+    
+        <div class="member-panel" data-member="grandB2">
+          <h3>親B-祖2</h3>
+    
+          <div class="image-drop-zone" data-member="grandB2">
+            <p>画像をここにドロップ</p>
+            <p class="drop-sub-text">またはクリックして選択</p>
+    
+            <input
+              type="file"
+              class="image-file-input"
+              data-member="grandB2"
+              accept="image/*"
+              multiple
+            >
+          </div>
+    
+          <div
+            id="preview-grandB2"
+            class="image-preview-list"
+          ></div>
+        </div>
+    
+      </div>
+    
+    
+      <div class="paste-guide">
+        <strong>クリップボードから貼り付け</strong>
+        <p>
+          貼り付け先にしたい人物の枠をクリックしてから、
+          Ctrl+V / Cmd+V で画像を貼り付けてください。
+        </p>
+    
+        <p>
+          現在の貼り付け先：
+          <span id="paste-target-label">親A</span>
+        </p>
+      </div>
+    
+    
+      <div class="image-summary">
+        登録画像：
+        <strong id="total-image-count">0</strong>
+        枚
+      </div>
+    
+    
+      <div class="action-area">
+        <button
+          id="analyze-images"
+          class="primary-button"
+          disabled
+        >
+          画像を解析
+        </button>
+      </div>
+    
     </section>
 
     <!-- 判定結果 -->
