@@ -32,7 +32,7 @@ let pasteTargetMember = "parentA";
 const ANALYSIS_CONFIG = {
   factorArea: {
     fallbackTopRatio: 0.18,
-    bottomRatio: 0.93
+    bottomRatio: 0.97
   },
 
   columns: {
@@ -809,6 +809,67 @@ function detectCardsInColumn(
 
 
 /* =========================================================
+   検出された領域が本当に因子カードか確認する処理
+
+   因子カード左端には必ず青白い丸型アイコンが存在する。
+   その領域に「青成分が強く、ある程度明るいピクセル」が
+   一定量存在するかを調べ、空白などの誤検出を除外する。
+   ========================================================= */
+
+function hasFactorIcon(ctx, card) {
+  const x = Math.round(card.x + card.width * 0.015);
+  const y = Math.round(card.y + card.height * 0.12);
+
+  const width = Math.max(
+    8,
+    Math.round(card.width * 0.10)
+  );
+
+  const height = Math.max(
+    8,
+    Math.round(card.height * 0.65)
+  );
+
+  const data = ctx.getImageData(
+    x,
+    y,
+    width,
+    height
+  ).data;
+
+  let iconLikePixels = 0;
+  let totalPixels = 0;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    /*
+      因子アイコンに含まれる
+      青～水色～白っぽい部分を広めに拾う。
+    */
+    const isIconLike =
+      b >= r &&
+      b >= g &&
+      b > 145 &&
+      r > 100 &&
+      g > 110;
+
+    if (isIconLike) {
+      iconLikePixels++;
+    }
+
+    totalPixels++;
+  }
+
+  const ratio =
+    iconLikePixels / totalPixels;
+
+  return ratio > 0.06;
+}
+
+/* =========================================================
    検出済み因子カードの色を判定する処理
 
    今回の目的は白因子の抽出なので、
@@ -971,6 +1032,11 @@ function analyzeFactorImage(
       "left",
       factorAreaTop,
       factorAreaBottom
+    ).filter(card =>
+      hasFactorIcon(
+        ctx,
+        card
+      )
     ).map(card =>
       classifyDetectedCard(
         ctx,
@@ -986,6 +1052,11 @@ function analyzeFactorImage(
       "right",
       factorAreaTop,
       factorAreaBottom
+    ).filter(card =>
+      hasFactorIcon(
+        ctx,
+        card
+      )
     ).map(card =>
       classifyDetectedCard(
         ctx,
