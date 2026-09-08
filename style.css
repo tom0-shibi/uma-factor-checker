@@ -4,18 +4,14 @@
 
 body {
   margin: 0;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f4f5f7;
   color: #222;
 }
 
 .app-header {
   padding: 20px;
-  background: white;
+  background: #fff;
   border-bottom: 1px solid #ddd;
 }
 
@@ -28,21 +24,21 @@ body {
   display: flex;
   gap: 8px;
   padding: 12px 20px;
-  background: white;
+  background: #fff;
   border-bottom: 1px solid #ddd;
 }
 
 .tab-button {
-  border: none;
-  background: #eee;
   padding: 10px 18px;
+  border: 0;
   border-radius: 8px;
+  background: #eee;
   cursor: pointer;
 }
 
 .tab-button.active {
   background: #333;
-  color: white;
+  color: #fff;
 }
 
 .app-main {
@@ -71,42 +67,33 @@ body {
 }
 
 .priority-panel {
-  background: white;
-  border-radius: 12px;
   padding: 16px;
+  background: #fff;
   border: 1px solid #ddd;
+  border-radius: 12px;
 }
 
 .priority-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   width: 44px;
   height: 44px;
-
   margin-bottom: 12px;
-
   border-radius: 10px;
-
+  background: #333;
+  color: #fff;
   font-size: 22px;
   font-weight: bold;
-
-  background: #333;
-  color: white;
 }
 
 .priority-panel textarea {
   width: 100%;
   min-height: 160px;
-
   padding: 12px;
-
   border: 1px solid #ccc;
   border-radius: 8px;
-
   resize: vertical;
-
   font-size: 16px;
 }
 
@@ -114,7 +101,6 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-
   margin-top: 12px;
 }
 
@@ -122,22 +108,17 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-
   padding: 8px 10px;
-
-  border-radius: 8px;
-
   background: #f0f0f0;
   border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
 .skill-card button {
-  border: none;
+  border: 0;
   background: none;
-
-  cursor: pointer;
-
   font-size: 16px;
+  cursor: pointer;
 }
 
 .action-area {
@@ -147,21 +128,20 @@ body {
 
 .primary-button {
   padding: 12px 24px;
-
-  border: none;
+  border: 0;
   border-radius: 8px;
-
   background: #333;
-  color: white;
-
+  color: #fff;
   font-size: 16px;
   cursor: pointer;
 }
 
-/* -----------------------------
-   画像登録
------------------------------ */
+.primary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
+/* 画像登録 */
 .member-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -169,11 +149,12 @@ body {
 }
 
 .member-panel {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
   cursor: pointer;
-  transition:
-    outline 0.15s,
-    box-shadow 0.15s,
-    background 0.15s;
+  transition: background 0.15s, outline 0.15s, box-shadow 0.15s;
 }
 
 .member-panel:hover {
@@ -186,50 +167,44 @@ body {
 }
 
 .member-panel.active-paste-target h3::after {
-  content: "  貼り付け先";
+  content: "貼り付け先";
+  display: inline-block;
   margin-left: 8px;
-  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #333;
+  color: #fff;
+  font-size: 11px;
   font-weight: normal;
-  color: #666;
 }
 
 .member-panel h3 {
-  margin-top: 0;
-  margin-bottom: 12px;
+  margin: 0 0 12px;
 }
 
 .image-drop-zone {
   position: relative;
-
-  min-height: 120px;
-
   display: flex;
+  min-height: 120px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-
   padding: 20px;
-
+  background: #fafafa;
   border: 2px dashed #bbb;
   border-radius: 10px;
-
-  background: #fafafa;
-
   cursor: pointer;
-
-  transition:
-    border-color 0.2s,
-    background 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .image-drop-zone:hover {
-  border-color: #777;
   background: #f4f4f4;
+  border-color: #777;
 }
 
 .image-drop-zone.drag-over {
-  border-color: #333;
   background: #eee;
+  border-color: #333;
 }
 
 .image-drop-zone p {
@@ -237,96 +212,72 @@ body {
 }
 
 .drop-sub-text {
-  font-size: 13px;
   color: #777;
+  font-size: 13px;
 }
 
 .image-file-input {
   display: none;
 }
 
-/* プレビュー一覧 */
-
 .image-preview-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-
   margin-top: 14px;
 }
 
 .image-preview-item {
   position: relative;
-
   overflow: hidden;
-
-  border-radius: 8px;
-  border: 1px solid #ddd;
-
   background: #eee;
+  border: 1px solid #ddd;
+  border-radius: 8px;
 }
 
 .image-preview-item img {
   display: block;
-
   width: 100%;
   aspect-ratio: 3 / 4;
-
   object-fit: cover;
 }
 
 .image-delete-button {
   position: absolute;
-
   top: 5px;
   right: 5px;
-
   width: 28px;
   height: 28px;
-
-  border: none;
+  border: 0;
   border-radius: 50%;
-
   background: rgba(0, 0, 0, 0.7);
-  color: white;
-
+  color: #fff;
   font-size: 18px;
   line-height: 1;
-
   cursor: pointer;
 }
 
 .image-number {
   position: absolute;
-
   bottom: 5px;
   left: 5px;
-
   padding: 3px 6px;
-
-  border-radius: 5px;
-
   background: rgba(0, 0, 0, 0.7);
-  color: white;
-
+  border-radius: 5px;
+  color: #fff;
   font-size: 12px;
 }
 
-/* 貼り付け案内 */
-
 .paste-guide {
   margin-top: 24px;
-
   padding: 16px;
-
-  background: white;
-
+  background: #fff;
   border: 1px solid #ddd;
   border-radius: 10px;
 }
 
 .paste-guide p {
-  margin-bottom: 0;
+  margin: 8px 0 0;
 }
 
 .image-summary {
@@ -335,23 +286,25 @@ body {
   font-size: 16px;
 }
 
-/* disabled */
-
-.primary-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-/* デバッグ用 */
-
+/* 解析デバッグ */
 .analysis-debug-section {
   margin-bottom: 30px;
   padding: 16px;
-
-  background: white;
-
+  background: #fff;
   border: 1px solid #ddd;
   border-radius: 10px;
+}
+
+.analysis-debug-section h3 {
+  margin-top: 0;
+}
+
+.analysis-summary {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  font-weight: bold;
 }
 
 .debug-table {
@@ -362,22 +315,55 @@ body {
 .debug-table th,
 .debug-table td {
   padding: 8px 10px;
-
   border-bottom: 1px solid #ddd;
-
   text-align: left;
+  vertical-align: middle;
 }
 
 .debug-table th {
   background: #f5f5f5;
 }
 
-@media (max-width: 700px) {
+.debug-thumbnail {
+  display: block;
+  width: 150px;
+  max-height: 70px;
+  object-fit: contain;
+  background: #eee;
+}
 
-  .priority-grid {
-    grid-template-columns: 1fr;
+.factor-type {
+  display: inline-block;
+  min-width: 60px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.factor-blue {
+  background: #d9f1ff;
+}
+
+.factor-red {
+  background: #ffe1ed;
+}
+
+.factor-green {
+  background: #e9f8d3;
+}
+
+.factor-white {
+  background: #eee;
+}
+
+@media (max-width: 700px) {
+  .app-main {
+    padding: 16px;
   }
 
+  .priority-grid,
   .member-grid {
     grid-template-columns: 1fr;
   }
@@ -386,8 +372,11 @@ body {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .app-main {
-    padding: 16px;
+  .debug-table {
+    font-size: 12px;
   }
 
+  .debug-thumbnail {
+    width: 90px;
+  }
 }
