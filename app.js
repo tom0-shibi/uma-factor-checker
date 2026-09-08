@@ -668,12 +668,18 @@ document.addEventListener(
 // -----------------------------
 
 document
-  .getElementById(
-    "analyze-images"
-  )
+  .getElementById("analyze-images")
   .addEventListener(
     "click",
-    () => {
+    async () => {
+
+      const debugContainer =
+        document.getElementById(
+          "analysis-debug"
+        );
+
+      debugContainer.innerHTML = "";
+
 
       const activeMembers =
         Object.entries(members)
@@ -683,15 +689,49 @@ document
           );
 
 
-      console.log(
-        "解析対象:",
-        activeMembers
-      );
+      for (
+        const [memberId, member]
+        of activeMembers
+      ) {
+
+        for (
+          let i = 0;
+          i < member.images.length;
+          i++
+        ) {
+
+          const imageData =
+            member.images[i];
 
 
-      alert(
-        `${activeMembers.length}人分の画像を解析対象として登録しました。\nOCR処理は次の工程で実装します。`
-      );
+          const { ctx } =
+            await drawNormalizedImage(
+              imageData.file
+            );
+
+
+          const factors =
+            detectFactorRows(ctx);
+
+
+          renderAnalysisDebug(
+            member.label,
+            i,
+            factors
+          );
+
+        }
+
+      }
+
+
+      // 判定結果タブへ移動
+
+      document
+        .querySelector(
+          '[data-tab="results"]'
+        )
+        .click();
 
     }
   );
@@ -966,7 +1006,93 @@ function detectFactorRows(ctx) {
 
   }
 
-
   return factors;
+
+}
+
+
+// -----------------------------
+// デバッグ一覧表示
+// -----------------------------
+
+function renderAnalysisDebug(
+  memberLabel,
+  imageIndex,
+  factors
+) {
+
+  const container =
+    document.getElementById(
+      "analysis-debug"
+    );
+
+
+  const section =
+    document.createElement("section");
+
+  section.className =
+    "analysis-debug-section";
+
+
+  const title =
+    document.createElement("h3");
+
+  title.textContent =
+    `${memberLabel} / 画像${imageIndex + 1}`;
+
+
+  section.appendChild(title);
+
+
+  const table =
+    document.createElement("table");
+
+  table.className =
+    "debug-table";
+
+
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>列</th>
+        <th>行</th>
+        <th>種類</th>
+        <th>RGB</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+
+  const tbody =
+    table.querySelector("tbody");
+
+
+  factors.forEach(factor => {
+
+    const tr =
+      document.createElement("tr");
+
+
+    tr.innerHTML = `
+      <td>${factor.column}</td>
+      <td>${factor.row + 1}</td>
+      <td>${factor.factorType}</td>
+      <td>
+        ${factor.color.r},
+        ${factor.color.g},
+        ${factor.color.b}
+      </td>
+    `;
+
+
+    tbody.appendChild(tr);
+
+  });
+
+
+  section.appendChild(table);
+
+  container.appendChild(section);
 
 }
