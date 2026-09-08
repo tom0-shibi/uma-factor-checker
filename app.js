@@ -538,21 +538,43 @@ function setPasteTarget(memberId) {
 
 }
 
-
 // パネルクリックでも貼り付け先変更
 
 memberPanels.forEach(panel => {
 
-  panel.addEventListener(
-    "click",
-    () => {
+  panel.setAttribute("tabindex", "0");
+
+  panel.addEventListener("click", event => {
+
+    // 削除ボタン等を押したときでも
+    // 貼り付け先変更が暴発しないようにする
+    if (
+      event.target.closest(".image-delete-button")
+    ) {
+      return;
+    }
+
+    setPasteTarget(
+      panel.dataset.member
+    );
+
+  });
+
+  // キーボード操作にも対応
+  panel.addEventListener("keydown", event => {
+
+    if (
+      event.key === "Enter" ||
+      event.key === " "
+    ) {
+      event.preventDefault();
 
       setPasteTarget(
         panel.dataset.member
       );
-
     }
-  );
+
+  });
 
 });
 
