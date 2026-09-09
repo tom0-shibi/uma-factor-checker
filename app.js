@@ -88,6 +88,25 @@ const STAR_CONFIG = {
 };
 
 /* =========================================================
+   OCR設定
+   白因子カード内のスキル名領域だけを切り出し、
+   拡大・二値化してTesseract.jsへ渡す。
+
+   座標は固定pxではなくカードサイズに対する割合で指定する。
+   ========================================================= */
+
+const OCR_CONFIG = {
+  textArea: {
+    xRatio: 0.115,
+    yRatio: 0.03,
+    widthRatio: 0.82,
+    heightRatio: 0.48
+  },
+  scale: 4,
+  threshold: 195
+};
+
+/* =========================================================
    タブ切り替え処理
    3つのメイン画面を切り替える。
    ========================================================= */
@@ -1294,6 +1313,18 @@ function analyzeFactorImage(ctx, width, height) {
     }
   });
 
+  const allCards = [
+    ...leftCards,
+    ...rightCards
+  ];
+
+  allCards.forEach(card => {
+    card.ocrText = "";
+    card.ocrRawText = "";
+    card.ocrConfidence = null;
+    card.ocrPreview = null;
+  });
+
   return {
     header,
     factorAreaTop,
@@ -1458,6 +1489,284 @@ function detectStarCount(ctx, card) {
 }
 
 /* =========================================================
+   因子カード内のスキル名領域を算出する処理
+
+   左側の丸アイコンと下側の★を避け、
+   スキル名が表示されている上半分だけをOCR対象にする。
+   ========================================================= */
+
+function getTextArea(card) {
+  return {
+    x: Math.round(
+      card.x +
+      card.width * OCR_CONFIG.textArea.xRatio
+    ),
+    y: Math.round(
+      card.y +
+      card.height * OCR_CONFIG.textArea.yRatio
+    ),
+    width: Math.round(
+      card.width *
+      OCR_CONFIG.textArea.widthRatio
+    ),
+    height: Math.round(
+      card.height *
+      OCR_CONFIG.textArea.heightRatio
+    )
+  };
+}
+
+/* =========================================================
+   OCR用画像を生成する処理
+
+   スキル名部分だけを切り出して拡大し、
+   明るい背景を白、暗い文字を黒へ二値化する。
+
+   Tesseractへカード全体を渡さないことで、
+   丸アイコンや★による誤認識を減らす。
+   ========================================================= */
+
+function createOcrCanvas(sourceCanvas, card) {
+  const textArea = getTextArea(card);
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width =
+    textArea.width *
+    OCR_CONFIG.scale;
+
+  canvas.height =
+    textArea.height *
+    OCR_CONFIG.scale;
+
+  const ctx = canvas.getContext("2d", {
+    willReadFrequently: true
+  });
+
+  ctx.imageSmoothingEnabled = true;
+
+  ctx.drawImage(
+    sourceCanvas,
+    textArea.x,
+    textArea.y,
+    textArea.width,
+    textArea.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const imageData = ctx.getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const data = imageData.data;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    const luminance =
+      0.2126 * r +
+      0.7152 * g +
+      0.0722 * b;
+
+    const value =
+      luminance < OCR_CONFIG.threshold
+        ? 0
+        : 255;
+
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+    data[i + 3] = 255;
+  }
+
+  ctx.putImageData(
+    imageData,
+    0,
+    0
+  );
+
+  return canvas;
+}
+
+/* =========================================================
+   OCR結果文字列を整形する処理
+
+   改行・タブ・前後空白などを削除し、
+   スキル名照合に使いやすい1行文字列へ変換する。
+   ========================================================= */
+
+function normalizeOcrText(text) {
+  return text
+    .replace(/\r?\n/g, "")
+    .replace(/\t/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+/* =========================================================
+   Tesseract.jsの日本語OCR workerを作成する処理
+
+   workerは解析処理中に1回だけ生成し、
+   すべての白因子カードで使い回す。
+   ========================================================= */
+
+async function createOcrWorker() {
+  const status =
+    document.getElementById(
+      "ocr-status"
+    );
+
+  status.textContent =
+    "日本語OCRを準備しています...";
+
+  const worker =
+    await Tesseract.createWorker(
+      "jpn",
+      1,
+      {
+        logger: message => {
+          if (
+            message.status ===
+            "recognizing text"
+          ) {
+            const percent =
+              Math.round(
+                message.progress * 100
+              );
+
+            status.textContent =
+              `OCR実行中... ${percent}%`;
+          }
+        }
+      }
+    );
+
+  /*
+    今回は1カードにつきスキル名1行なので、
+    Tesseractのページ分割を1行認識向けに設定する。
+  */
+  await worker.setParameters({
+    tessedit_pageseg_mode: "7"
+  });
+
+  return worker;
+}
+
+/* =========================================================
+   1枚の白因子カードからスキル名をOCRする処理
+
+   前処理済みCanvasをTesseractへ渡し、
+   生OCR結果・整形済み文字列・信頼度を返す。
+   ========================================================= */
+
+async function recognizeSkillName(
+  worker,
+  sourceCanvas,
+  card
+) {
+  const ocrCanvas =
+    createOcrCanvas(
+      sourceCanvas,
+      card
+    );
+
+  const result =
+    await worker.recognize(
+      ocrCanvas
+    );
+
+  const rawText =
+    result.data.text || "";
+
+  const ocrText =
+    normalizeOcrText(
+      rawText
+    );
+
+  return {
+    ocrText,
+    ocrRawText: rawText,
+    ocrConfidence:
+      result.data.confidence ?? 0,
+    ocrCanvas
+  };
+}
+
+/* =========================================================
+   解析済みカードのうち白因子だけOCRする処理
+
+   青・赤・緑因子は今回のスキル要件判定対象ではないため
+   OCRを実行しない。
+
+   各カードへ
+   ・ocrText
+   ・ocrConfidence
+   ・ocrPreview
+   を追加する。
+   ========================================================= */
+
+async function runOcrForWhiteCards(
+  worker,
+  sourceCanvas,
+  analysis,
+  memberLabel,
+  imageIndex
+) {
+  const status =
+    document.getElementById(
+      "ocr-status"
+    );
+
+  const whiteCards = [
+    ...analysis.leftCards,
+    ...analysis.rightCards
+  ].filter(card =>
+    card.factorType === "white"
+  );
+
+  for (
+    let i = 0;
+    i < whiteCards.length;
+    i++
+  ) {
+    const card =
+      whiteCards[i];
+
+    status.textContent =
+      `${memberLabel} / 画像${imageIndex + 1}：白因子OCR ${i + 1}/${whiteCards.length}`;
+
+    const result =
+      await recognizeSkillName(
+        worker,
+        sourceCanvas,
+        card
+      );
+
+    card.ocrText =
+      result.ocrText;
+
+    card.ocrRawText =
+      result.ocrRawText;
+
+    card.ocrConfidence =
+      result.ocrConfidence;
+
+    card.ocrPreview =
+      result.ocrCanvas.toDataURL(
+        "image/png"
+      );
+  }
+}
+
+/* =========================================================
    星領域のデバッグ用プレビューを生成する処理
    星数判定が正しいか目視確認できるようにする。
    ========================================================= */
@@ -1557,11 +1866,13 @@ function renderAnalysisDebug(
     <thead>
       <tr>
         <th>画像</th>
-        <th>星領域</th>
+        <th>OCR画像</th>
         <th>列</th>
         <th>No.</th>
         <th>種類</th>
         <th>星数</th>
+        <th>OCR結果</th>
+        <th>信頼度</th>
         <th>星判定率</th>
         <th>RGB</th>
         <th>Y</th>
@@ -1591,27 +1902,66 @@ function renderAnalysisDebug(
       card.area
     );
 
+    const ocrPreviewHtml =
+      card.ocrPreview
+        ? `
+          <img
+            class="debug-ocr-thumbnail"
+            src="${card.ocrPreview}"
+            alt="OCR画像"
+          >
+        `
+        : "-";
+
+    const confidenceText =
+      card.ocrConfidence !== null
+        ? card.ocrConfidence.toFixed(1)
+        : "-";
+
     const ratioText = card.yellowRatios
       .map(ratio => ratio.toFixed(3))
       .join(" / ");
 
     tr.innerHTML = `
       <td>
-        <img class="debug-thumbnail" src="${preview}" alt="因子カード">
+        <img
+          class="debug-thumbnail"
+          src="${preview}"
+          alt="因子カード"
+        >
       </td>
+
       <td>
-        <img class="debug-star-thumbnail" src="${starPreview}" alt="星領域">
+        ${ocrPreviewHtml}
       </td>
+
       <td>${card.column}</td>
       <td>${card.row}</td>
+
       <td>
         <span class="factor-type factor-${card.factorType}">
           ${card.factorType}
         </span>
       </td>
+
       <td>${card.stars}</td>
+
+      <td>
+        ${card.ocrText || "-"}
+      </td>
+
+      <td>
+        ${confidenceText}
+      </td>
+
       <td>${ratioText}</td>
-      <td>${card.color.r}, ${card.color.g}, ${card.color.b}</td>
+
+      <td>
+        ${card.color.r},
+        ${card.color.g},
+        ${card.color.b}
+      </td>
+
       <td>${card.y}</td>
       <td>${card.height}</td>
     `;
@@ -1630,7 +1980,7 @@ function renderAnalysisDebug(
   logLines.push(`行間隔：${analysis.pitch ?? "-"}`);
   logLines.push("");
   logLines.push(
-    "画像\t列\tNo.\t種類\t星数\t星判定率\tRGB\tY\t高さ"
+    "画像\t列\tNo.\t種類\t星数\tOCR結果\t信頼度\t星判定率\tRGB\tY\t高さ"
   );
 
   allCards.forEach(card => {
@@ -1645,6 +1995,10 @@ function renderAnalysisDebug(
         card.row,
         card.factorType,
         card.stars,
+        card.ocrText || "",
+        card.ocrConfidence !== null
+          ? card.ocrConfidence.toFixed(1)
+          : "",
         ratioText,
         `${card.color.r}, ${card.color.g}, ${card.color.b}`,
         card.y,
@@ -1712,6 +2066,25 @@ document.getElementById("analyze-images").addEventListener("click", async () => 
     return member.images.length > 0;
   });
 
+  let ocrWorker = null;
+
+  try {
+    ocrWorker =
+      await createOcrWorker();
+  } catch (error) {
+    console.error(
+      "OCRの初期化に失敗しました",
+      error
+    );
+
+    document.getElementById(
+      "ocr-status"
+    ).textContent =
+      "OCRの初期化に失敗しました。";
+
+    return;
+  }
+
   for (const [, member] of activeMembers) {
     for (let i = 0; i < member.images.length; i++) {
       const imageData = member.images[i];
@@ -1726,10 +2099,19 @@ document.getElementById("analyze-images").addEventListener("click", async () => 
           imageData.file
         );
 
-        const analysis = analyzeFactorImage(
-          ctx,
-          width,
-          height
+        const analysis =
+          analyzeFactorImage(
+            ctx,
+            width,
+            height
+          );
+
+        await runOcrForWhiteCards(
+          ocrWorker,
+          canvas,
+          analysis,
+          member.label,
+          i
         );
 
         renderAnalysisDebug(
@@ -1738,6 +2120,7 @@ document.getElementById("analyze-images").addEventListener("click", async () => 
           canvas,
           analysis
         );
+
       } catch (error) {
         console.error(
           `${member.label} / 画像${i + 1} の解析に失敗しました`,
@@ -1752,6 +2135,15 @@ document.getElementById("analyze-images").addEventListener("click", async () => 
       }
     }
   }
+
+  if (ocrWorker) {
+    await ocrWorker.terminate();
+  }
+
+  document.getElementById(
+    "ocr-status"
+  ).textContent =
+    "解析が完了しました。";
 
   document.getElementById(
     "copy-debug-log"
