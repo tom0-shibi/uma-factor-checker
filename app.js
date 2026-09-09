@@ -1,3 +1,9 @@
+const APP_BUILD = "20260910-skill-match-01";
+
+console.info(
+  `[Uma Factor Checker] build: ${APP_BUILD}`
+);
+
 /* =========================================================
    アプリ内データ
    スキル要件と最大6人分の画像を保持する。
@@ -33,24 +39,19 @@ const ANALYSIS_CONFIG = {
     fallbackTopRatio: 0.18,
     bottomRatio: 0.97
   },
-
   columns: {
     left: {
       xRatio: 0.16,
       widthRatio: 0.33
     },
-
     right: {
       xRatio: 0.505,
       widthRatio: 0.33
     }
   },
-
   scanXPositions: [0.72, 0.82, 0.92],
-
   gapLuminanceThreshold: 239,
   minimumGapRatio: 0.003,
-
   minimumCardHeightRatio: 0.014,
   maximumCardHeightRatio: 0.055
 };
@@ -67,27 +68,19 @@ const STAR_CONFIG = {
     widthRatio: 0.36,
     heightRatio: 0.50
   },
-
   yellow: {
     minR: 180,
     minG: 120,
     maxB: 120,
     minRGDiffFromB: 45
   },
-
   minimumYellowRatio: 0.018
 };
 
 /* =========================================================
    OCR設定
-
-   直前の変更では文字領域を狭くしすぎたため、
-   「大阪杯」「左回り○」「先行ためらい」などの
-   下側が欠けてOCR精度が大幅に低下した。
-
-   今回は精度が良かった状態へ戻し、
-   カード上部68%を探索した後に、
-   実際の文字ピクセル位置からOCR範囲を自動取得する。
+   精度が比較的安定していた設定を維持する。
+   OCR画像生成部分は今回変更しない。
    ========================================================= */
 
 const OCR_CONFIG = {
@@ -97,7 +90,6 @@ const OCR_CONFIG = {
     widthRatio: 0.86,
     heightRatio: 0.68
   },
-
   scale: 4,
   paddingRatio: 0.12
 };
@@ -199,7 +191,6 @@ function renderSkillCards(rank) {
 
     card.appendChild(text);
     card.appendChild(deleteButton);
-
     container.appendChild(card);
   });
 }
@@ -247,6 +238,22 @@ document
   );
 
 /* =========================================================
+   スキル要件からOCR照合用辞書を作る処理
+   S/A/B/Cに入力されたスキルをまとめて重複除去する。
+   ========================================================= */
+
+function getRequirementSkillDictionary() {
+  return [
+    ...new Set([
+      ...requirements.S,
+      ...requirements.A,
+      ...requirements.B,
+      ...requirements.C
+    ])
+  ];
+}
+
+/* =========================================================
    画像登録画面で使用するDOMを取得する。
    ========================================================= */
 
@@ -281,9 +288,7 @@ function addImages(memberId, files) {
     members[memberId].images.push({
       id:
         `${Date.now()}-${Math.random()}`,
-
       file,
-
       url:
         URL.createObjectURL(file)
     });
@@ -645,13 +650,11 @@ function loadImageElement(file) {
 
       image.onload = () => {
         URL.revokeObjectURL(url);
-
         resolve(image);
       };
 
       image.onerror = error => {
         URL.revokeObjectURL(url);
-
         reject(error);
       };
 
@@ -778,7 +781,6 @@ function getAverageColor(
     r += data[i];
     g += data[i + 1];
     b += data[i + 2];
-
     count++;
   }
 
@@ -881,7 +883,6 @@ function detectFactorHeader(
   }
 
   const groups = [];
-
   let current =
     [matchingRows[0]];
 
@@ -925,7 +926,6 @@ function detectFactorHeader(
   return {
     top:
       target[0],
-
     bottom:
       target[
         target.length - 1
@@ -1026,7 +1026,6 @@ function detectCardsInColumn(
   ) {
     samples.push({
       y,
-
       luminance:
         getRowLuminance(
           ctx,
@@ -1039,7 +1038,6 @@ function detectCardsInColumn(
   }
 
   const gaps = [];
-
   let gapStart = null;
 
   samples.forEach(sample => {
@@ -1096,7 +1094,6 @@ function detectCardsInColumn(
 
   const boundaries = [
     factorAreaTop,
-
     ...gaps.map(
       gap =>
         (
@@ -1104,7 +1101,6 @@ function detectCardsInColumn(
           gap.bottom
         ) / 2
     ),
-
     factorAreaBottom
   ];
 
@@ -1153,25 +1149,20 @@ function detectCardsInColumn(
 
     cards.push({
       column: columnName,
-
       row:
         cards.length + 1,
-
       x:
         Math.round(
           columnX
         ),
-
       y:
         Math.round(
           top + padding
         ),
-
       width:
         Math.round(
           columnWidth
         ),
-
       height:
         Math.round(
           cardHeight -
@@ -1412,12 +1403,7 @@ function calculateRowPitch(cards) {
 
 /* =========================================================
    左右共通の因子行生成処理
-
-   最初の完全カードを基準にし、
-   以降は画像ごとに算出した一定ピッチでカードを生成する。
-
-   これによりスクロール途中画像でも、
-   各行のY位置が不規則にずれる問題を防ぐ。
+   最初の完全カードを基準に一定ピッチでカードを生成する。
    ========================================================= */
 
 function buildFactorRows(
@@ -1509,26 +1495,22 @@ function buildFactorRows(
     const leftCard = {
       column: "left",
       row: 1,
-
       x:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.left.xRatio
         ),
-
       y:
         Math.round(
           candidateY
         ),
-
       width:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.left.widthRatio
         ),
-
       height:
         Math.round(
           cardHeight
@@ -1538,26 +1520,22 @@ function buildFactorRows(
     const rightCard = {
       column: "right",
       row: 1,
-
       x:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.right.xRatio
         ),
-
       y:
         Math.round(
           candidateY
         ),
-
       width:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.right.widthRatio
         ),
-
       height:
         Math.round(
           cardHeight
@@ -1623,27 +1601,22 @@ function buildFactorRows(
 
     const leftCard = {
       column: "left",
-
       row:
         rowIndex + 1,
-
       x:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.left.xRatio
         ),
-
       y:
         Math.round(y),
-
       width:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.left.widthRatio
         ),
-
       height:
         Math.round(
           cardHeight
@@ -1652,27 +1625,22 @@ function buildFactorRows(
 
     const rightCard = {
       column: "right",
-
       row:
         rowIndex + 1,
-
       x:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.right.xRatio
         ),
-
       y:
         Math.round(y),
-
       width:
         Math.round(
           width *
           ANALYSIS_CONFIG
             .columns.right.widthRatio
         ),
-
       height:
         Math.round(
           cardHeight
@@ -1709,15 +1677,12 @@ function buildFactorRows(
     rows.push({
       row:
         rowIndex + 1,
-
       y:
         Math.round(y),
-
       leftCard:
         hasLeft
           ? leftCard
           : null,
-
       rightCard:
         hasRight
           ? rightCard
@@ -1734,9 +1699,7 @@ function buildFactorRows(
 
 /* =========================================================
    因子カード色判定処理
-
-   明確な青・赤・緑だけ判定し、
-   それ以外のカードは白因子候補とする。
+   明確な青・赤・緑だけ判定し、それ以外を白因子とする。
    ========================================================= */
 
 function classifyDetectedCard(
@@ -1784,7 +1747,6 @@ function classifyDetectedCard(
         ) /
         colors.length
       ),
-
     g:
       Math.round(
         colors.reduce(
@@ -1794,7 +1756,6 @@ function classifyDetectedCard(
         ) /
         colors.length
       ),
-
     b:
       Math.round(
         colors.reduce(
@@ -1857,7 +1818,6 @@ function getStarArea(card) {
         STAR_CONFIG
           .area.xRatio
       ),
-
     y:
       Math.round(
         card.y +
@@ -1865,14 +1825,12 @@ function getStarArea(card) {
         STAR_CONFIG
           .area.yRatio
       ),
-
     width:
       Math.round(
         card.width *
         STAR_CONFIG
           .area.widthRatio
       ),
-
     height:
       Math.round(
         card.height *
@@ -1895,20 +1853,16 @@ function isYellowStarPixel(
     r >=
       STAR_CONFIG
         .yellow.minR &&
-
     g >=
       STAR_CONFIG
         .yellow.minG &&
-
     b <=
       STAR_CONFIG
         .yellow.maxB &&
-
     r - b >=
       STAR_CONFIG
         .yellow
         .minRGDiffFromB &&
-
     g - b >=
       STAR_CONFIG
         .yellow
@@ -2007,7 +1961,6 @@ function detectStarCount(
       starStates
         .filter(Boolean)
         .length,
-
     starStates,
     yellowRatios,
     area
@@ -2016,13 +1969,8 @@ function detectStarCount(
 
 /* =========================================================
    因子一覧画像全体解析処理
-
-   ・カード位置
-   ・色
-   ・星数
-   を取得する。
-
-   OCRはこの処理とは分離して後から実施する。
+   カード位置・色・星数を取得する。
+   OCRはこの処理とは分離して実行する。
    ========================================================= */
 
 function analyzeFactorImage(
@@ -2162,6 +2110,11 @@ function analyzeFactorImage(
     card.ocrRawText = "";
     card.ocrConfidence = null;
     card.ocrPreview = null;
+
+    card.normalizedOcr = "";
+    card.matchCandidate = null;
+    card.matchSimilarity = 0;
+    card.matchStatus = null;
   });
 
   return {
@@ -2177,12 +2130,7 @@ function analyzeFactorImage(
 
 /* =========================================================
    OCR対象となるスキル文字色判定処理
-
-   白因子カードのスキル名は濃い茶色なので、
-   薄い灰色背景などを除外する。
-
-   星なども一部茶色系を含むが、
-   OCR探索範囲と文字位置検出によって影響を抑える。
+   白因子カードの濃い茶色文字を検出する。
    ========================================================= */
 
 function isSkillTextPixel(
@@ -2213,15 +2161,7 @@ function isSkillTextPixel(
 
 /* =========================================================
    カード内の実際の文字領域を自動検出する処理
-
-   重要：
-   直前の修正でカード上部50%までに制限した結果、
-   日本語文字の下端が欠けた。
-
-   今回は精度が良かった上部68%探索へ戻し、
-   実際の文字色ピクセルの上下左右からOCR範囲を算出する。
-
-   最終的な高さ上限も設けない。
+   精度が安定していた上部68%探索方式を維持する。
    ========================================================= */
 
 function detectSkillTextBounds(
@@ -2426,12 +2366,10 @@ function detectSkillTextBounds(
       Math.round(
         resultX
       ),
-
     y:
       Math.round(
         resultY
       ),
-
     width:
       Math.max(
         1,
@@ -2440,7 +2378,6 @@ function detectSkillTextBounds(
           resultX
         )
       ),
-
     height:
       Math.max(
         1,
@@ -2454,12 +2391,7 @@ function detectSkillTextBounds(
 
 /* =========================================================
    OCR用画像生成処理
-
-   文字領域だけを4倍拡大する。
-
-   二値化・強いコントラスト補正は行わない。
-   元のアンチエイリアスを維持することで、
-   日本語の細い線や複雑な漢字をなるべく保存する。
+   文字領域だけを4倍拡大し、元の輪郭を維持する。
    ========================================================= */
 
 function createOcrCanvas(
@@ -2514,12 +2446,10 @@ function createOcrCanvas(
 
   ctx.drawImage(
     sourceCanvas,
-
     textBounds.x,
     textBounds.y,
     textBounds.width,
     textBounds.height,
-
     0,
     0,
     canvas.width,
@@ -2531,9 +2461,7 @@ function createOcrCanvas(
 
 /* =========================================================
    OCR結果の基本整形処理
-   改行・タブ・空白だけを除去する。
-
-   OCR精度確認のため、ここでは勝手な文字補正を行わない。
+   改行・タブ・空白のみ除去する。
    ========================================================= */
 
 function normalizeOcrText(text) {
@@ -2554,10 +2482,8 @@ function normalizeOcrText(text) {
 }
 
 /* =========================================================
-   将来のスキル照合用正規化処理
-
-   現時点では判定にはまだ使用しないが、
-   「〇」「O」「○」や末尾ノイズを吸収するために用意する。
+   スキル照合用文字列正規化処理
+   OCRで発生しやすい○表記や末尾記号の揺れを吸収する。
    ========================================================= */
 
 function normalizeSkillText(text) {
@@ -2583,10 +2509,225 @@ function normalizeSkillText(text) {
 }
 
 /* =========================================================
-   Tesseract.js OCR worker生成処理
+   Levenshtein距離を計算する処理
+   挿入・削除・置換の最小回数を求める。
+   ========================================================= */
 
-   日本語＋英語を読み込み、
-   Dreams・BC・NHK等の英数字混在にも対応する。
+function calculateLevenshteinDistance(
+  source,
+  target
+) {
+  const sourceLength =
+    source.length;
+
+  const targetLength =
+    target.length;
+
+  const matrix =
+    Array.from(
+      {
+        length:
+          sourceLength + 1
+      },
+      () =>
+        Array(
+          targetLength + 1
+        ).fill(0)
+    );
+
+  for (
+    let i = 0;
+    i <= sourceLength;
+    i++
+  ) {
+    matrix[i][0] = i;
+  }
+
+  for (
+    let j = 0;
+    j <= targetLength;
+    j++
+  ) {
+    matrix[0][j] = j;
+  }
+
+  for (
+    let i = 1;
+    i <= sourceLength;
+    i++
+  ) {
+    for (
+      let j = 1;
+      j <= targetLength;
+      j++
+    ) {
+      const cost =
+        source[i - 1] ===
+        target[j - 1]
+          ? 0
+          : 1;
+
+      matrix[i][j] =
+        Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] +
+            cost
+        );
+    }
+  }
+
+  return matrix[
+    sourceLength
+  ][targetLength];
+}
+
+/* =========================================================
+   2つの文字列の類似度を0～1で計算する処理
+   1.000なら完全一致。
+   ========================================================= */
+
+function calculateSimilarity(
+  source,
+  target
+) {
+  if (
+    source === target
+  ) {
+    return 1;
+  }
+
+  const maxLength =
+    Math.max(
+      source.length,
+      target.length
+    );
+
+  if (
+    maxLength === 0
+  ) {
+    return 1;
+  }
+
+  const distance =
+    calculateLevenshteinDistance(
+      source,
+      target
+    );
+
+  return (
+    1 -
+    distance /
+    maxLength
+  );
+}
+
+/* =========================================================
+   OCR結果に最も近いスキル要件候補を探す処理
+   ========================================================= */
+
+function findBestSkillMatch(
+  ocrText,
+  dictionary
+) {
+  const normalizedOcr =
+    normalizeSkillText(
+      ocrText
+    );
+
+  if (
+    !normalizedOcr ||
+    dictionary.length === 0
+  ) {
+    return {
+      candidate: null,
+      similarity: 0,
+      normalizedOcr
+    };
+  }
+
+  let bestCandidate = null;
+  let bestSimilarity = 0;
+
+  dictionary.forEach(skill => {
+    const normalizedSkill =
+      normalizeSkillText(
+        skill
+      );
+
+    const similarity =
+      calculateSimilarity(
+        normalizedOcr,
+        normalizedSkill
+      );
+
+    if (
+      similarity >
+      bestSimilarity
+    ) {
+      bestCandidate =
+        skill;
+
+      bestSimilarity =
+        similarity;
+    }
+  });
+
+  return {
+    candidate:
+      bestCandidate,
+    similarity:
+      bestSimilarity,
+    normalizedOcr
+  };
+}
+
+/* =========================================================
+   OCR結果と候補の一致状態を判定する処理
+
+   exact:
+     正規化後に完全一致。
+
+   similar:
+     類似度0.60以上。
+
+   unmatched:
+     自動補正には不十分。
+   ========================================================= */
+
+function determineMatchStatus(
+  normalizedOcr,
+  candidate,
+  similarity
+) {
+  if (!candidate) {
+    return "unmatched";
+  }
+
+  const normalizedCandidate =
+    normalizeSkillText(
+      candidate
+    );
+
+  if (
+    normalizedOcr ===
+    normalizedCandidate
+  ) {
+    return "exact";
+  }
+
+  if (
+    similarity >= 0.60
+  ) {
+    return "similar";
+  }
+
+  return "unmatched";
+}
+
+/* =========================================================
+   Tesseract.js OCR worker生成処理
+   日本語優先で認識する。
    ========================================================= */
 
 async function createOcrWorker() {
@@ -2667,21 +2808,17 @@ async function recognizeSkillName(
       normalizeOcrText(
         rawText
       ),
-
     ocrRawText:
       rawText,
-
     ocrConfidence:
       result.data
         .confidence ?? 0,
-
     ocrCanvas
   };
 }
 
 /* =========================================================
-   白因子だけOCRする処理
-   青・赤・緑因子にはOCRを実行しない。
+   白因子だけOCRし、スキル要件との類似照合も実行する処理
    ========================================================= */
 
 async function runOcrForWhiteCards(
@@ -2695,6 +2832,9 @@ async function runOcrForWhiteCards(
     document.getElementById(
       "ocr-status"
     );
+
+  const dictionary =
+    getRequirementSkillDictionary();
 
   const whiteCards = [
     ...analysis.leftCards,
@@ -2739,6 +2879,28 @@ async function runOcrForWhiteCards(
               "image/png"
             )
         : null;
+
+    const matchResult =
+      findBestSkillMatch(
+        card.ocrText,
+        dictionary
+      );
+
+    card.normalizedOcr =
+      matchResult.normalizedOcr;
+
+    card.matchCandidate =
+      matchResult.candidate;
+
+    card.matchSimilarity =
+      matchResult.similarity;
+
+    card.matchStatus =
+      determineMatchStatus(
+        matchResult.normalizedOcr,
+        matchResult.candidate,
+        matchResult.similarity
+      );
   }
 }
 
@@ -2766,12 +2928,10 @@ function createCardThumbnail(
 
   cropCtx.drawImage(
     canvas,
-
     card.x,
     card.y,
     card.width,
     card.height,
-
     0,
     0,
     card.width,
@@ -2785,51 +2945,8 @@ function createCardThumbnail(
 }
 
 /* =========================================================
-   星領域プレビュー生成処理
-   ========================================================= */
-
-function createStarThumbnail(
-  canvas,
-  starArea
-) {
-  const cropCanvas =
-    document.createElement(
-      "canvas"
-    );
-
-  cropCanvas.width =
-    starArea.width;
-
-  cropCanvas.height =
-    starArea.height;
-
-  const cropCtx =
-    cropCanvas.getContext("2d");
-
-  cropCtx.drawImage(
-    canvas,
-
-    starArea.x,
-    starArea.y,
-    starArea.width,
-    starArea.height,
-
-    0,
-    0,
-    starArea.width,
-    starArea.height
-  );
-
-  return cropCanvas.toDataURL(
-    "image/png"
-  );
-}
-
-/* =========================================================
    解析デバッグ結果表示処理
-
-   カード・OCR画像・星数・OCR結果等を表示し、
-   同じ内容をコピー用ログにも保存する。
+   OCR結果・候補・一致状態・類似度も表示する。
    ========================================================= */
 
 function renderAnalysisDebug(
@@ -2894,6 +3011,9 @@ function renderAnalysisDebug(
         <th>種類</th>
         <th>星数</th>
         <th>OCR結果</th>
+        <th>候補</th>
+        <th>一致</th>
+        <th>類似度</th>
         <th>信頼度</th>
         <th>星判定率</th>
         <th>RGB</th>
@@ -2949,6 +3069,39 @@ function renderAnalysisDebug(
         )
         .join("/");
 
+    const candidateText =
+      card.matchCandidate ||
+      "-";
+
+    const similarityText =
+      card.factorType ===
+      "white"
+        ? card.matchSimilarity
+            .toFixed(3)
+        : "-";
+
+    let matchStatusText = "-";
+
+    if (
+      card.matchStatus ===
+      "exact"
+    ) {
+      matchStatusText =
+        "完全一致";
+    } else if (
+      card.matchStatus ===
+      "similar"
+    ) {
+      matchStatusText =
+        "類似一致";
+    } else if (
+      card.matchStatus ===
+      "unmatched"
+    ) {
+      matchStatusText =
+        "未確定";
+    }
+
     tr.innerHTML = `
       <td>
         <img
@@ -2975,6 +3128,18 @@ function renderAnalysisDebug(
 
       <td>
         ${card.ocrText || "-"}
+      </td>
+
+      <td>
+        ${candidateText}
+      </td>
+
+      <td>
+        ${matchStatusText}
+      </td>
+
+      <td>
+        ${similarityText}
       </td>
 
       <td>
@@ -3008,6 +3173,10 @@ function renderAnalysisDebug(
   );
 
   logLines.push(
+    `BUILD：${APP_BUILD}`
+  );
+
+  logLines.push(
     `左列：${analysis.leftCards.length}件`
   );
 
@@ -3026,7 +3195,7 @@ function renderAnalysisDebug(
   logLines.push("");
 
   logLines.push(
-    "画像\t列\tNo.\t種類\t星数\tOCR結果\t信頼度\t星判定率\tRGB\tY\t高さ"
+    "画像\t列\tNo.\t種類\t星数\tOCR結果\t候補\t一致\t類似度\t信頼度\t星判定率\tRGB\tY\t高さ"
   );
 
   allCards.forEach(card => {
@@ -3038,6 +3207,31 @@ function renderAnalysisDebug(
         )
         .join("/");
 
+    const candidateText =
+      card.matchCandidate || "";
+
+    let matchStatusText = "";
+
+    if (
+      card.matchStatus ===
+      "exact"
+    ) {
+      matchStatusText =
+        "完全一致";
+    } else if (
+      card.matchStatus ===
+      "similar"
+    ) {
+      matchStatusText =
+        "類似一致";
+    } else if (
+      card.matchStatus ===
+      "unmatched"
+    ) {
+      matchStatusText =
+        "未確定";
+    }
+
     logLines.push(
       [
         "因子カード",
@@ -3046,6 +3240,11 @@ function renderAnalysisDebug(
         card.factorType,
         card.stars,
         card.ocrText || "",
+        candidateText,
+        matchStatusText,
+        card.factorType === "white"
+          ? card.matchSimilarity.toFixed(3)
+          : "",
         card.ocrConfidence !== null
           ? card.ocrConfidence.toFixed(1)
           : "",
@@ -3065,7 +3264,7 @@ function renderAnalysisDebug(
 
 /* =========================================================
    画像単位の解析エラー表示処理
-   1枚でエラーが発生しても他の画像解析を続行する。
+   1枚でエラーが発生しても他画像の解析は継続する。
    ========================================================= */
 
 function renderAnalysisError(
@@ -3108,6 +3307,10 @@ function renderAnalysisError(
   );
 
   debugLogLines.push(
+    `BUILD：${APP_BUILD}`
+  );
+
+  debugLogLines.push(
     `解析エラー：${error.message}`
   );
 
@@ -3116,7 +3319,7 @@ function renderAnalysisError(
 
 /* =========================================================
    デバッグログコピー処理
-   表示された解析結果をワンクリックでクリップボードへコピーする。
+   表示された解析結果をクリップボードへコピーする。
    ========================================================= */
 
 async function copyDebugLog() {
@@ -3168,12 +3371,12 @@ document
 /* =========================================================
    画像解析ボタン処理
 
-   1. OCR workerを1回だけ生成
-   2. 登録画像を順番に解析
-   3. カード・色・星数を取得
-   4. 白因子のみOCR
-   5. デバッグ結果表示
-   6. worker終了
+   1. OCR worker生成
+   2. カード検出
+   3. 色・星判定
+   4. 白因子OCR
+   5. スキル要件との類似照合
+   6. デバッグ表示
    ========================================================= */
 
 document
