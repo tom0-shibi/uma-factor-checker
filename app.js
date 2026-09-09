@@ -1,7 +1,6 @@
 /* =========================================================
-   アプリ内で使用するデータ
-   - requirements : S/A/B/Cごとのスキル要件
-   - members      : 最大6人分の画像
+   アプリ内データ
+   スキル要件と最大6人分の画像を保持する。
    ========================================================= */
 
 const requirements = {
@@ -22,11 +21,9 @@ const members = {
 
 let pasteTargetMember = "parentA";
 
-
 /* =========================================================
    画像解析設定
-   因子カードの位置・サイズを固定せず、画像サイズに対する割合と
-   カード間の明暗差を利用して動的に検出する。
+   固定ピクセルではなく画像サイズに対する割合を使用する。
    ========================================================= */
 
 const ANALYSIS_CONFIG = {
@@ -34,7 +31,6 @@ const ANALYSIS_CONFIG = {
     fallbackTopRatio: 0.18,
     bottomRatio: 0.97
   },
-
   columns: {
     left: {
       xRatio: 0.16,
@@ -45,24 +41,16 @@ const ANALYSIS_CONFIG = {
       widthRatio: 0.33
     }
   },
-
-  // カード右側の「文字や星が少ない位置」を見る
   scanXPositions: [0.72, 0.82, 0.92],
-
-  // カードとカードの間は明るいため、明るさを使って区切る
   gapLuminanceThreshold: 239,
-
-  // 最低何px分「明るい隙間」が続いたらカード境界とみなすか
   minimumGapRatio: 0.003,
-
-  // 正常なカード高さの許容範囲
   minimumCardHeightRatio: 0.014,
   maximumCardHeightRatio: 0.045
 };
 
 /* =========================================================
    タブ切り替え処理
-   「スキル要件」「画像登録」「判定結果」の表示を切り替える。
+   3つのメイン画面を切り替える。
    ========================================================= */
 
 const tabButtons = document.querySelectorAll(".tab-button");
@@ -80,10 +68,9 @@ tabButtons.forEach(button => {
   });
 });
 
-
 /* =========================================================
-   スキル入力文字列の整形処理
-   1行1スキルとして配列化し、空行と同一ランク内の重複を除去する。
+   スキル入力整形処理
+   1行1スキルとして配列化し、空行と重複を除去する。
    ========================================================= */
 
 function parseSkillInput(value) {
@@ -97,11 +84,9 @@ function parseSkillInput(value) {
   ];
 }
 
-
 /* =========================================================
    スキルカード表示処理
-   入力されたスキルをランクごとのカードとして表示する。
-   カード右側の×ボタンで個別削除できる。
+   入力済みスキルをランクごとのカードとして表示する。
    ========================================================= */
 
 function renderSkillCards(rank) {
@@ -130,10 +115,9 @@ function renderSkillCards(rank) {
   });
 }
 
-
 /* =========================================================
    スキル要件反映処理
-   S/A/B/Cのテキスト欄を読み込み、内部データへ反映してカード化する。
+   S/A/B/Cの入力欄を内部データへ反映する。
    ========================================================= */
 
 document.getElementById("apply-requirements").addEventListener("click", () => {
@@ -150,7 +134,6 @@ document.getElementById("apply-requirements").addEventListener("click", () => {
   console.log("現在のスキル要件:", requirements);
 });
 
-
 /* =========================================================
    画像登録画面で使用するDOMを取得する。
    ========================================================= */
@@ -159,11 +142,9 @@ const fileInputs = document.querySelectorAll(".image-file-input");
 const dropZones = document.querySelectorAll(".image-drop-zone");
 const memberPanels = document.querySelectorAll(".member-panel");
 
-
 /* =========================================================
    画像追加処理
-   ファイル選択・ドロップ・クリップボードから渡された画像を
-   指定人物のimages配列へ追加する。
+   ファイル選択・ドロップ・貼り付け画像を指定人物へ追加する。
    ========================================================= */
 
 function addImages(memberId, files) {
@@ -181,10 +162,9 @@ function addImages(memberId, files) {
   updateImageSummary();
 }
 
-
 /* =========================================================
    画像プレビュー表示処理
-   各人物に登録された画像をサムネイルとして表示する。
+   登録画像をサムネイルとして表示する。
    ========================================================= */
 
 function renderImagePreviews(memberId) {
@@ -220,10 +200,9 @@ function renderImagePreviews(memberId) {
   });
 }
 
-
 /* =========================================================
    画像削除処理
-   指定画像を配列から削除し、ObjectURLも解放する。
+   指定画像を削除し、ObjectURLも解放する。
    ========================================================= */
 
 function removeImage(memberId, imageId) {
@@ -239,23 +218,22 @@ function removeImage(memberId, imageId) {
   updateImageSummary();
 }
 
-
 /* =========================================================
-   登録画像数と解析ボタン状態の更新処理
-   6枠すべてを埋める必要はなく、画像が1枚以上あれば解析可能にする。
+   登録画像数・解析ボタン更新処理
+   画像が1枚以上あれば解析可能にする。
    ========================================================= */
 
 function updateImageSummary() {
-  const total = Object.values(members).reduce((sum, member) => sum + member.images.length, 0);
+  const total = Object.values(members).reduce((sum, member) => {
+    return sum + member.images.length;
+  }, 0);
 
   document.getElementById("total-image-count").textContent = total;
   document.getElementById("analyze-images").disabled = total === 0;
 }
 
-
 /* =========================================================
    ファイル選択による画像追加処理
-   multiple属性により複数画像を一括登録できる。
    ========================================================= */
 
 fileInputs.forEach(input => {
@@ -265,11 +243,9 @@ fileInputs.forEach(input => {
   });
 });
 
-
 /* =========================================================
    ドロップエリアクリック処理
-   ドロップエリアをクリックすると貼り付け先を変更し、
-   同時にファイル選択画面を開く。
+   貼り付け先を選択し、ファイル選択画面を開く。
    ========================================================= */
 
 dropZones.forEach(zone => {
@@ -286,10 +262,8 @@ dropZones.forEach(zone => {
   });
 });
 
-
 /* =========================================================
    ドラッグ＆ドロップ処理
-   各人物枠へ画像ファイルを直接ドロップして登録できる。
    ========================================================= */
 
 dropZones.forEach(zone => {
@@ -313,10 +287,8 @@ dropZones.forEach(zone => {
   });
 });
 
-
 /* =========================================================
-   クリップボード貼り付け先の変更処理
-   人物枠全体のどこをクリックしても、その人物を貼り付け先にできる。
+   クリップボード貼り付け先変更処理
    ========================================================= */
 
 function setPasteTarget(memberId) {
@@ -334,15 +306,12 @@ function setPasteTarget(memberId) {
     targetPanel.classList.add("active-paste-target");
   }
 
-  document.getElementById("paste-target-label").textContent =
-    members[memberId].label;
+  document.getElementById("paste-target-label").textContent = members[memberId].label;
 }
-
 
 /* =========================================================
    人物枠全体の選択処理
-   ドロップエリア以外の余白やプレビュー部分をクリックしても
-   「選択 → Ctrl+V / Cmd+V」で画像を貼り付けられる。
+   枠のどこをクリックしても貼り付け先にできる。
    ========================================================= */
 
 memberPanels.forEach(panel => {
@@ -364,10 +333,9 @@ memberPanels.forEach(panel => {
   });
 });
 
-
 /* =========================================================
    クリップボード画像貼り付け処理
-   選択中の人物枠へCtrl+V / Cmd+Vでスクリーンショットを追加する。
+   Ctrl+V / Cmd+Vで選択中の人物へ画像を追加する。
    ========================================================= */
 
 document.addEventListener("paste", event => {
@@ -397,10 +365,9 @@ document.addEventListener("paste", event => {
   addImages(pasteTargetMember, files);
 });
 
-
 /* =========================================================
-   FileオブジェクトをImage要素として読み込む処理
-   解析時に画像の元サイズをそのまま取得するために使用する。
+   FileをImage要素へ読み込む処理
+   PNG・JPEG・WebPなどブラウザ対応画像を読み込む。
    ========================================================= */
 
 function loadImageElement(file) {
@@ -422,10 +389,9 @@ function loadImageElement(file) {
   });
 }
 
-
 /* =========================================================
-   元画像を解析Canvasへ描画する処理
-   縦横比や解像度を変更せず、その画像本来のサイズで解析する。
+   元画像をCanvasへ描画する処理
+   解像度や縦横比を変更せず解析する。
    ========================================================= */
 
 async function drawOriginalImage(file) {
@@ -450,33 +416,16 @@ async function drawOriginalImage(file) {
   };
 }
 
-
 /* =========================================================
-   RGB値から明るさを計算する処理
-   因子カードと背景を区別するためのスコア計算に使用する。
+   RGBから明るさを計算する処理
    ========================================================= */
 
 function getLuminance(r, g, b) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-
-/* =========================================================
-   RGB値から簡易的な彩度を計算する処理
-   青・赤・緑など色付き因子をカードとして検出しやすくする。
-   ========================================================= */
-
-function getSaturation(r, g, b) {
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-
-  return (max - min) / 255;
-}
-
-
 /* =========================================================
    指定範囲の平均RGBを取得する処理
-   1ピクセルではなく複数ピクセルを見ることでノイズを減らす。
    ========================================================= */
 
 function getAverageColor(ctx, x, y, width, height) {
@@ -511,28 +460,18 @@ function getAverageColor(ctx, x, y, width, height) {
   };
 }
 
-
 /* =========================================================
-   「所持因子」の緑色ヘッダーを検出する処理
-
-   画面上には
-   ・上部の「因子一覧」ヘッダー
-   ・「所持因子」ヘッダー
-   ・緑因子カード
-   が存在する。
-
-   緑因子カードは左右どちらか片方にしか存在しないため、
-   画面中央付近まで横長に続く緑色だけを「所持因子」候補とする。
+   「所持因子」の緑色ヘッダー検出処理
+   横幅の広い緑帯だけを対象とする。
    ========================================================= */
 
 function detectFactorHeader(ctx, width, height) {
   const startY = Math.floor(height * 0.12);
   const endY = Math.floor(height * 0.35);
-
   const startX = Math.floor(width * 0.14);
   const endX = Math.floor(width * 0.86);
-
   const stepX = Math.max(2, Math.floor(width / 300));
+
   const matchingRows = [];
 
   for (let y = startY; y < endY; y += 2) {
@@ -558,10 +497,6 @@ function detectFactorHeader(ctx, width, height) {
       total++;
     }
 
-    /*
-      所持因子ヘッダーは横幅の大半が緑。
-      緑因子カードは片列だけなので、割合が大きくならない。
-    */
     if (greenCount / total > 0.55) {
       matchingRows.push(y);
     }
@@ -591,10 +526,6 @@ function detectFactorHeader(ctx, width, height) {
     return null;
   }
 
-  /*
-    探索範囲を画面中央より下に限定しているので、
-    通常はここに「所持因子」だけが残る。
-  */
   const target = validGroups[0];
 
   return {
@@ -603,19 +534,13 @@ function detectFactorHeader(ctx, width, height) {
   };
 }
 
-
 /* =========================================================
-   指定Y座標におけるカード右側の平均明るさを取得する処理
-
-   カード内部は灰色・青・赤・緑などで少し暗く、
-   カードとカードの隙間は白に近く明るい。
-
-   複数X座標を平均することで、文字・星・装飾の影響を減らす。
+   指定Y座標のカード右側平均明るさ取得処理
+   カード間の明るい隙間を探すために使用する。
    ========================================================= */
 
 function getRowLuminance(ctx, columnX, columnWidth, y, imageWidth) {
   const patchSize = Math.max(2, Math.floor(imageWidth * 0.003));
-
   let total = 0;
 
   ANALYSIS_CONFIG.scanXPositions.forEach(position => {
@@ -627,25 +552,15 @@ function getRowLuminance(ctx, columnX, columnWidth, y, imageWidth) {
       patchSize
     );
 
-    total += getLuminance(
-      color.r,
-      color.g,
-      color.b
-    );
+    total += getLuminance(color.r, color.g, color.b);
   });
 
   return total / ANALYSIS_CONFIG.scanXPositions.length;
 }
 
-
 /* =========================================================
-   1列分の因子カードを動的検出する処理
-
-   因子カードそのものではなく、
-   「カード間の明るい隙間」を先に検出する。
-
-   隙間と隙間の間を1枚のカードとして扱うため、
-   行数が18・22・それ以上でも固定値なしで対応できる。
+   1列分の因子カード候補検出処理
+   カード間の明るい隙間を基準にカード領域を分割する。
    ========================================================= */
 
 function detectCardsInColumn(
@@ -658,25 +573,17 @@ function detectCardsInColumn(
 ) {
   const column = ANALYSIS_CONFIG.columns[columnName];
 
-  const columnX =
-    width * column.xRatio;
+  const columnX = width * column.xRatio;
+  const columnWidth = width * column.widthRatio;
 
-  const columnWidth =
-    width * column.widthRatio;
-
-  const minimumGapHeight =
-    Math.max(
-      2,
-      height * ANALYSIS_CONFIG.minimumGapRatio
-    );
+  const minimumGapHeight = Math.max(
+    2,
+    height * ANALYSIS_CONFIG.minimumGapRatio
+  );
 
   const samples = [];
 
-  for (
-    let y = factorAreaTop;
-    y < factorAreaBottom;
-    y += 2
-  ) {
+  for (let y = factorAreaTop; y < factorAreaBottom; y += 2) {
     samples.push({
       y,
       luminance: getRowLuminance(
@@ -689,24 +596,19 @@ function detectCardsInColumn(
     });
   }
 
-  /*
-    明るい領域＝カード間の隙間を抽出する。
-  */
   const gaps = [];
   let gapStart = null;
 
   samples.forEach(sample => {
     const isGap =
-      sample.luminance >=
-      ANALYSIS_CONFIG.gapLuminanceThreshold;
+      sample.luminance >= ANALYSIS_CONFIG.gapLuminanceThreshold;
 
     if (isGap && gapStart === null) {
       gapStart = sample.y;
     }
 
     if (!isGap && gapStart !== null) {
-      const gapHeight =
-        sample.y - gapStart;
+      const gapHeight = sample.y - gapStart;
 
       if (gapHeight >= minimumGapHeight) {
         gaps.push({
@@ -720,8 +622,7 @@ function detectCardsInColumn(
   });
 
   if (gapStart !== null) {
-    const gapHeight =
-      factorAreaBottom - gapStart;
+    const gapHeight = factorAreaBottom - gapStart;
 
     if (gapHeight >= minimumGapHeight) {
       gaps.push({
@@ -731,40 +632,24 @@ function detectCardsInColumn(
     }
   }
 
-  /*
-    因子領域の開始点・終了点も仮想的な境界として追加する。
-  */
   const boundaries = [
     factorAreaTop,
-    ...gaps.map(
-      gap => (gap.top + gap.bottom) / 2
-    ),
+    ...gaps.map(gap => (gap.top + gap.bottom) / 2),
     factorAreaBottom
   ];
 
   const minimumCardHeight =
-    height *
-    ANALYSIS_CONFIG.minimumCardHeightRatio;
+    height * ANALYSIS_CONFIG.minimumCardHeightRatio;
 
   const maximumCardHeight =
-    height *
-    ANALYSIS_CONFIG.maximumCardHeightRatio;
+    height * ANALYSIS_CONFIG.maximumCardHeightRatio;
 
   const cards = [];
 
-  for (
-    let i = 0;
-    i < boundaries.length - 1;
-    i++
-  ) {
-    const top =
-      boundaries[i];
-
-    const bottom =
-      boundaries[i + 1];
-
-    const cardHeight =
-      bottom - top;
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const top = boundaries[i];
+    const bottom = boundaries[i + 1];
+    const cardHeight = bottom - top;
 
     if (
       cardHeight < minimumCardHeight ||
@@ -773,54 +658,37 @@ function detectCardsInColumn(
       continue;
     }
 
-    /*
-      境界線そのものを含めないよう、
-      上下を少しだけ内側へ寄せる。
-    */
-    const padding =
-      Math.max(
-        1,
-        Math.round(height * 0.0015)
-      );
+    const padding = Math.max(
+      1,
+      Math.round(height * 0.0015)
+    );
 
     cards.push({
       column: columnName,
       row: cards.length + 1,
-
       x: Math.round(columnX),
-
-      y: Math.round(
-        top + padding
-      ),
-
-      width: Math.round(
-        columnWidth
-      ),
-
-      height: Math.round(
-        cardHeight -
-        padding * 2
-      )
+      y: Math.round(top + padding),
+      width: Math.round(columnWidth),
+      height: Math.round(cardHeight - padding * 2)
     });
   }
 
   return cards;
 }
 
-
 /* =========================================================
-   因子カード左端の丸アイコンが存在するか確認する処理
-
-   通常の青白い因子アイコンだけでなく、
-   緑因子に使われる黄色系アイコンにも対応する。
-
-   「閉じる」ボタンなどの白背景は除外できるよう、
-   単なる明るさではなく青系・黄系の色差を確認する。
+   因子カード左端の丸アイコン検出処理
+   PNGだけでなくJPEG圧縮による色変化も考慮する。
    ========================================================= */
 
 function hasFactorIcon(ctx, card) {
-  const x = Math.round(card.x + card.width * 0.015);
-  const y = Math.round(card.y + card.height * 0.12);
+  const x = Math.round(
+    card.x + card.width * 0.015
+  );
+
+  const y = Math.round(
+    card.y + card.height * 0.12
+  );
 
   const width = Math.max(
     8,
@@ -847,19 +715,17 @@ function hasFactorIcon(ctx, card) {
     const g = data[i + 1];
     const b = data[i + 2];
 
-    // 通常の青～水色系アイコン
     const isBlueIcon =
-      b - r > 8 &&
-      b - g > 4 &&
-      b > 150 &&
-      r < 240;
+      b >= r &&
+      b >= g &&
+      b > 135 &&
+      r < 245;
 
-    // 緑因子で使用される黄～金色系アイコン
     const isGoldIcon =
-      r > 180 &&
-      g > 120 &&
-      r - g > 15 &&
-      g - b > 25;
+      r > 165 &&
+      g > 105 &&
+      r > b + 25 &&
+      g > b + 15;
 
     if (isBlueIcon || isGoldIcon) {
       iconPixels++;
@@ -868,19 +734,13 @@ function hasFactorIcon(ctx, card) {
     totalPixels++;
   }
 
-  const ratio =
-    iconPixels / totalPixels;
+  const ratio = iconPixels / totalPixels;
 
-  return ratio > 0.12;
+  return ratio > 0.07;
 }
 
-
 /* =========================================================
-   左右列で検出したカード候補から、
-   因子カード共通の縦方向ピッチを算出する処理。
-
-   同じ行の左右カードはほぼ同じY座標にあるため、
-   Y座標を統合し、カード間隔の中央値を求める。
+   因子カード候補から共通行間隔を計算する処理
    ========================================================= */
 
 function calculateRowPitch(cards) {
@@ -895,13 +755,8 @@ function calculateRowPitch(cards) {
   const differences = [];
 
   for (let i = 1; i < yValues.length; i++) {
-    const diff =
-      yValues[i] - yValues[i - 1];
+    const diff = yValues[i] - yValues[i - 1];
 
-    /*
-      左右同一行の数px差や、
-      大きく飛んだ誤検出は除外する。
-    */
     if (diff >= 40 && diff <= 120) {
       differences.push(diff);
     }
@@ -918,59 +773,9 @@ function calculateRowPitch(cards) {
   ];
 }
 
-
 /* =========================================================
-   左右列で検出したカード候補から、
-   因子カード共通の縦方向ピッチを算出する処理。
-
-   同じ行の左右カードはほぼ同じY座標にあるため、
-   Y座標を統合し、カード間隔の中央値を求める。
-   ========================================================= */
-
-function calculateRowPitch(cards) {
-  const yValues = [
-    ...new Set(
-      cards
-        .map(card => card.y)
-        .sort((a, b) => a - b)
-    )
-  ];
-
-  const differences = [];
-
-  for (let i = 1; i < yValues.length; i++) {
-    const diff =
-      yValues[i] - yValues[i - 1];
-
-    /*
-      左右同一行の数px差や、
-      大きく飛んだ誤検出は除外する。
-    */
-    if (diff >= 40 && diff <= 120) {
-      differences.push(diff);
-    }
-  }
-
-  if (differences.length === 0) {
-    return null;
-  }
-
-  differences.sort((a, b) => a - b);
-
-  return differences[
-    Math.floor(differences.length / 2)
-  ];
-}
-
-
-/* =========================================================
-   因子一覧の行位置を生成する処理
-
-   最初のカード位置とカード間隔から、
-   「次の行」を順番に確認する。
-
-   左右どちらにも因子アイコンが存在しない行が出たら終了するため、
-   因子一覧より下の「閉じる」ボタンまで誤検出しない。
+   左右共通の因子行を生成する処理
+   左右どちらにもカードがない行まで来たら終了する。
    ========================================================= */
 
 function buildFactorRows(
@@ -981,56 +786,49 @@ function buildFactorRows(
   factorAreaBottom
 ) {
   if (initialCards.length === 0) {
-    return [];
+    return {
+      pitch: null,
+      cardHeight: null,
+      rows: []
+    };
   }
 
-  const pitch =
-    calculateRowPitch(initialCards);
+  const pitch = calculateRowPitch(initialCards);
 
   if (!pitch) {
-    return [];
+    return {
+      pitch: null,
+      cardHeight: null,
+      rows: []
+    };
   }
 
-  const firstY =
-    Math.min(
-      ...initialCards.map(card => card.y)
-    );
+  const firstY = Math.min(
+    ...initialCards.map(card => card.y)
+  );
 
-  /*
-    実際のカード高さはピッチより少し小さい。
-  */
-  const typicalHeights =
-    initialCards
-      .map(card => card.height)
-      .filter(height =>
-        height >= pitch * 0.65 &&
-        height <= pitch * 1.2
-      )
-      .sort((a, b) => a - b);
+  const typicalHeights = initialCards
+    .map(card => card.height)
+    .filter(cardHeight => {
+      return (
+        cardHeight >= pitch * 0.65 &&
+        cardHeight <= pitch * 1.2
+      );
+    })
+    .sort((a, b) => a - b);
 
-  const cardHeight =
-    typicalHeights.length > 0
-      ? typicalHeights[
-          Math.floor(
-            typicalHeights.length / 2
-          )
-        ]
-      : pitch * 0.9;
+  const cardHeight = typicalHeights.length > 0
+    ? typicalHeights[
+        Math.floor(typicalHeights.length / 2)
+      ]
+    : pitch * 0.9;
 
   const rows = [];
 
-  for (
-    let rowIndex = 0;
-    ;
-    rowIndex++
-  ) {
-    const y =
-      firstY + pitch * rowIndex;
+  for (let rowIndex = 0; ; rowIndex++) {
+    const y = firstY + pitch * rowIndex;
 
-    if (
-      y + cardHeight >
-      factorAreaBottom
-    ) {
+    if (y + cardHeight > factorAreaBottom) {
       break;
     }
 
@@ -1038,13 +836,11 @@ function buildFactorRows(
       column: "left",
       row: rowIndex + 1,
       x: Math.round(
-        width *
-        ANALYSIS_CONFIG.columns.left.xRatio
+        width * ANALYSIS_CONFIG.columns.left.xRatio
       ),
       y: Math.round(y),
       width: Math.round(
-        width *
-        ANALYSIS_CONFIG.columns.left.widthRatio
+        width * ANALYSIS_CONFIG.columns.left.widthRatio
       ),
       height: Math.round(cardHeight)
     };
@@ -1053,33 +849,25 @@ function buildFactorRows(
       column: "right",
       row: rowIndex + 1,
       x: Math.round(
-        width *
-        ANALYSIS_CONFIG.columns.right.xRatio
+        width * ANALYSIS_CONFIG.columns.right.xRatio
       ),
       y: Math.round(y),
       width: Math.round(
-        width *
-        ANALYSIS_CONFIG.columns.right.widthRatio
+        width * ANALYSIS_CONFIG.columns.right.widthRatio
       ),
       height: Math.round(cardHeight)
     };
 
-    const hasLeft =
-      hasFactorIcon(
-        ctx,
-        leftCard
-      );
+    const hasLeft = hasFactorIcon(
+      ctx,
+      leftCard
+    );
 
-    const hasRight =
-      hasFactorIcon(
-        ctx,
-        rightCard
-      );
+    const hasRight = hasFactorIcon(
+      ctx,
+      rightCard
+    );
 
-    /*
-      左右ともカードが存在しない行に来たら、
-      因子一覧は終了したと判断する。
-    */
     if (!hasLeft && !hasRight) {
       break;
     }
@@ -1087,14 +875,8 @@ function buildFactorRows(
     rows.push({
       row: rowIndex + 1,
       y: Math.round(y),
-      leftCard:
-        hasLeft
-          ? leftCard
-          : null,
-      rightCard:
-        hasRight
-          ? rightCard
-          : null
+      leftCard: hasLeft ? leftCard : null,
+      rightCard: hasRight ? rightCard : null
     });
   }
 
@@ -1106,105 +888,62 @@ function buildFactorRows(
 }
 
 /* =========================================================
-   検出済み因子カードの色を判定する処理
-
-   今回の目的は白因子の抽出なので、
-   青・赤・緑だけを明確な場合に除外し、
-   それ以外は白因子候補として扱う。
-
-   文字や★を避けるため、カード右上側を複数点確認する。
+   因子カード色判定処理
+   青・赤・緑を明確に判定し、それ以外は白因子候補とする。
    ========================================================= */
 
 function classifyDetectedCard(ctx, card) {
-  const patchSize =
-    Math.max(
-      2,
-      Math.floor(card.width * 0.025)
-    );
+  const patchSize = Math.max(
+    2,
+    Math.floor(card.width * 0.025)
+  );
 
   const samplePositions = [
-    {
-      x: 0.68,
-      y: 0.25
-    },
-    {
-      x: 0.80,
-      y: 0.25
-    },
-    {
-      x: 0.90,
-      y: 0.25
-    }
+    { x: 0.68, y: 0.25 },
+    { x: 0.80, y: 0.25 },
+    { x: 0.90, y: 0.25 }
   ];
 
-  const colors =
-    samplePositions.map(position => {
-      return getAverageColor(
-        ctx,
-        card.x +
-          card.width *
-          position.x,
-
-        card.y +
-          card.height *
-          position.y,
-
-        patchSize,
-        patchSize
-      );
-    });
+  const colors = samplePositions.map(position => {
+    return getAverageColor(
+      ctx,
+      card.x + card.width * position.x,
+      card.y + card.height * position.y,
+      patchSize,
+      patchSize
+    );
+  });
 
   const color = {
     r: Math.round(
-      colors.reduce(
-        (sum, item) =>
-          sum + item.r,
-        0
-      ) /
+      colors.reduce((sum, item) => sum + item.r, 0) /
       colors.length
     ),
-
     g: Math.round(
-      colors.reduce(
-        (sum, item) =>
-          sum + item.g,
-        0
-      ) /
+      colors.reduce((sum, item) => sum + item.g, 0) /
       colors.length
     ),
-
     b: Math.round(
-      colors.reduce(
-        (sum, item) =>
-          sum + item.b,
-        0
-      ) /
+      colors.reduce((sum, item) => sum + item.b, 0) /
       colors.length
     )
   };
 
   let factorType = "white";
 
-  // 青因子
   if (
     color.b > 170 &&
     color.b > color.r + 35 &&
     color.b > color.g + 10
   ) {
     factorType = "blue";
-  }
-
-  // 赤因子
-  else if (
+  } else if (
     color.r > 190 &&
     color.r > color.g + 30 &&
     color.b > 120
   ) {
     factorType = "red";
-  }
-
-  // 緑因子
-  else if (
+  } else if (
     color.g > 140 &&
     color.g > color.r + 25 &&
     color.g > color.b + 25
@@ -1219,97 +958,65 @@ function classifyDetectedCard(ctx, card) {
   };
 }
 
-
 /* =========================================================
-   因子一覧画像全体を解析する処理
-
-   1. 「所持因子」の緑ヘッダーを検出
-   2. 左右列から初期カード候補を取得
-   3. 候補から行間隔を算出
-   4. 左右共通の行位置を生成
-   5. 各行について左右それぞれカード有無を判定
-   6. 存在するカードだけ色分類する
-
-   左右別々に最下段を検出しないため、
-   「左だけ取れる・右だけ最終行を落とす」を防止する。
+   因子一覧画像全体解析処理
+   行間隔取得にはアイコン判定前のカード候補を使い、
+   JPEGでも初期候補を失いにくくする。
    ========================================================= */
 
-function analyzeFactorImage(
-  ctx,
-  width,
-  height
-) {
-  const header =
-    detectFactorHeader(
-      ctx,
-      width,
-      height
-    );
+function analyzeFactorImage(ctx, width, height) {
+  const header = detectFactorHeader(
+    ctx,
+    width,
+    height
+  );
 
-  const factorAreaTop =
-    header
-      ? Math.round(
-          header.bottom +
-          height * 0.008
-        )
-      : Math.round(
-          height *
-          ANALYSIS_CONFIG.factorArea
-            .fallbackTopRatio
-        );
+  const factorAreaTop = header
+    ? Math.round(
+        header.bottom + height * 0.008
+      )
+    : Math.round(
+        height * ANALYSIS_CONFIG.factorArea.fallbackTopRatio
+      );
 
-  const factorAreaBottom =
-    Math.round(
-      height *
-      ANALYSIS_CONFIG.factorArea
-        .bottomRatio
-    );
+  const factorAreaBottom = Math.round(
+    height * ANALYSIS_CONFIG.factorArea.bottomRatio
+  );
 
-  /*
-    まず従来方式でカード候補を得る。
-    ここでは最終結果ではなく、
-    行位置とピッチを求めるためだけに使用する。
-  */
-  const initialLeft =
-    detectCardsInColumn(
-      ctx,
-      width,
-      height,
-      "left",
-      factorAreaTop,
-      factorAreaBottom
-    ).filter(card =>
-      hasFactorIcon(ctx, card)
-    );
+  const initialLeft = detectCardsInColumn(
+    ctx,
+    width,
+    height,
+    "left",
+    factorAreaTop,
+    factorAreaBottom
+  );
 
-  const initialRight =
-    detectCardsInColumn(
-      ctx,
-      width,
-      height,
-      "right",
-      factorAreaTop,
-      factorAreaBottom
-    ).filter(card =>
-      hasFactorIcon(ctx, card)
-    );
+  const initialRight = detectCardsInColumn(
+    ctx,
+    width,
+    height,
+    "right",
+    factorAreaTop,
+    factorAreaBottom
+  );
 
   const initialCards = [
     ...initialLeft,
     ...initialRight
   ];
 
-  const rowResult =
-    buildFactorRows(
-      ctx,
-      width,
-      height,
-      initialCards,
-      factorAreaBottom
-    );
+  const rowResult = buildFactorRows(
+    ctx,
+    width,
+    height,
+    initialCards,
+    factorAreaBottom
+  );
 
   if (
     !rowResult ||
+    !Array.isArray(rowResult.rows) ||
     rowResult.rows.length === 0
   ) {
     return {
@@ -1355,10 +1062,8 @@ function analyzeFactorImage(
   };
 }
 
-
 /* =========================================================
-   因子カードのプレビュー画像を作る処理
-   検出位置が正しいか確認するため、判定結果画面に切り出し画像を表示する。
+   因子カード切り抜きプレビュー生成処理
    ========================================================= */
 
 function createCardThumbnail(canvas, card) {
@@ -1384,11 +1089,8 @@ function createCardThumbnail(canvas, card) {
   return cropCanvas.toDataURL("image/jpeg", 0.85);
 }
 
-
 /* =========================================================
-   解析デバッグ結果の表示処理
-   左右それぞれ何件カードを検出したかと、
-   各カードの画像・色判定・RGB・Y座標を一覧表示する。
+   解析デバッグ結果表示処理
    ========================================================= */
 
 function renderAnalysisDebug(
@@ -1397,28 +1099,18 @@ function renderAnalysisDebug(
   canvas,
   analysis
 ) {
-  const container =
-    document.getElementById("analysis-debug");
+  const container = document.getElementById("analysis-debug");
 
-  const section =
-    document.createElement("section");
+  const section = document.createElement("section");
+  section.className = "analysis-debug-section";
 
-  section.className =
-    "analysis-debug-section";
-
-  const title =
-    document.createElement("h3");
-
-  title.textContent =
-    `${memberLabel} / 画像${imageIndex + 1}`;
+  const title = document.createElement("h3");
+  title.textContent = `${memberLabel} / 画像${imageIndex + 1}`;
 
   section.appendChild(title);
 
-  const summary =
-    document.createElement("div");
-
-  summary.className =
-    "analysis-summary";
+  const summary = document.createElement("div");
+  summary.className = "analysis-summary";
 
   summary.innerHTML = `
     <span>左列：${analysis.leftCards.length}件</span>
@@ -1429,11 +1121,8 @@ function renderAnalysisDebug(
 
   section.appendChild(summary);
 
-  const table =
-    document.createElement("table");
-
-  table.className =
-    "debug-table";
+  const table = document.createElement("table");
+  table.className = "debug-table";
 
   table.innerHTML = `
     <thead>
@@ -1450,8 +1139,7 @@ function renderAnalysisDebug(
     <tbody></tbody>
   `;
 
-  const tbody =
-    table.querySelector("tbody");
+  const tbody = table.querySelector("tbody");
 
   const allCards = [
     ...analysis.leftCards,
@@ -1459,22 +1147,16 @@ function renderAnalysisDebug(
   ];
 
   allCards.forEach(card => {
-    const tr =
-      document.createElement("tr");
+    const tr = document.createElement("tr");
 
-    const preview =
-      createCardThumbnail(
-        canvas,
-        card
-      );
+    const preview = createCardThumbnail(
+      canvas,
+      card
+    );
 
     tr.innerHTML = `
       <td>
-        <img
-          class="debug-thumbnail"
-          src="${preview}"
-          alt="因子カード"
-        >
+        <img class="debug-thumbnail" src="${preview}" alt="因子カード">
       </td>
       <td>${card.column}</td>
       <td>${card.row}</td>
@@ -1483,11 +1165,7 @@ function renderAnalysisDebug(
           ${card.factorType}
         </span>
       </td>
-      <td>
-        ${card.color.r},
-        ${card.color.g},
-        ${card.color.b}
-      </td>
+      <td>${card.color.r}, ${card.color.g}, ${card.color.b}</td>
       <td>${card.y}</td>
       <td>${card.height}</td>
     `;
@@ -1499,72 +1177,91 @@ function renderAnalysisDebug(
   container.appendChild(section);
 }
 
+/* =========================================================
+   画像単位の解析エラー表示処理
+   1枚失敗しても他の画像解析を継続する。
+   ========================================================= */
+
+function renderAnalysisError(
+  memberLabel,
+  imageIndex,
+  error
+) {
+  const container = document.getElementById("analysis-debug");
+
+  const section = document.createElement("section");
+  section.className = "analysis-debug-section";
+
+  const title = document.createElement("h3");
+  title.textContent = `${memberLabel} / 画像${imageIndex + 1}`;
+
+  const message = document.createElement("p");
+  message.textContent = `この画像は解析できませんでした：${error.message}`;
+
+  section.appendChild(title);
+  section.appendChild(message);
+  container.appendChild(section);
+}
 
 /* =========================================================
    「画像を解析」ボタン処理
-   画像が登録されている人物だけを対象にし、
-   1人につき複数画像を個別解析する。
-
-   現段階ではOCRや星数判定は行わず、
-   因子カード検出と色分類のみ確認する。
+   登録済み画像を人物単位・画像単位で順番に解析する。
    ========================================================= */
 
 document.getElementById("analyze-images").addEventListener("click", async () => {
-  const debugContainer =
-    document.getElementById("analysis-debug");
-
+  const debugContainer = document.getElementById("analysis-debug");
   debugContainer.innerHTML = "";
 
-  const activeMembers =
-    Object.entries(members)
-      .filter(([, member]) =>
-        member.images.length > 0
-      );
+  const activeMembers = Object.entries(members).filter(([, member]) => {
+    return member.images.length > 0;
+  });
 
   for (const [, member] of activeMembers) {
-    for (
-      let i = 0;
-      i < member.images.length;
-      i++
-    ) {
-      const imageData =
-        member.images[i];
+    for (let i = 0; i < member.images.length; i++) {
+      const imageData = member.images[i];
 
-      const {
-        canvas,
-        ctx,
-        width,
-        height
-      } = await drawOriginalImage(
-        imageData.file
-      );
+      try {
+        const {
+          canvas,
+          ctx,
+          width,
+          height
+        } = await drawOriginalImage(
+          imageData.file
+        );
 
-      const analysis =
-        analyzeFactorImage(
+        const analysis = analyzeFactorImage(
           ctx,
           width,
           height
         );
 
-      renderAnalysisDebug(
-        member.label,
-        i,
-        canvas,
-        analysis
-      );
+        renderAnalysisDebug(
+          member.label,
+          i,
+          canvas,
+          analysis
+        );
+      } catch (error) {
+        console.error(
+          `${member.label} / 画像${i + 1} の解析に失敗しました`,
+          error
+        );
+
+        renderAnalysisError(
+          member.label,
+          i,
+          error
+        );
+      }
     }
   }
 
-  document
-    .querySelector('[data-tab="results"]')
-    .click();
+  document.querySelector('[data-tab="results"]').click();
 });
-
 
 /* =========================================================
    初期状態設定
-   最初のクリップボード貼り付け先を「親A」にし、
-   画像数と解析ボタン状態も初期化する。
    ========================================================= */
 
 setPasteTarget("parentA");
