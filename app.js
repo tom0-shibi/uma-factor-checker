@@ -45,7 +45,12 @@ const ANALYSIS_CONFIG = {
   gapLuminanceThreshold: 239,
   minimumGapRatio: 0.003,
   minimumCardHeightRatio: 0.014,
-  maximumCardHeightRatio: 0.045
+
+  /*
+    JPGではカード高さが画像全体に対して約4.5%を少し超えるため、
+    5.5%まで許容する。
+  */
+  maximumCardHeightRatio: 0.055
 };
 
 /* =========================================================
@@ -678,7 +683,14 @@ function detectCardsInColumn(
 
 /* =========================================================
    因子カード左端の丸アイコン検出処理
-   PNGだけでなくJPEG圧縮による色変化も考慮する。
+
+   通常因子の青～水色アイコンと、
+   緑因子の黄～金色アイコンを検出する。
+
+   白背景や「閉じる」ボタンを誤認識しないよう、
+   青系ではRGB間に最低限の色差を要求する。
+
+   JPEG圧縮は考慮するが、条件を緩めすぎない。
    ========================================================= */
 
 function hasFactorIcon(ctx, card) {
@@ -715,17 +727,24 @@ function hasFactorIcon(ctx, card) {
     const g = data[i + 1];
     const b = data[i + 2];
 
+    /*
+      青～水色系。
+      白や灰色ではRGB差がほぼないため除外される。
+    */
     const isBlueIcon =
-      b >= r &&
-      b >= g &&
+      b - r >= 3 &&
+      b - g >= 2 &&
       b > 135 &&
       r < 245;
 
+    /*
+      緑因子用の黄色～金色系。
+    */
     const isGoldIcon =
       r > 165 &&
       g > 105 &&
-      r > b + 25 &&
-      g > b + 15;
+      r - b > 25 &&
+      g - b > 15;
 
     if (isBlueIcon || isGoldIcon) {
       iconPixels++;
@@ -775,7 +794,16 @@ function calculateRowPitch(cards) {
 
 /* =========================================================
    左右共通の因子行を生成する処理
-   左右どちらにもカードがない行まで来たら終了する。
+
+   1. 初期カード候補から行間隔を計算する
+   2. 候補Yを上から確認する
+   3. 左右どちらかに因子アイコンがある最初の候補を
+      「本当の1行目」とする
+   4. 以降は一定ピッチで行を生成する
+   5. 左右どちらにもカードがない行で終了する
+
+   スクロール途中画像の上端に、
+   切れたカードや空白が存在しても解析を開始できる。
    ========================================================= */
 
 function buildFactorRows(
@@ -803,10 +831,6 @@ function buildFactorRows(
     };
   }
 
-  const firstY = Math.min(
-    ...initialCards.map(card => card.y)
-  );
-
   const typicalHeights = initialCards
     .map(card => card.height)
     .filter(cardHeight => {
@@ -823,37 +847,63 @@ function buildFactorRows(
       ]
     : pitch * 0.9;
 
-  const rows = [];
+  /*
+    候補Yを昇順で取得し、
+    近い値は1つにまとめる。
+  */
+  const candidateYs = initialCards
+    .map(card => card.y)
+    .sort((a, b) => a - b);
 
-  for (let rowIndex = 0; ; rowIndex++) {
-    const y = firstY + pitch * rowIndex;
+  const mergedCandidateYs = [];
 
-    if (y + cardHeight > factorAreaBottom) {
-      break;
+  candidateYs.forEach(y => {
+    const last =
+      mergedCandidateYs[
+        mergedCandidateYs.length - 1
+      ];
+
+    if (
+      last === undefined ||
+      Math.abs(y - last) > pitch * 0.25
+    ) {
+      mergedCandidateYs.push(y);
     }
+  });
 
+  /*
+    左右どちらかに本物の因子アイコンが存在する
+    最初の候補Yを探す。
+  */
+  let firstY = null;
+
+  for (const candidateY of mergedCandidateYs) {
     const leftCard = {
       column: "left",
-      row: rowIndex + 1,
+      row: 1,
       x: Math.round(
-        width * ANALYSIS_CONFIG.columns.left.xRatio
+        width *
+        ANALYSIS_CONFIG.columns.left.xRatio
       ),
-      y: Math.round(y),
+      y: Math.round(candidateY),
       width: Math.round(
-        width * ANALYSIS_CONFIG.columns.left.widthRatio
+        width *
+        ANALYSIS_CONFIG.columns.left.widthRatio
       ),
       height: Math.round(cardHeight)
     };
 
     const rightCard = {
       column: "right",
-      row: rowIndex + 1,
+      row: 1,
       x: Math.round(
-        width * ANALYSIS_CONFIG.columns.right.xRatio
+        width *
+        ANALYSIS_CONFIG.columns.right.xRatio
       ),
-      y: Math.round(y),
+      y: Math.round(candidateY),
       width: Math.round(
-        width * ANALYSIS_CONFIG.columns.right.widthRatio
+        width *
+        ANALYSIS_CONFIG.columns.right.widthRatio
       ),
       height: Math.round(cardHeight)
     };
@@ -868,6 +918,81 @@ function buildFactorRows(
       rightCard
     );
 
+    if (hasLeft || hasRight) {
+      firstY = candidateY;
+      break;
+    }
+  }
+
+  /*
+    本物の開始行を見つけられなかった場合。
+  */
+  if (firstY === null) {
+    return {
+      pitch,
+      cardHeight,
+      rows: []
+    };
+  }
+
+  const rows = [];
+
+  for (let rowIndex = 0; ; rowIndex++) {
+    const y =
+      firstY +
+      pitch * rowIndex;
+
+    if (
+      y + cardHeight >
+      factorAreaBottom
+    ) {
+      break;
+    }
+
+    const leftCard = {
+      column: "left",
+      row: rowIndex + 1,
+      x: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.left.xRatio
+      ),
+      y: Math.round(y),
+      width: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.left.widthRatio
+      ),
+      height: Math.round(cardHeight)
+    };
+
+    const rightCard = {
+      column: "right",
+      row: rowIndex + 1,
+      x: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.right.xRatio
+      ),
+      y: Math.round(y),
+      width: Math.round(
+        width *
+        ANALYSIS_CONFIG.columns.right.widthRatio
+      ),
+      height: Math.round(cardHeight)
+    };
+
+    const hasLeft = hasFactorIcon(
+      ctx,
+      leftCard
+    );
+
+    const hasRight = hasFactorIcon(
+      ctx,
+      rightCard
+    );
+
+    /*
+      左右とも因子カードが存在しない行に到達したら
+      因子一覧終了と判断する。
+    */
     if (!hasLeft && !hasRight) {
       break;
     }
