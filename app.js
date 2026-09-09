@@ -89,21 +89,19 @@ const STAR_CONFIG = {
 
 /* =========================================================
    OCR設定
-   白因子カード内のスキル名領域だけを切り出し、
-   拡大・二値化してTesseract.jsへ渡す。
-
-   座標は固定pxではなくカードサイズに対する割合で指定する。
+   固定の狭い文字領域を直接OCRせず、
+   まずカード上側を広めに取得して文字位置を自動検出する。
    ========================================================= */
 
 const OCR_CONFIG = {
-  textArea: {
-    xRatio: 0.115,
-    yRatio: 0.03,
-    widthRatio: 0.82,
-    heightRatio: 0.48
+  searchArea: {
+    xRatio: 0.10,
+    yRatio: 0.00,
+    widthRatio: 0.86,
+    heightRatio: 0.68
   },
   scale: 4,
-  threshold: 195
+  paddingRatio: 0.12
 };
 
 /* =========================================================
@@ -1489,108 +1487,79 @@ function detectStarCount(ctx, card) {
 }
 
 /* =========================================================
-   因子カード内のスキル名領域を算出する処理
-
-   左側の丸アイコンと下側の★を避け、
-   スキル名が表示されている上半分だけをOCR対象にする。
-   ========================================================= */
-
-function getTextArea(card) {
-  return {
-    x: Math.round(
-      card.x +
-      card.width * OCR_CONFIG.textArea.xRatio
-    ),
-    y: Math.round(
-      card.y +
-      card.height * OCR_CONFIG.textArea.yRatio
-    ),
-    width: Math.round(
-      card.width *
-      OCR_CONFIG.textArea.widthRatio
-    ),
-    height: Math.round(
-      card.height *
-      OCR_CONFIG.textArea.heightRatio
-    )
-  };
-}
-
-/* =========================================================
    OCR用画像を生成する処理
 
-   スキル名部分だけを切り出して拡大し、
-   明るい背景を白、暗い文字を黒へ二値化する。
+   自動検出したスキル名範囲だけを切り出し、
+   4倍に拡大する。
 
-   Tesseractへカード全体を渡さないことで、
-   丸アイコンや★による誤認識を減らす。
+   この段階では二値化や強いコントラスト補正を行わず、
+   元文字の輪郭・アンチエイリアスをできるだけ維持する。
    ========================================================= */
 
-function createOcrCanvas(sourceCanvas, card) {
-  const textArea = getTextArea(card);
+function createOcrCanvas(
+  sourceCanvas,
+  card
+) {
+  const textBounds =
+    detectSkillTextBounds(
+      sourceCanvas,
+      card
+    );
 
-  const canvas = document.createElement("canvas");
+  if (!textBounds) {
+    return null;
+  }
+
+  const canvas =
+    document.createElement(
+      "canvas"
+    );
 
   canvas.width =
-    textArea.width *
-    OCR_CONFIG.scale;
+    Math.round(
+      textBounds.width *
+      OCR_CONFIG.scale
+    );
 
   canvas.height =
-    textArea.height *
-    OCR_CONFIG.scale;
+    Math.round(
+      textBounds.height *
+      OCR_CONFIG.scale
+    );
 
-  const ctx = canvas.getContext("2d", {
-    willReadFrequently: true
-  });
+  const ctx =
+    canvas.getContext("2d");
 
+  /*
+    背景を白で埋める。
+    */
+  ctx.fillStyle = "#ffffff";
+
+  ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  /*
+    小さい文字なので、今回は平滑化を有効にする。
+  */
   ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   ctx.drawImage(
     sourceCanvas,
-    textArea.x,
-    textArea.y,
-    textArea.width,
-    textArea.height,
+
+    textBounds.x,
+    textBounds.y,
+    textBounds.width,
+    textBounds.height,
+
     0,
     0,
     canvas.width,
     canvas.height
-  );
-
-  const imageData = ctx.getImageData(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  const data = imageData.data;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-
-    const luminance =
-      0.2126 * r +
-      0.7152 * g +
-      0.0722 * b;
-
-    const value =
-      luminance < OCR_CONFIG.threshold
-        ? 0
-        : 255;
-
-    data[i] = value;
-    data[i + 1] = value;
-    data[i + 2] = value;
-    data[i + 3] = 255;
-  }
-
-  ctx.putImageData(
-    imageData,
-    0,
-    0
   );
 
   return canvas;
@@ -1609,6 +1578,222 @@ function normalizeOcrText(text) {
     .replace(/\t/g, "")
     .replace(/\s+/g, "")
     .trim();
+}
+
+/* =========================================================
+   スキル名文字らしいピクセルか判定する処理
+
+   白因子の文字は濃い茶色なので、
+   背景の灰色・黄色い星・白い部分を除外する。
+
+   JPEG圧縮を考慮して条件にはある程度幅を持たせる。
+   ========================================================= */
+
+function isSkillTextPixel(r, g, b) {
+  const luminance =
+    0.2126 * r +
+    0.7152 * g +
+    0.0722 * b;
+
+  const isDark =
+    luminance < 175;
+
+  const isBrownish =
+    r >= g &&
+    g >= b &&
+    r - b > 15;
+
+  return (
+    isDark &&
+    isBrownish
+  );
+}
+
+/* =========================================================
+   カード内から実際のスキル名文字範囲を検出する処理
+
+   カード上側を広めに調べ、
+   茶色い文字ピクセルが存在する行・列を取得する。
+
+   固定heightRatioで文字下端を切ってしまう問題を防ぐ。
+   ========================================================= */
+
+function detectSkillTextBounds(
+  sourceCanvas,
+  card
+) {
+  const searchX =
+    Math.round(
+      card.x +
+      card.width *
+      OCR_CONFIG.searchArea.xRatio
+    );
+
+  const searchY =
+    Math.round(
+      card.y +
+      card.height *
+      OCR_CONFIG.searchArea.yRatio
+    );
+
+  const searchWidth =
+    Math.round(
+      card.width *
+      OCR_CONFIG.searchArea.widthRatio
+    );
+
+  const searchHeight =
+    Math.round(
+      card.height *
+      OCR_CONFIG.searchArea.heightRatio
+    );
+
+  const ctx =
+    sourceCanvas.getContext(
+      "2d",
+      {
+        willReadFrequently: true
+      }
+    );
+
+  const imageData =
+    ctx.getImageData(
+      searchX,
+      searchY,
+      searchWidth,
+      searchHeight
+    );
+
+  const data =
+    imageData.data;
+
+  let minX = searchWidth;
+  let minY = searchHeight;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (
+    let y = 0;
+    y < searchHeight;
+    y++
+  ) {
+    for (
+      let x = 0;
+      x < searchWidth;
+      x++
+    ) {
+      const index =
+        (
+          y *
+          searchWidth +
+          x
+        ) * 4;
+
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
+
+      if (
+        !isSkillTextPixel(
+          r,
+          g,
+          b
+        )
+      ) {
+        continue;
+      }
+
+      minX =
+        Math.min(
+          minX,
+          x
+        );
+
+      minY =
+        Math.min(
+          minY,
+          y
+        );
+
+      maxX =
+        Math.max(
+          maxX,
+          x
+        );
+
+      maxY =
+        Math.max(
+          maxY,
+          y
+        );
+    }
+  }
+
+  /*
+    文字らしい領域が見つからなかった場合。
+  */
+  if (
+    maxX < 0 ||
+    maxY < 0
+  ) {
+    return null;
+  }
+
+  const detectedWidth =
+    maxX -
+    minX +
+    1;
+
+  const detectedHeight =
+    maxY -
+    minY +
+    1;
+
+  /*
+    文字の上下左右がギリギリにならないよう
+    検出サイズに応じた余白を追加する。
+  */
+  const paddingX =
+    Math.max(
+      3,
+      Math.round(
+        detectedHeight *
+        OCR_CONFIG.paddingRatio
+      )
+    );
+
+  const paddingY =
+    Math.max(
+      3,
+      Math.round(
+        detectedHeight *
+        OCR_CONFIG.paddingRatio
+      )
+    );
+
+  return {
+    x: Math.max(
+      card.x,
+      searchX +
+      minX -
+      paddingX
+    ),
+
+    y: Math.max(
+      card.y,
+      searchY +
+      minY -
+      paddingY
+    ),
+
+    width:
+      detectedWidth +
+      paddingX * 2,
+
+    height:
+      detectedHeight +
+      paddingY * 2
+  };
 }
 
 /* =========================================================
@@ -1663,8 +1848,8 @@ async function createOcrWorker() {
 /* =========================================================
    1枚の白因子カードからスキル名をOCRする処理
 
-   前処理済みCanvasをTesseractへ渡し、
-   生OCR結果・整形済み文字列・信頼度を返す。
+   スキル名領域を自動検出してTesseractへ渡す。
+   文字領域を検出できなかった場合は空結果を返す。
    ========================================================= */
 
 async function recognizeSkillName(
@@ -1677,6 +1862,15 @@ async function recognizeSkillName(
       sourceCanvas,
       card
     );
+
+  if (!ocrCanvas) {
+    return {
+      ocrText: "",
+      ocrRawText: "",
+      ocrConfidence: 0,
+      ocrCanvas: null
+    };
+  }
 
   const result =
     await worker.recognize(
@@ -1760,9 +1954,11 @@ async function runOcrForWhiteCards(
       result.ocrConfidence;
 
     card.ocrPreview =
-      result.ocrCanvas.toDataURL(
-        "image/png"
-      );
+      result.ocrCanvas
+        ? result.ocrCanvas.toDataURL(
+            "image/png"
+          )
+        : null;
   }
 }
 
