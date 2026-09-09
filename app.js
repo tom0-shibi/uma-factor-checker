@@ -598,6 +598,111 @@ function getRowLuminance(ctx, columnX, columnWidth, y, imageWidth) {
 }
 
 /* =========================================================
+   因子カード上端Y座標の補正処理
+
+   スクロール途中の画像では、fallback位置から算出した行位置が
+   実際のカード上端より数px～十数pxずれる場合がある。
+
+   カード間の隙間は明るく、カード内部はそれより暗いため、
+   推定Yの前後を探索して
+
+   「明るい隙間 → 暗いカード」
+
+   へ変化する位置を実際のカード上端として採用する。
+
+   左右列をそれぞれ調べ、検出できた位置の平均を返す。
+   ========================================================= */
+
+function refineCardTopY(
+  ctx,
+  width,
+  height,
+  approximateY,
+  pitch
+) {
+  const searchRadius = Math.max(
+    6,
+    Math.round(pitch * 0.32)
+  );
+
+  const startY = Math.max(
+    1,
+    Math.round(approximateY - searchRadius)
+  );
+
+  const endY = Math.min(
+    height - 2,
+    Math.round(approximateY + searchRadius)
+  );
+
+  const detectedYs = [];
+
+  for (const columnName of ["left", "right"]) {
+    const column =
+      ANALYSIS_CONFIG.columns[columnName];
+
+    const columnX =
+      width * column.xRatio;
+
+    const columnWidth =
+      width * column.widthRatio;
+
+    let previousLuminance =
+      getRowLuminance(
+        ctx,
+        columnX,
+        columnWidth,
+        startY,
+        width
+      );
+
+    for (
+      let y = startY + 1;
+      y <= endY;
+      y++
+    ) {
+      const luminance =
+        getRowLuminance(
+          ctx,
+          columnX,
+          columnWidth,
+          y,
+          width
+        );
+
+      /*
+        カード間の白い隙間から、
+        灰色・青・赤・緑のカード内部へ入った瞬間を探す。
+      */
+      const enteredCard =
+        previousLuminance >= 242 &&
+        luminance < 239;
+
+      if (enteredCard) {
+        detectedYs.push(y);
+        break;
+      }
+
+      previousLuminance =
+        luminance;
+    }
+  }
+
+  if (detectedYs.length === 0) {
+    return Math.round(approximateY);
+  }
+
+  const average =
+    detectedYs.reduce(
+      (sum, y) => sum + y,
+      0
+    ) /
+    detectedYs.length;
+
+  return Math.round(average);
+}
+
+/* =========================================================
    1列分の因子カード候補検出処理
    カード間の明るい隙間を基準にカード領域を分割する。
    ========================================================= */
@@ -972,9 +1077,18 @@ function buildFactorRows(
   const rows = [];
 
   for (let rowIndex = 0; ; rowIndex++) {
-    const y =
+    const approximateY =
       firstY +
       pitch * rowIndex;
+
+    const y =
+      refineCardTopY(
+        ctx,
+        width,
+        height,
+        approximateY,
+        pitch
+      );
 
     if (
       y + cardHeight >
