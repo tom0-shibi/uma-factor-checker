@@ -2600,10 +2600,7 @@ async function createOcrWorker() {
 
   const worker =
     await Tesseract.createWorker(
-      [
-        "jpn",
-        "eng"
-      ],
+      "jpn",
       1,
       {
         logger: message => {
