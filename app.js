@@ -96,9 +96,9 @@ const STAR_CONFIG = {
 const OCR_CONFIG = {
   searchArea: {
     xRatio: 0.10,
-    yRatio: 0.00,
+    yRatio: 0.02,
     widthRatio: 0.86,
-    heightRatio: 0.68
+    heightRatio: 0.50
   },
   scale: 4,
   paddingRatio: 0.12
@@ -1771,28 +1771,37 @@ function detectSkillTextBounds(
       )
     );
 
+  const resultX = Math.max(
+    card.x,
+    searchX + minX - paddingX
+  );
+
+  const resultY = Math.max(
+    card.y,
+    searchY + minY - paddingY
+  );
+
+  const resultRight = Math.min(
+    card.x + card.width * 0.97,
+    searchX + maxX + paddingX
+  );
+
+  const resultBottom = Math.min(
+    card.y + card.height * 0.56,
+    searchY + maxY + paddingY
+  );
+
   return {
-    x: Math.max(
-      card.x,
-      searchX +
-      minX -
-      paddingX
+    x: Math.round(resultX),
+    y: Math.round(resultY),
+    width: Math.max(
+      1,
+      Math.round(resultRight - resultX)
     ),
-
-    y: Math.max(
-      card.y,
-      searchY +
-      minY -
-      paddingY
-    ),
-
-    width:
-      detectedWidth +
-      paddingX * 2,
-
-    height:
-      detectedHeight +
-      paddingY * 2
+    height: Math.max(
+      1,
+      Math.round(resultBottom - resultY)
+    )
   };
 }
 
@@ -1960,6 +1969,25 @@ async function runOcrForWhiteCards(
           )
         : null;
   }
+}
+
+/* =========================================================
+   OCR済みスキル名を照合用に正規化する処理
+
+   OCRで発生しやすい表記揺れだけを補正する。
+   元のOCR文字列は別途保持するため、この処理では
+   照合しやすい文字列を生成することだけを目的とする。
+   ========================================================= */
+
+function normalizeSkillText(text) {
+  return text
+    .normalize("NFKC")
+    .replace(/[〇ＯO]/g, "○")
+    .replace(/[。．.]+$/g, "")
+    .replace(/[\/\\|]+$/g, "")
+    .replace(/[$]+$/g, "")
+    .replace(/\s+/g, "")
+    .trim();
 }
 
 /* =========================================================
