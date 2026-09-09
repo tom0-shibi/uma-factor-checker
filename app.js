@@ -1,13 +1,13 @@
-const APP_BUILD = "20260910-skill-match-01";
+const APP_BUILD = "20260910-skill-match-02";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
 );
 
 /* =========================================================
-   アプリ内データ
-   スキル要件と最大6人分の画像を保持する。
-   ========================================================= */
+  アプリ内データ
+  スキル要件と最大6人分の画像を保持する。
+  ========================================================= */
 
 const requirements = {
   S: [],
@@ -29,10 +29,10 @@ let pasteTargetMember = "parentA";
 let debugLogLines = [];
 
 /* =========================================================
-   画像解析設定
-   固定pxではなく画像サイズに対する割合を使用する。
-   PNG/JPG・画像サイズ違い・スクロール途中画像へ対応する。
-   ========================================================= */
+  画像解析設定
+  固定pxではなく画像サイズに対する割合を使用する。
+  PNG/JPG・画像サイズ違い・スクロール途中画像へ対応する。
+  ========================================================= */
 
 const ANALYSIS_CONFIG = {
   factorArea: {
@@ -57,9 +57,9 @@ const ANALYSIS_CONFIG = {
 };
 
 /* =========================================================
-   星数判定設定
-   カード内の★1～3を黄色ピクセル量から判定する。
-   ========================================================= */
+  星数判定設定
+  カード内の★1～3を黄色ピクセル量から判定する。
+  ========================================================= */
 
 const STAR_CONFIG = {
   area: {
@@ -78,10 +78,9 @@ const STAR_CONFIG = {
 };
 
 /* =========================================================
-   OCR設定
-   精度が比較的安定していた設定を維持する。
-   OCR画像生成部分は今回変更しない。
-   ========================================================= */
+  OCR設定
+  現在安定している設定を維持する。
+  ========================================================= */
 
 const OCR_CONFIG = {
   searchArea: {
@@ -95,9 +94,31 @@ const OCR_CONFIG = {
 };
 
 /* =========================================================
-   タブ切り替え処理
-   スキル要件・画像登録・判定結果を切り替える。
-   ========================================================= */
+  スキル名照合設定
+
+  OCR文字数に応じて必要な類似度を変更する。
+
+  minimumMargin:
+    第1候補と第2候補の類似度差。
+    候補が拮抗している場合は自動確定しない。
+  ========================================================= */
+
+const SKILL_MATCH_CONFIG = {
+  thresholds: {
+    1: 1.00,
+    2: 0.50,
+    3: 0.66,
+    4: 0.60,
+    5: 0.60
+  },
+  defaultThreshold: 0.60,
+  minimumMargin: 0.15
+};
+
+/* =========================================================
+  タブ切り替え処理
+  スキル要件・画像登録・判定結果を切り替える。
+  ========================================================= */
 
 const tabButtons =
   document.querySelectorAll(".tab-button");
@@ -127,9 +148,9 @@ tabButtons.forEach(button => {
 });
 
 /* =========================================================
-   スキル入力整形処理
-   1行1スキルとして配列化し、空行・重複を除去する。
-   ========================================================= */
+  スキル入力整形処理
+  1行1スキルとして配列化し、空行・重複を除去する。
+  ========================================================= */
 
 function parseSkillInput(value) {
   return [
@@ -143,9 +164,9 @@ function parseSkillInput(value) {
 }
 
 /* =========================================================
-   スキルカード表示処理
-   入力されたスキルをS/A/B/Cごとのカードで表示する。
-   ========================================================= */
+  スキルカード表示処理
+  入力されたスキルをS/A/B/Cごとのカードで表示する。
+  ========================================================= */
 
 function renderSkillCards(rank) {
   const container =
@@ -196,9 +217,9 @@ function renderSkillCards(rank) {
 }
 
 /* =========================================================
-   スキル要件反映処理
-   S/A/B/Cの入力欄を内部データへ保存する。
-   ========================================================= */
+  スキル要件反映処理
+  S/A/B/Cの入力欄を内部データへ保存する。
+  ========================================================= */
 
 document
   .getElementById("apply-requirements")
@@ -238,9 +259,9 @@ document
   );
 
 /* =========================================================
-   スキル要件からOCR照合用辞書を作る処理
-   S/A/B/Cに入力されたスキルをまとめて重複除去する。
-   ========================================================= */
+  スキル要件からOCR照合用辞書を作る処理
+  S/A/B/Cに入力されたスキルをまとめて重複除去する。
+  ========================================================= */
 
 function getRequirementSkillDictionary() {
   return [
@@ -254,8 +275,8 @@ function getRequirementSkillDictionary() {
 }
 
 /* =========================================================
-   画像登録画面で使用するDOMを取得する。
-   ========================================================= */
+  画像登録画面で使用するDOMを取得する。
+  ========================================================= */
 
 const fileInputs =
   document.querySelectorAll(
@@ -273,9 +294,9 @@ const memberPanels =
   );
 
 /* =========================================================
-   画像追加処理
-   ファイル選択・ドラッグ&ドロップ・貼り付け画像を登録する。
-   ========================================================= */
+  画像追加処理
+  ファイル選択・ドラッグ&ドロップ・貼り付け画像を登録する。
+  ========================================================= */
 
 function addImages(memberId, files) {
   const imageFiles =
@@ -299,9 +320,9 @@ function addImages(memberId, files) {
 }
 
 /* =========================================================
-   画像プレビュー表示処理
-   登録された画像を人物枠ごとに表示する。
-   ========================================================= */
+  画像プレビュー表示処理
+  登録された画像を人物枠ごとに表示する。
+  ========================================================= */
 
 function renderImagePreviews(memberId) {
   const container =
@@ -371,9 +392,9 @@ function renderImagePreviews(memberId) {
 }
 
 /* =========================================================
-   画像削除処理
-   指定画像を削除し、ObjectURLも解放する。
-   ========================================================= */
+  画像削除処理
+  指定画像を削除し、ObjectURLも解放する。
+  ========================================================= */
 
 function removeImage(
   memberId,
@@ -402,9 +423,9 @@ function removeImage(
 }
 
 /* =========================================================
-   登録画像数・解析ボタン状態更新処理
-   画像が1枚以上あれば解析を実行可能にする。
-   ========================================================= */
+  登録画像数・解析ボタン状態更新処理
+  画像が1枚以上あれば解析を実行可能にする。
+  ========================================================= */
 
 function updateImageSummary() {
   const total =
@@ -426,8 +447,8 @@ function updateImageSummary() {
 }
 
 /* =========================================================
-   ファイル選択による画像追加処理
-   ========================================================= */
+  ファイル選択による画像追加処理
+  ========================================================= */
 
 fileInputs.forEach(input => {
   input.addEventListener(
@@ -444,9 +465,9 @@ fileInputs.forEach(input => {
 });
 
 /* =========================================================
-   ドロップエリアクリック処理
-   貼り付け先を変更し、ファイル選択画面を開く。
-   ========================================================= */
+  ドロップエリアクリック処理
+  貼り付け先を変更し、ファイル選択画面を開く。
+  ========================================================= */
 
 dropZones.forEach(zone => {
   zone.addEventListener(
@@ -468,8 +489,8 @@ dropZones.forEach(zone => {
 });
 
 /* =========================================================
-   ドラッグ&ドロップ処理
-   ========================================================= */
+  ドラッグ&ドロップ処理
+  ========================================================= */
 
 dropZones.forEach(zone => {
   zone.addEventListener(
@@ -515,9 +536,8 @@ dropZones.forEach(zone => {
 });
 
 /* =========================================================
-   クリップボード貼り付け先変更処理
-   人物枠全体をクリックして貼り付け先を変更する。
-   ========================================================= */
+  クリップボード貼り付け先変更処理
+  ========================================================= */
 
 function setPasteTarget(memberId) {
   pasteTargetMember =
@@ -547,8 +567,8 @@ function setPasteTarget(memberId) {
 }
 
 /* =========================================================
-   人物枠全体の選択処理
-   ========================================================= */
+  人物枠全体の選択処理
+  ========================================================= */
 
 memberPanels.forEach(panel => {
   panel.setAttribute(
@@ -591,9 +611,9 @@ memberPanels.forEach(panel => {
 });
 
 /* =========================================================
-   クリップボード画像貼り付け処理
-   Ctrl+V / Cmd+Vで選択中の人物へ画像を追加する。
-   ========================================================= */
+  クリップボード画像貼り付け処理
+  Ctrl+V / Cmd+Vで選択中の人物へ画像を追加する。
+  ========================================================= */
 
 document.addEventListener(
   "paste",
@@ -635,9 +655,8 @@ document.addEventListener(
 );
 
 /* =========================================================
-   FileをImageへ読み込む処理
-   PNG・JPEG・WebPなどブラウザ対応画像を扱う。
-   ========================================================= */
+  FileをImageへ読み込む処理
+  ========================================================= */
 
 function loadImageElement(file) {
   return new Promise(
@@ -665,9 +684,8 @@ function loadImageElement(file) {
 }
 
 /* =========================================================
-   元画像を解析Canvasへ描画する処理
-   元解像度・縦横比を維持する。
-   ========================================================= */
+  元画像を解析Canvasへ描画する処理
+  ========================================================= */
 
 async function drawOriginalImage(file) {
   const image =
@@ -714,8 +732,8 @@ async function drawOriginalImage(file) {
 }
 
 /* =========================================================
-   RGBから明るさを計算する処理
-   ========================================================= */
+  RGBから明るさを計算する処理
+  ========================================================= */
 
 function getLuminance(r, g, b) {
   return (
@@ -726,8 +744,8 @@ function getLuminance(r, g, b) {
 }
 
 /* =========================================================
-   指定範囲の平均RGB取得処理
-   ========================================================= */
+  指定範囲の平均RGB取得処理
+  ========================================================= */
 
 function getAverageColor(
   ctx,
@@ -792,9 +810,8 @@ function getAverageColor(
 }
 
 /* =========================================================
-   「所持因子」緑ヘッダー検出処理
-   横幅の広い緑帯を検出し、因子一覧開始位置を取得する。
-   ========================================================= */
+  「所持因子」緑ヘッダー検出処理
+  ========================================================= */
 
 function detectFactorHeader(
   ctx,
@@ -934,9 +951,8 @@ function detectFactorHeader(
 }
 
 /* =========================================================
-   指定Y座標の平均明るさ取得処理
-   カード間の明るい隙間を検出するために使用する。
-   ========================================================= */
+  指定Y座標の平均明るさ取得処理
+  ========================================================= */
 
 function getRowLuminance(
   ctx,
@@ -985,9 +1001,8 @@ function getRowLuminance(
 }
 
 /* =========================================================
-   1列分の因子カード候補検出処理
-   カード間の明るい隙間を利用してカードを分割する。
-   ========================================================= */
+  1列分の因子カード候補検出処理
+  ========================================================= */
 
 function detectCardsInColumn(
   ctx,
@@ -1175,10 +1190,8 @@ function detectCardsInColumn(
 }
 
 /* =========================================================
-   因子カード左端の丸アイコン検出処理
-   通常因子の青系アイコンと緑因子の黄色アイコンに対応する。
-   JPG圧縮による色変化もある程度許容する。
-   ========================================================= */
+  因子カード左端の丸アイコン検出処理
+  ========================================================= */
 
 function hasFactorIcon(
   ctx,
@@ -1262,9 +1275,8 @@ function hasFactorIcon(
 }
 
 /* =========================================================
-   カード本体が十分写っているか確認する処理
-   スクロール途中で切れたカードや空白を除外する。
-   ========================================================= */
+  カード本体が十分写っているか確認する処理
+  ========================================================= */
 
 function hasFullCardBody(
   ctx,
@@ -1353,8 +1365,8 @@ function hasFullCardBody(
 }
 
 /* =========================================================
-   因子カードの共通行間隔を計算する処理
-   ========================================================= */
+  因子カードの共通行間隔を計算する処理
+  ========================================================= */
 
 function calculateRowPitch(cards) {
   const yValues = [
@@ -1402,9 +1414,8 @@ function calculateRowPitch(cards) {
 }
 
 /* =========================================================
-   左右共通の因子行生成処理
-   最初の完全カードを基準に一定ピッチでカードを生成する。
-   ========================================================= */
+  左右共通の因子行生成処理
+  ========================================================= */
 
 function buildFactorRows(
   ctx,
@@ -1698,9 +1709,8 @@ function buildFactorRows(
 }
 
 /* =========================================================
-   因子カード色判定処理
-   明確な青・赤・緑だけ判定し、それ以外を白因子とする。
-   ========================================================= */
+  因子カード色判定処理
+  ========================================================= */
 
 function classifyDetectedCard(
   ctx,
@@ -1747,6 +1757,7 @@ function classifyDetectedCard(
         ) /
         colors.length
       ),
+
     g:
       Math.round(
         colors.reduce(
@@ -1756,6 +1767,7 @@ function classifyDetectedCard(
         ) /
         colors.length
       ),
+
     b:
       Math.round(
         colors.reduce(
@@ -1806,8 +1818,8 @@ function classifyDetectedCard(
 }
 
 /* =========================================================
-   星領域算出処理
-   ========================================================= */
+  星領域算出処理
+  ========================================================= */
 
 function getStarArea(card) {
   return {
@@ -1818,6 +1830,7 @@ function getStarArea(card) {
         STAR_CONFIG
           .area.xRatio
       ),
+
     y:
       Math.round(
         card.y +
@@ -1825,12 +1838,14 @@ function getStarArea(card) {
         STAR_CONFIG
           .area.yRatio
       ),
+
     width:
       Math.round(
         card.width *
         STAR_CONFIG
           .area.widthRatio
       ),
+
     height:
       Math.round(
         card.height *
@@ -1841,8 +1856,8 @@ function getStarArea(card) {
 }
 
 /* =========================================================
-   黄色い取得済み星ピクセル判定処理
-   ========================================================= */
+  黄色い取得済み星ピクセル判定処理
+  ========================================================= */
 
 function isYellowStarPixel(
   r,
@@ -1871,9 +1886,8 @@ function isYellowStarPixel(
 }
 
 /* =========================================================
-   ★1～3判定処理
-   星領域を3分割し、それぞれの黄色ピクセル割合を判定する。
-   ========================================================= */
+  ★1～3判定処理
+  ========================================================= */
 
 function detectStarCount(
   ctx,
@@ -1961,6 +1975,7 @@ function detectStarCount(
       starStates
         .filter(Boolean)
         .length,
+
     starStates,
     yellowRatios,
     area
@@ -1968,10 +1983,8 @@ function detectStarCount(
 }
 
 /* =========================================================
-   因子一覧画像全体解析処理
-   カード位置・色・星数を取得する。
-   OCRはこの処理とは分離して実行する。
-   ========================================================= */
+  因子一覧画像全体解析処理
+  ========================================================= */
 
 function analyzeFactorImage(
   ctx,
@@ -2112,8 +2125,16 @@ function analyzeFactorImage(
     card.ocrPreview = null;
 
     card.normalizedOcr = "";
+
     card.matchCandidate = null;
     card.matchSimilarity = 0;
+
+    card.secondMatchCandidate = null;
+    card.secondMatchSimilarity = 0;
+
+    card.matchSimilarityMargin = 0;
+    card.matchThreshold = 0;
+
     card.matchStatus = null;
   });
 
@@ -2121,17 +2142,18 @@ function analyzeFactorImage(
     header,
     factorAreaTop,
     factorAreaBottom,
+
     pitch:
       rowResult.pitch,
+
     leftCards,
     rightCards
   };
 }
 
 /* =========================================================
-   OCR対象となるスキル文字色判定処理
-   白因子カードの濃い茶色文字を検出する。
-   ========================================================= */
+  OCR対象となるスキル文字色判定処理
+  ========================================================= */
 
 function isSkillTextPixel(
   r,
@@ -2160,9 +2182,8 @@ function isSkillTextPixel(
 }
 
 /* =========================================================
-   カード内の実際の文字領域を自動検出する処理
-   精度が安定していた上部68%探索方式を維持する。
-   ========================================================= */
+  カード内の実際の文字領域を自動検出する処理
+  ========================================================= */
 
 function detectSkillTextBounds(
   sourceCanvas,
@@ -2295,11 +2316,6 @@ function detectSkillTextBounds(
     return null;
   }
 
-  const detectedWidth =
-    maxX -
-    minX +
-    1;
-
   const detectedHeight =
     maxY -
     minY +
@@ -2366,10 +2382,12 @@ function detectSkillTextBounds(
       Math.round(
         resultX
       ),
+
     y:
       Math.round(
         resultY
       ),
+
     width:
       Math.max(
         1,
@@ -2378,6 +2396,7 @@ function detectSkillTextBounds(
           resultX
         )
       ),
+
     height:
       Math.max(
         1,
@@ -2390,9 +2409,8 @@ function detectSkillTextBounds(
 }
 
 /* =========================================================
-   OCR用画像生成処理
-   文字領域だけを4倍拡大し、元の輪郭を維持する。
-   ========================================================= */
+  OCR用画像生成処理
+  ========================================================= */
 
 function createOcrCanvas(
   sourceCanvas,
@@ -2460,9 +2478,8 @@ function createOcrCanvas(
 }
 
 /* =========================================================
-   OCR結果の基本整形処理
-   改行・タブ・空白のみ除去する。
-   ========================================================= */
+  OCR結果の基本整形処理
+  ========================================================= */
 
 function normalizeOcrText(text) {
   return text
@@ -2482,9 +2499,8 @@ function normalizeOcrText(text) {
 }
 
 /* =========================================================
-   スキル照合用文字列正規化処理
-   OCRで発生しやすい○表記や末尾記号の揺れを吸収する。
-   ========================================================= */
+  スキル照合用文字列正規化処理
+  ========================================================= */
 
 function normalizeSkillText(text) {
   return text
@@ -2509,9 +2525,8 @@ function normalizeSkillText(text) {
 }
 
 /* =========================================================
-   Levenshtein距離を計算する処理
-   挿入・削除・置換の最小回数を求める。
-   ========================================================= */
+  Levenshtein距離を計算する処理
+  ========================================================= */
 
 function calculateLevenshteinDistance(
   source,
@@ -2583,9 +2598,8 @@ function calculateLevenshteinDistance(
 }
 
 /* =========================================================
-   2つの文字列の類似度を0～1で計算する処理
-   1.000なら完全一致。
-   ========================================================= */
+  2つの文字列の類似度を0～1で計算する処理
+  ========================================================= */
 
 function calculateSimilarity(
   source,
@@ -2623,8 +2637,10 @@ function calculateSimilarity(
 }
 
 /* =========================================================
-   OCR結果に最も近いスキル要件候補を探す処理
-   ========================================================= */
+  OCR結果に近いスキル要件候補を探す処理
+
+  第1候補だけでなく第2候補も取得する。
+  ========================================================= */
 
 function findBestSkillMatch(
   ocrText,
@@ -2642,63 +2658,109 @@ function findBestSkillMatch(
     return {
       candidate: null,
       similarity: 0,
+      secondCandidate: null,
+      secondSimilarity: 0,
+      similarityMargin: 0,
       normalizedOcr
     };
   }
 
-  let bestCandidate = null;
-  let bestSimilarity = 0;
+  const matches =
+    dictionary.map(skill => {
+      const normalizedSkill =
+        normalizeSkillText(
+          skill
+        );
 
-  dictionary.forEach(skill => {
-    const normalizedSkill =
-      normalizeSkillText(
-        skill
-      );
+      const similarity =
+        calculateSimilarity(
+          normalizedOcr,
+          normalizedSkill
+        );
 
-    const similarity =
-      calculateSimilarity(
-        normalizedOcr,
-        normalizedSkill
-      );
+      return {
+        candidate: skill,
+        normalizedSkill,
+        similarity
+      };
+    });
 
-    if (
-      similarity >
-      bestSimilarity
-    ) {
-      bestCandidate =
-        skill;
+  matches.sort(
+    (a, b) =>
+      b.similarity -
+      a.similarity
+  );
 
-      bestSimilarity =
-        similarity;
-    }
-  });
+  const best =
+    matches[0] || null;
+
+  const second =
+    matches[1] || null;
+
+  const bestSimilarity =
+    best
+      ? best.similarity
+      : 0;
+
+  const secondSimilarity =
+    second
+      ? second.similarity
+      : 0;
+
+  const similarityMargin =
+    best
+      ? bestSimilarity -
+        secondSimilarity
+      : 0;
 
   return {
     candidate:
-      bestCandidate,
+      best
+        ? best.candidate
+        : null,
+
     similarity:
       bestSimilarity,
+
+    secondCandidate:
+      second
+        ? second.candidate
+        : null,
+
+    secondSimilarity,
+    similarityMargin,
     normalizedOcr
   };
 }
 
 /* =========================================================
-   OCR結果と候補の一致状態を判定する処理
+  OCR文字数に応じた類似度閾値取得処理
+  ========================================================= */
 
-   exact:
-     正規化後に完全一致。
+function getSkillMatchThreshold(
+  normalizedOcr
+) {
+  const length =
+    normalizedOcr.length;
 
-   similar:
-     類似度0.60以上。
+  return (
+    SKILL_MATCH_CONFIG
+      .thresholds[length] ??
+    SKILL_MATCH_CONFIG
+      .defaultThreshold
+  );
+}
 
-   unmatched:
-     自動補正には不十分。
-   ========================================================= */
+/* =========================================================
+  OCR結果と候補の一致状態を判定する処理
+  ========================================================= */
 
 function determineMatchStatus(
   normalizedOcr,
   candidate,
-  similarity
+  similarity,
+  secondSimilarity,
+  similarityMargin
 ) {
   if (!candidate) {
     return "unmatched";
@@ -2716,19 +2778,35 @@ function determineMatchStatus(
     return "exact";
   }
 
+  const threshold =
+    getSkillMatchThreshold(
+      normalizedOcr
+    );
+
   if (
-    similarity >= 0.60
+    similarity < threshold
   ) {
-    return "similar";
+    return "unmatched";
   }
 
-  return "unmatched";
+  const hasSecondCandidate =
+    secondSimilarity > 0;
+
+  if (
+    hasSecondCandidate &&
+    similarityMargin <
+      SKILL_MATCH_CONFIG
+        .minimumMargin
+  ) {
+    return "unmatched";
+  }
+
+  return "similar";
 }
 
 /* =========================================================
-   Tesseract.js OCR worker生成処理
-   日本語優先で認識する。
-   ========================================================= */
+  Tesseract.js OCR worker生成処理
+  ========================================================= */
 
 async function createOcrWorker() {
   const status =
@@ -2772,8 +2850,8 @@ async function createOcrWorker() {
 }
 
 /* =========================================================
-   白因子カード1件をOCRする処理
-   ========================================================= */
+  白因子カード1件をOCRする処理
+  ========================================================= */
 
 async function recognizeSkillName(
   worker,
@@ -2808,18 +2886,21 @@ async function recognizeSkillName(
       normalizeOcrText(
         rawText
       ),
+
     ocrRawText:
       rawText,
+
     ocrConfidence:
       result.data
         .confidence ?? 0,
+
     ocrCanvas
   };
 }
 
 /* =========================================================
-   白因子だけOCRし、スキル要件との類似照合も実行する処理
-   ========================================================= */
+  白因子だけOCRし、スキル要件との類似照合も実行する処理
+  ========================================================= */
 
 async function runOcrForWhiteCards(
   worker,
@@ -2895,18 +2976,34 @@ async function runOcrForWhiteCards(
     card.matchSimilarity =
       matchResult.similarity;
 
+    card.secondMatchCandidate =
+      matchResult.secondCandidate;
+
+    card.secondMatchSimilarity =
+      matchResult.secondSimilarity;
+
+    card.matchSimilarityMargin =
+      matchResult.similarityMargin;
+
+    card.matchThreshold =
+      getSkillMatchThreshold(
+        matchResult.normalizedOcr
+      );
+
     card.matchStatus =
       determineMatchStatus(
         matchResult.normalizedOcr,
         matchResult.candidate,
-        matchResult.similarity
+        matchResult.similarity,
+        matchResult.secondSimilarity,
+        matchResult.similarityMargin
       );
   }
 }
 
 /* =========================================================
-   因子カード切り抜きプレビュー生成処理
-   ========================================================= */
+  因子カード切り抜きプレビュー生成処理
+  ========================================================= */
 
 function createCardThumbnail(
   canvas,
@@ -2945,9 +3042,8 @@ function createCardThumbnail(
 }
 
 /* =========================================================
-   解析デバッグ結果表示処理
-   OCR結果・候補・一致状態・類似度も表示する。
-   ========================================================= */
+  解析デバッグ結果表示処理
+  ========================================================= */
 
 function renderAnalysisDebug(
   memberLabel,
@@ -3011,9 +3107,13 @@ function renderAnalysisDebug(
         <th>種類</th>
         <th>星数</th>
         <th>OCR結果</th>
-        <th>候補</th>
+        <th>第1候補</th>
+        <th>第1類似度</th>
+        <th>第2候補</th>
+        <th>第2類似度</th>
+        <th>候補差</th>
+        <th>閾値</th>
         <th>一致</th>
-        <th>類似度</th>
         <th>信頼度</th>
         <th>星判定率</th>
         <th>RGB</th>
@@ -3080,6 +3180,31 @@ function renderAnalysisDebug(
             .toFixed(3)
         : "-";
 
+    const secondCandidateText =
+      card.secondMatchCandidate ||
+      "-";
+
+    const secondSimilarityText =
+      card.factorType ===
+      "white"
+        ? card.secondMatchSimilarity
+            .toFixed(3)
+        : "-";
+
+    const marginText =
+      card.factorType ===
+      "white"
+        ? card.matchSimilarityMargin
+            .toFixed(3)
+        : "-";
+
+    const thresholdText =
+      card.factorType ===
+      "white"
+        ? card.matchThreshold
+            .toFixed(3)
+        : "-";
+
     let matchStatusText = "-";
 
     if (
@@ -3135,11 +3260,27 @@ function renderAnalysisDebug(
       </td>
 
       <td>
-        ${matchStatusText}
+        ${similarityText}
       </td>
 
       <td>
-        ${similarityText}
+        ${secondCandidateText}
+      </td>
+
+      <td>
+        ${secondSimilarityText}
+      </td>
+
+      <td>
+        ${marginText}
+      </td>
+
+      <td>
+        ${thresholdText}
+      </td>
+
+      <td>
+        ${matchStatusText}
       </td>
 
       <td>
@@ -3195,7 +3336,7 @@ function renderAnalysisDebug(
   logLines.push("");
 
   logLines.push(
-    "画像\t列\tNo.\t種類\t星数\tOCR結果\t候補\t一致\t類似度\t信頼度\t星判定率\tRGB\tY\t高さ"
+    "画像\t列\tNo.\t種類\t星数\tOCR結果\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t信頼度\t星判定率\tRGB\tY\t高さ"
   );
 
   allCards.forEach(card => {
@@ -3206,9 +3347,6 @@ function renderAnalysisDebug(
             ratio.toFixed(3)
         )
         .join("/");
-
-    const candidateText =
-      card.matchCandidate || "";
 
     let matchStatusText = "";
 
@@ -3240,16 +3378,37 @@ function renderAnalysisDebug(
         card.factorType,
         card.stars,
         card.ocrText || "",
-        candidateText,
-        matchStatusText,
+
+        card.matchCandidate || "",
+
         card.factorType === "white"
           ? card.matchSimilarity.toFixed(3)
           : "",
+
+        card.secondMatchCandidate || "",
+
+        card.factorType === "white"
+          ? card.secondMatchSimilarity.toFixed(3)
+          : "",
+
+        card.factorType === "white"
+          ? card.matchSimilarityMargin.toFixed(3)
+          : "",
+
+        card.factorType === "white"
+          ? card.matchThreshold.toFixed(3)
+          : "",
+
+        matchStatusText,
+
         card.ocrConfidence !== null
           ? card.ocrConfidence.toFixed(1)
           : "",
+
         ratioText,
+
         `${card.color.r}, ${card.color.g}, ${card.color.b}`,
+
         card.y,
         card.height
       ].join("\t")
@@ -3263,9 +3422,8 @@ function renderAnalysisDebug(
 }
 
 /* =========================================================
-   画像単位の解析エラー表示処理
-   1枚でエラーが発生しても他画像の解析は継続する。
-   ========================================================= */
+  画像単位の解析エラー表示処理
+  ========================================================= */
 
 function renderAnalysisError(
   memberLabel,
@@ -3318,9 +3476,8 @@ function renderAnalysisError(
 }
 
 /* =========================================================
-   デバッグログコピー処理
-   表示された解析結果をクリップボードへコピーする。
-   ========================================================= */
+  デバッグログコピー処理
+  ========================================================= */
 
 async function copyDebugLog() {
   const status =
@@ -3369,15 +3526,16 @@ document
   );
 
 /* =========================================================
-   画像解析ボタン処理
+  画像解析ボタン処理
 
-   1. OCR worker生成
-   2. カード検出
-   3. 色・星判定
-   4. 白因子OCR
-   5. スキル要件との類似照合
-   6. デバッグ表示
-   ========================================================= */
+  1. OCR worker生成
+  2. カード検出
+  3. 色・星判定
+  4. 白因子OCR
+  5. スキル要件との類似照合
+  6. 第1・第2候補の比較
+  7. デバッグ表示
+  ========================================================= */
 
 document
   .getElementById("analyze-images")
@@ -3525,8 +3683,8 @@ document
   );
 
 /* =========================================================
-   初期状態設定
-   ========================================================= */
+  初期状態設定
+  ========================================================= */
 
 setPasteTarget("parentA");
 updateImageSummary();
