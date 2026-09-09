@@ -22,6 +22,14 @@ const members = {
 let pasteTargetMember = "parentA";
 
 /* =========================================================
+   デバッグログ保持
+   画面に表示した解析結果をテキスト化して保存し、
+   「デバッグログをコピー」ボタンから一括コピーできるようにする。
+   ========================================================= */
+
+let debugLogLines = [];
+
+/* =========================================================
    画像解析設定
    固定ピクセルではなく画像サイズに対する割合を使用する。
    ========================================================= */
@@ -51,6 +59,32 @@ const ANALYSIS_CONFIG = {
     5.5%まで許容する。
   */
   maximumCardHeightRatio: 0.055
+};
+
+/* =========================================================
+   星数判定設定
+   カード内の星が表示される領域を割合で定義する。
+
+   PNG・JPGでカードサイズが違っても、
+   card.width / card.height に対する割合で追従する。
+   ========================================================= */
+
+const STAR_CONFIG = {
+  area: {
+    xRatio: 0.34,
+    yRatio: 0.46,
+    widthRatio: 0.36,
+    heightRatio: 0.50
+  },
+
+  yellow: {
+    minR: 180,
+    minG: 120,
+    maxB: 120,
+    minRGDiffFromB: 45
+  },
+
+  minimumYellowRatio: 0.018
 };
 
 /* =========================================================
@@ -1159,21 +1193,40 @@ function analyzeFactorImage(ctx, width, height) {
 
   rowResult.rows.forEach(row => {
     if (row.leftCard) {
-      leftCards.push(
+      const classifiedCard =
         classifyDetectedCard(
           ctx,
           row.leftCard
-        )
-      );
-    }
+        );
 
+      const starResult =
+        detectStarCount(
+          ctx,
+          classifiedCard
+        );
+
+      leftCards.push({
+        ...classifiedCard,
+        ...starResult
+      });
+    }
     if (row.rightCard) {
-      rightCards.push(
+      const classifiedCard =
         classifyDetectedCard(
           ctx,
           row.rightCard
-        )
-      );
+        );
+
+      const starResult =
+        detectStarCount(
+          ctx,
+          classifiedCard
+        );
+
+      rightCards.push({
+        ...classifiedCard,
+        ...starResult
+      });
     }
   });
 
@@ -1215,6 +1268,193 @@ function createCardThumbnail(canvas, card) {
 }
 
 /* =========================================================
+   因子カード内の星表示領域を算出する処理
+
+   星はカード下側中央付近にあるため、
+   固定pxではなくカードサイズに対する割合で切り出す。
+   ========================================================= */
+
+function getStarArea(card) {
+  return {
+    x: Math.round(
+      card.x +
+      card.width * STAR_CONFIG.area.xRatio
+    ),
+
+    y: Math.round(
+      card.y +
+      card.height * STAR_CONFIG.area.yRatio
+    ),
+
+    width: Math.round(
+      card.width *
+      STAR_CONFIG.area.widthRatio
+    ),
+
+    height: Math.round(
+      card.height *
+      STAR_CONFIG.area.heightRatio
+    )
+  };
+}
+
+/* =========================================================
+   ピクセルが「取得済みの黄色い星」に近い色か判定する処理
+
+   未取得の灰色星や白背景を除外し、
+   黄色～金色のピクセルだけを拾う。
+   ========================================================= */
+
+function isYellowStarPixel(r, g, b) {
+  return (
+    r >= STAR_CONFIG.yellow.minR &&
+    g >= STAR_CONFIG.yellow.minG &&
+    b <= STAR_CONFIG.yellow.maxB &&
+    r - b >= STAR_CONFIG.yellow.minRGDiffFromB &&
+    g - b >= STAR_CONFIG.yellow.minRGDiffFromB
+  );
+}
+
+/* =========================================================
+   星数を1～3で判定する処理
+
+   星領域を横方向に3分割し、
+   それぞれの領域に黄色ピクセルが一定割合存在するか確認する。
+
+   ★★☆なら
+   1個目 true
+   2個目 true
+   3個目 false
+   となり、stars = 2 を返す。
+   ========================================================= */
+
+function detectStarCount(ctx, card) {
+  const area = getStarArea(card);
+
+  const segmentWidth =
+    area.width / 3;
+
+  const starStates = [];
+  const yellowRatios = [];
+
+  for (let starIndex = 0; starIndex < 3; starIndex++) {
+    const x = Math.round(
+      area.x +
+      segmentWidth * starIndex
+    );
+
+    const width = Math.max(
+      1,
+      Math.round(segmentWidth)
+    );
+
+    const data = ctx.getImageData(
+      x,
+      area.y,
+      width,
+      area.height
+    ).data;
+
+    let yellowPixels = 0;
+    let totalPixels = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      if (isYellowStarPixel(r, g, b)) {
+        yellowPixels++;
+      }
+
+      totalPixels++;
+    }
+
+    const ratio =
+      yellowPixels /
+      totalPixels;
+
+    yellowRatios.push(ratio);
+
+    starStates.push(
+      ratio >=
+      STAR_CONFIG.minimumYellowRatio
+    );
+  }
+
+  const stars =
+    starStates.filter(Boolean).length;
+
+  return {
+    stars,
+    starStates,
+    yellowRatios,
+    area
+  };
+}
+
+/* =========================================================
+   星領域のデバッグ用プレビューを生成する処理
+   星数判定が正しいか目視確認できるようにする。
+   ========================================================= */
+
+function createStarThumbnail(canvas, starArea) {
+  const cropCanvas = document.createElement("canvas");
+
+  cropCanvas.width = starArea.width;
+  cropCanvas.height = starArea.height;
+
+  const cropCtx = cropCanvas.getContext("2d");
+
+  cropCtx.drawImage(
+    canvas,
+    starArea.x,
+    starArea.y,
+    starArea.width,
+    starArea.height,
+    0,
+    0,
+    starArea.width,
+    starArea.height
+  );
+
+  return cropCanvas.toDataURL("image/png");
+}
+
+/* =========================================================
+   デバッグログコピー処理
+   現在の解析結果をタブ区切りテキストとして
+   クリップボードへ一括コピーする。
+   ========================================================= */
+
+async function copyDebugLog() {
+  const button = document.getElementById("copy-debug-log");
+  const status = document.getElementById("copy-debug-status");
+
+  if (debugLogLines.length === 0) {
+    return;
+  }
+
+  const text = debugLogLines.join("\n");
+
+  try {
+    await navigator.clipboard.writeText(text);
+
+    status.textContent = "コピーしました";
+
+    setTimeout(() => {
+      status.textContent = "";
+    }, 2000);
+  } catch (error) {
+    console.error("デバッグログのコピーに失敗しました", error);
+
+    status.textContent = "コピーに失敗しました";
+  }
+}
+
+document.getElementById("copy-debug-log").addEventListener("click", copyDebugLog);
+
+/* =========================================================
    解析デバッグ結果表示処理
    ========================================================= */
 
@@ -1253,9 +1493,12 @@ function renderAnalysisDebug(
     <thead>
       <tr>
         <th>画像</th>
+        <th>星領域</th>
         <th>列</th>
         <th>No.</th>
         <th>種類</th>
+        <th>星数</th>
+        <th>星判定率</th>
         <th>RGB</th>
         <th>Y</th>
         <th>高さ</th>
@@ -1279,9 +1522,21 @@ function renderAnalysisDebug(
       card
     );
 
+    const starPreview = createStarThumbnail(
+      canvas,
+      card.area
+    );
+
+    const ratioText = card.yellowRatios
+      .map(ratio => ratio.toFixed(3))
+      .join(" / ");
+
     tr.innerHTML = `
       <td>
         <img class="debug-thumbnail" src="${preview}" alt="因子カード">
+      </td>
+      <td>
+        <img class="debug-star-thumbnail" src="${starPreview}" alt="星領域">
       </td>
       <td>${card.column}</td>
       <td>${card.row}</td>
@@ -1290,6 +1545,8 @@ function renderAnalysisDebug(
           ${card.factorType}
         </span>
       </td>
+      <td>${card.stars}</td>
+      <td>${ratioText}</td>
       <td>${card.color.r}, ${card.color.g}, ${card.color.b}</td>
       <td>${card.y}</td>
       <td>${card.height}</td>
@@ -1299,6 +1556,43 @@ function renderAnalysisDebug(
   });
 
   section.appendChild(table);
+
+  const logLines = [];
+
+  logLines.push(`${memberLabel} / 画像${imageIndex + 1}`);
+  logLines.push(`左列：${analysis.leftCards.length}件`);
+  logLines.push(`右列：${analysis.rightCards.length}件`);
+  logLines.push(`所持因子開始Y：${analysis.factorAreaTop}`);
+  logLines.push(`行間隔：${analysis.pitch ?? "-"}`);
+  logLines.push("");
+  logLines.push(
+    "画像\t列\tNo.\t種類\t星数\t星判定率\tRGB\tY\t高さ"
+  );
+
+  allCards.forEach(card => {
+    const ratioText = card.yellowRatios
+      .map(ratio => ratio.toFixed(3))
+      .join("/");
+
+    logLines.push(
+      [
+        "因子カード",
+        card.column,
+        card.row,
+        card.factorType,
+        card.stars,
+        ratioText,
+        `${card.color.r}, ${card.color.g}, ${card.color.b}`,
+        card.y,
+        card.height
+      ].join("\t")
+    );
+  });
+
+  debugLogLines.push(
+    ...logLines,
+    ""
+  );
   container.appendChild(section);
 }
 
@@ -1336,6 +1630,19 @@ function renderAnalysisError(
 document.getElementById("analyze-images").addEventListener("click", async () => {
   const debugContainer = document.getElementById("analysis-debug");
   debugContainer.innerHTML = "";
+
+  debugLogLines = [];
+
+  const copyButton =
+    document.getElementById(
+      "copy-debug-log"
+    );
+
+  copyButton.disabled = true;
+
+  document.getElementById(
+    "copy-debug-status"
+  ).textContent = "";
 
   const activeMembers = Object.entries(members).filter(([, member]) => {
     return member.images.length > 0;
@@ -1381,6 +1688,11 @@ document.getElementById("analyze-images").addEventListener("click", async () => 
       }
     }
   }
+
+  document.getElementById(
+    "copy-debug-log"
+  ).disabled =
+    debugLogLines.length === 0;
 
   document.querySelector('[data-tab="results"]').click();
 });

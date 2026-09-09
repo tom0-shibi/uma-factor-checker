@@ -356,6 +356,45 @@ body {
   background: #eee;
 }
 
+.debug-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.secondary-button {
+  padding: 9px 16px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  background: #fff;
+  color: #222;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: #f5f5f5;
+}
+
+.secondary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.copy-status {
+  color: #666;
+  font-size: 13px;
+}
+
+.debug-star-thumbnail {
+  display: block;
+  width: 120px;
+  max-height: 50px;
+  object-fit: contain;
+  background: #222;
+}
+
 @media (max-width: 700px) {
   .app-main {
     padding: 16px;

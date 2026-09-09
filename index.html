@@ -145,9 +145,19 @@
 
     <section id="results" class="tab-content">
       <h2>判定結果</h2>
+
       <p class="description">
-        現在は因子カードの検出・色判定を確認するデバッグ段階です。
+        現在は因子カード検出・色判定・星数判定を確認するデバッグ段階です。
       </p>
+
+      <div class="debug-actions">
+        <button id="copy-debug-log" class="secondary-button" disabled>
+          デバッグログをコピー
+        </button>
+
+        <span id="copy-debug-status" class="copy-status"></span>
+      </div>
+
       <div id="analysis-debug"></div>
     </section>
   </main>
