@@ -598,111 +598,6 @@ function getRowLuminance(ctx, columnX, columnWidth, y, imageWidth) {
 }
 
 /* =========================================================
-   因子カード上端Y座標の補正処理
-
-   スクロール途中の画像では、fallback位置から算出した行位置が
-   実際のカード上端より数px～十数pxずれる場合がある。
-
-   カード間の隙間は明るく、カード内部はそれより暗いため、
-   推定Yの前後を探索して
-
-   「明るい隙間 → 暗いカード」
-
-   へ変化する位置を実際のカード上端として採用する。
-
-   左右列をそれぞれ調べ、検出できた位置の平均を返す。
-   ========================================================= */
-
-function refineCardTopY(
-  ctx,
-  width,
-  height,
-  approximateY,
-  pitch
-) {
-  const searchRadius = Math.max(
-    6,
-    Math.round(pitch * 0.32)
-  );
-
-  const startY = Math.max(
-    1,
-    Math.round(approximateY - searchRadius)
-  );
-
-  const endY = Math.min(
-    height - 2,
-    Math.round(approximateY + searchRadius)
-  );
-
-  const detectedYs = [];
-
-  for (const columnName of ["left", "right"]) {
-    const column =
-      ANALYSIS_CONFIG.columns[columnName];
-
-    const columnX =
-      width * column.xRatio;
-
-    const columnWidth =
-      width * column.widthRatio;
-
-    let previousLuminance =
-      getRowLuminance(
-        ctx,
-        columnX,
-        columnWidth,
-        startY,
-        width
-      );
-
-    for (
-      let y = startY + 1;
-      y <= endY;
-      y++
-    ) {
-      const luminance =
-        getRowLuminance(
-          ctx,
-          columnX,
-          columnWidth,
-          y,
-          width
-        );
-
-      /*
-        カード間の白い隙間から、
-        灰色・青・赤・緑のカード内部へ入った瞬間を探す。
-      */
-      const enteredCard =
-        previousLuminance >= 242 &&
-        luminance < 239;
-
-      if (enteredCard) {
-        detectedYs.push(y);
-        break;
-      }
-
-      previousLuminance =
-        luminance;
-    }
-  }
-
-  if (detectedYs.length === 0) {
-    return Math.round(approximateY);
-  }
-
-  const average =
-    detectedYs.reduce(
-      (sum, y) => sum + y,
-      0
-    ) /
-    detectedYs.length;
-
-  return Math.round(average);
-}
-
-/* =========================================================
    1列分の因子カード候補検出処理
    カード間の明るい隙間を基準にカード領域を分割する。
    ========================================================= */
@@ -898,6 +793,77 @@ function hasFactorIcon(ctx, card) {
 }
 
 /* =========================================================
+   カード領域が十分に写っているか確認する処理
+
+   スクロール途中でカードの一部だけが写っている場合、
+   カード背景ではなく白い画面背景を多く含む。
+
+   カード右側の背景部分を確認し、
+   ・白因子の灰色背景
+   ・青 / 赤 / 緑の色付き背景
+   のいずれかが存在すれば完全カード候補とする。
+
+   ほぼ真っ白な領域は部分カードまたは空白として除外する。
+   ========================================================= */
+
+function hasFullCardBody(ctx, card) {
+  const samplePositions = [
+    { x: 0.70, y: 0.25 },
+    { x: 0.82, y: 0.25 },
+    { x: 0.90, y: 0.25 }
+  ];
+
+  const patchSize = Math.max(
+    3,
+    Math.round(card.width * 0.025)
+  );
+
+  const colors = samplePositions.map(position => {
+    return getAverageColor(
+      ctx,
+      card.x + card.width * position.x,
+      card.y + card.height * position.y,
+      patchSize,
+      patchSize
+    );
+  });
+
+  const average = {
+    r: colors.reduce((sum, color) => sum + color.r, 0) / colors.length,
+    g: colors.reduce((sum, color) => sum + color.g, 0) / colors.length,
+    b: colors.reduce((sum, color) => sum + color.b, 0) / colors.length
+  };
+
+  const luminance = getLuminance(
+    average.r,
+    average.g,
+    average.b
+  );
+
+  const colorSpread =
+    Math.max(
+      average.r,
+      average.g,
+      average.b
+    ) -
+    Math.min(
+      average.r,
+      average.g,
+      average.b
+    );
+
+  /*
+    白背景そのものなら245～255程度になる。
+    白因子背景は230前後。
+    色因子は彩度があるためcolorSpreadも大きい。
+  */
+  return (
+    luminance < 242 ||
+    colorSpread > 18
+  );
+}
+
+/* =========================================================
    因子カード候補から共通行間隔を計算する処理
    ========================================================= */
 
@@ -934,15 +900,15 @@ function calculateRowPitch(cards) {
 /* =========================================================
    左右共通の因子行を生成する処理
 
-   1. 初期カード候補から行間隔を計算する
-   2. 候補Yを上から確認する
-   3. 左右どちらかに因子アイコンがある最初の候補を
-      「本当の1行目」とする
-   4. 以降は一定ピッチで行を生成する
-   5. 左右どちらにもカードがない行で終了する
+   スクロール途中画像への対応として、
+   最初に「完全に写っているカード」の位置を探す。
 
-   スクロール途中画像の上端に、
-   切れたカードや空白が存在しても解析を開始できる。
+   完全カードを1枚見つけた後は、
+   そのY座標と算出済みの行間隔を基準にして
+   全行を一定ピッチで生成する。
+
+   行ごとのY補正は行わないため、
+   補正成功・失敗によってカード位置がばらつくことを防ぐ。
    ========================================================= */
 
 function buildFactorRows(
@@ -986,10 +952,6 @@ function buildFactorRows(
       ]
     : pitch * 0.9;
 
-  /*
-    候補Yを昇順で取得し、
-    近い値は1つにまとめる。
-  */
   const candidateYs = initialCards
     .map(card => card.y)
     .sort((a, b) => a - b);
@@ -1011,8 +973,7 @@ function buildFactorRows(
   });
 
   /*
-    左右どちらかに本物の因子アイコンが存在する
-    最初の候補Yを探す。
+    最初の「完全なカード」を基準行として探す。
   */
   let firstY = null;
 
@@ -1047,25 +1008,20 @@ function buildFactorRows(
       height: Math.round(cardHeight)
     };
 
-    const hasLeft = hasFactorIcon(
-      ctx,
-      leftCard
-    );
+    const leftValid =
+      hasFactorIcon(ctx, leftCard) &&
+      hasFullCardBody(ctx, leftCard);
 
-    const hasRight = hasFactorIcon(
-      ctx,
-      rightCard
-    );
+    const rightValid =
+      hasFactorIcon(ctx, rightCard) &&
+      hasFullCardBody(ctx, rightCard);
 
-    if (hasLeft || hasRight) {
+    if (leftValid || rightValid) {
       firstY = candidateY;
       break;
     }
   }
 
-  /*
-    本物の開始行を見つけられなかった場合。
-  */
   if (firstY === null) {
     return {
       pitch,
@@ -1077,18 +1033,9 @@ function buildFactorRows(
   const rows = [];
 
   for (let rowIndex = 0; ; rowIndex++) {
-    const approximateY =
+    const y =
       firstY +
       pitch * rowIndex;
-
-    const y =
-      refineCardTopY(
-        ctx,
-        width,
-        height,
-        approximateY,
-        pitch
-      );
 
     if (
       y + cardHeight >
@@ -1127,19 +1074,16 @@ function buildFactorRows(
       height: Math.round(cardHeight)
     };
 
-    const hasLeft = hasFactorIcon(
-      ctx,
-      leftCard
-    );
+    const hasLeft =
+      hasFactorIcon(ctx, leftCard) &&
+      hasFullCardBody(ctx, leftCard);
 
-    const hasRight = hasFactorIcon(
-      ctx,
-      rightCard
-    );
+    const hasRight =
+      hasFactorIcon(ctx, rightCard) &&
+      hasFullCardBody(ctx, rightCard);
 
     /*
-      左右とも因子カードが存在しない行に到達したら
-      因子一覧終了と判断する。
+      完全なカードが左右どちらにも存在しなくなったら終了する。
     */
     if (!hasLeft && !hasRight) {
       break;
@@ -1148,8 +1092,14 @@ function buildFactorRows(
     rows.push({
       row: rowIndex + 1,
       y: Math.round(y),
-      leftCard: hasLeft ? leftCard : null,
-      rightCard: hasRight ? rightCard : null
+      leftCard:
+        hasLeft
+          ? leftCard
+          : null,
+      rightCard:
+        hasRight
+          ? rightCard
+          : null
     });
   }
 
