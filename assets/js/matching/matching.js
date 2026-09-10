@@ -352,6 +352,25 @@ function determineMatchStatus(
     return "exact";
   }
 
+  const seasonalAwakeningMatch =
+    normalizedCandidate.match(
+      /^([春夏秋冬])の目覚め$/
+    );
+
+  if (seasonalAwakeningMatch) {
+    const recognizedSeason =
+      normalizedOcr.match(
+        /^([春夏秋冬])の目覚め/
+      )?.[1] || null;
+
+    if (
+      recognizedSeason !==
+      seasonalAwakeningMatch[1]
+    ) {
+      return "unmatched";
+    }
+  }
+
   const threshold =
     getSkillMatchThreshold(
       normalizedOcr
@@ -384,6 +403,7 @@ export {
   getRequirementSkillDictionary,
   getRequirementRank,
   normalizeOcrText,
+  normalizeSkillText,
   findBestSkillMatch,
   getSkillMatchThreshold,
   determineMatchStatus

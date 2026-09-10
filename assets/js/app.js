@@ -3,10 +3,13 @@ import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis
 import { createOcrWorker, runOcrForWhiteCards } from "./ocr/ocr.js";
 import { renderAnalysisDebug, renderAnalysisError, renderOverallSkillSummary, appendSummaryToDebugLog } from "./result/results.js";
 import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, setPasteTarget, updateImageSummary } from "./ui/ui.js";
+import { initializePresetManager } from "./preset/preset-manager.js";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
 );
+
+initializePresetManager();
 
 /* =========================================================
   全人物の保存済み解析結果初期化処理

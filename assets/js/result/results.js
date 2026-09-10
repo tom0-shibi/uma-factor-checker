@@ -1,5 +1,6 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
 import { ensureResultSummaryContainer } from "../ui/ui.js";
+import { getRequirementRankLabel } from "../preset/preset-manager.js";
 
 /* =========================================================
   因子カード切り抜きプレビュー生成処理
@@ -861,7 +862,7 @@ function renderOverallSkillSummary() {
       "factor-result-rank-title";
 
     rankTitle.textContent =
-      `${rank}ランク`;
+      getRequirementRankLabel(rank);
 
     section.appendChild(
       rankTitle

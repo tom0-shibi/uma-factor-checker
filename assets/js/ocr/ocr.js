@@ -5,10 +5,19 @@ import {
   getRequirementSkillDictionary,
   getRequirementRank,
   normalizeOcrText,
+  normalizeSkillText,
   findBestSkillMatch,
   getSkillMatchThreshold,
   determineMatchStatus
 } from "../matching/matching.js";
+
+const SHORT_SKILL_FALLBACK_CONFIG = {
+  maximumLength: 3,
+  minimumLength: 2,
+  maximumInitialConfidence: 40,
+  thresholds: [165, 195, 220],
+  scale: 1.5
+};
 
 /* =========================================================
   OCR対象となるスキル文字色判定処理
@@ -342,6 +351,163 @@ function createOcrCanvas(
 }
 
 /* =========================================================
+  短いスキル名専用の限定OCR画像生成処理
+  通常OCRが低信頼かつ未確定の場合にだけ使用する。
+  ========================================================= */
+
+function createShortSkillFallbackCanvas(
+  sourceCanvas,
+  threshold
+) {
+  const canvas =
+    document.createElement("canvas");
+
+  canvas.width =
+    Math.round(
+      sourceCanvas.width *
+      SHORT_SKILL_FALLBACK_CONFIG.scale
+    );
+
+  canvas.height =
+    Math.round(
+      sourceCanvas.height *
+      SHORT_SKILL_FALLBACK_CONFIG.scale
+    );
+
+  const ctx =
+    canvas.getContext(
+      "2d",
+      {
+        willReadFrequently: true
+      }
+    );
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(
+    sourceCanvas,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const imageData =
+    ctx.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+  for (
+    let index = 0;
+    index < imageData.data.length;
+    index += 4
+  ) {
+    const luminance =
+      getLuminance(
+        imageData.data[index],
+        imageData.data[index + 1],
+        imageData.data[index + 2]
+      );
+
+    const value =
+      luminance < threshold
+        ? 0
+        : 255;
+
+    imageData.data[index] = value;
+    imageData.data[index + 1] = value;
+    imageData.data[index + 2] = value;
+  }
+
+  ctx.putImageData(
+    imageData,
+    0,
+    0
+  );
+
+  return canvas;
+}
+
+async function recognizeShortSkillFallback(
+  worker,
+  ocrCanvas,
+  dictionary
+) {
+  let bestResult = null;
+
+  for (
+    const threshold
+    of SHORT_SKILL_FALLBACK_CONFIG.thresholds
+  ) {
+    const fallbackCanvas =
+      createShortSkillFallbackCanvas(
+        ocrCanvas,
+        threshold
+      );
+
+    const result =
+      await worker.recognize(
+        fallbackCanvas
+      );
+
+    const rawText =
+      result.data.text || "";
+
+    const ocrText =
+      normalizeOcrText(
+        rawText
+      );
+
+    const matchResult =
+      findBestSkillMatch(
+        ocrText,
+        dictionary
+      );
+
+    const matchStatus =
+      determineMatchStatus(
+        matchResult.normalizedOcr,
+        matchResult.candidate,
+        matchResult.similarity,
+        matchResult.secondSimilarity,
+        matchResult.similarityMargin
+      );
+
+    if (
+      matchStatus === "exact" ||
+      matchStatus === "similar"
+    ) {
+      if (
+        !bestResult ||
+        matchResult.similarity >
+          bestResult.matchResult.similarity
+      ) {
+        bestResult = {
+          ocrText,
+          ocrRawText: rawText,
+          ocrConfidence:
+            result.data.confidence ?? 0,
+          ocrCanvas: fallbackCanvas,
+          matchResult,
+          matchStatus
+        };
+      }
+    }
+  }
+
+  return bestResult;
+}
+
+/* =========================================================
   Tesseract.js OCR worker生成処理
   ========================================================= */
 
@@ -479,6 +645,23 @@ async function runOcrForWhiteCards(
 
   const dictionary =
     getRequirementSkillDictionary();
+
+  const shortSkillDictionary =
+    dictionary.filter(skill => {
+      const length =
+        normalizeSkillText(
+          skill
+        ).length;
+
+      return (
+        length >=
+          SHORT_SKILL_FALLBACK_CONFIG
+            .minimumLength &&
+        length <=
+          SHORT_SKILL_FALLBACK_CONFIG
+            .maximumLength
+      );
+    });
 
   const whiteCards = [
     ...analysis.leftCards,
@@ -619,6 +802,76 @@ async function runOcrForWhiteCards(
         matchResult
           .similarityMargin
       );
+
+    if (
+      card.matchStatus ===
+        "unmatched" &&
+      card.ocrConfidence <
+        SHORT_SKILL_FALLBACK_CONFIG
+          .maximumInitialConfidence &&
+      shortSkillDictionary.length > 0 &&
+      result.ocrCanvas
+    ) {
+      const fallback =
+        await recognizeShortSkillFallback(
+          worker,
+          result.ocrCanvas,
+          shortSkillDictionary
+        );
+
+      if (fallback) {
+        card.ocrText =
+          fallback.ocrText;
+
+        card.ocrRawText =
+          fallback.ocrRawText;
+
+        card.ocrConfidence =
+          fallback.ocrConfidence;
+
+        card.ocrPreview =
+          fallback.ocrCanvas
+            .toDataURL(
+              "image/png"
+            );
+
+        card.normalizedOcr =
+          fallback.matchResult
+            .normalizedOcr;
+
+        card.matchCandidate =
+          fallback.matchResult
+            .candidate;
+
+        card.matchSimilarity =
+          fallback.matchResult
+            .similarity;
+
+        card.secondMatchCandidate =
+          fallback.matchResult
+            .secondCandidate;
+
+        card.secondMatchSimilarity =
+          fallback.matchResult
+            .secondSimilarity;
+
+        card.matchSimilarityMargin =
+          fallback.matchResult
+            .similarityMargin;
+
+        card.matchThreshold =
+          getSkillMatchThreshold(
+            fallback.matchResult
+              .normalizedOcr
+          );
+
+        card.matchStatus =
+          fallback.matchStatus;
+
+        card.ocrFallbackUsed =
+          true;
+      }
+    }
 
     card.requirementRank =
       (
