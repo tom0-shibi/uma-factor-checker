@@ -641,6 +641,16 @@ function renderSkillCards(rank) {
     return;
   }
 
+  const count =
+    document.querySelector(
+      `[data-rank-count="${rank}"]`
+    );
+
+  if (count) {
+    count.textContent =
+      `${requirements[rank].length}件`;
+  }
+
   container.innerHTML = "";
 
   requirements[rank].forEach(skill => {
@@ -698,6 +708,62 @@ const applyRequirementsButton =
     "apply-requirements"
   );
 
+const requirementApplyStatus =
+  document.getElementById(
+    "requirement-apply-status"
+  );
+
+function setRequirementApplyStatus(state) {
+  if (!requirementApplyStatus) {
+    return;
+  }
+
+  requirementApplyStatus.classList.remove(
+    "is-applied",
+    "is-dirty"
+  );
+
+  if (state === "applied") {
+    requirementApplyStatus.textContent = "✓ 反映済み";
+    requirementApplyStatus.classList.add("is-applied");
+    return;
+  }
+
+  if (state === "dirty") {
+    requirementApplyStatus.textContent = "● 未反映の変更があります";
+    requirementApplyStatus.classList.add("is-dirty");
+    return;
+  }
+
+  requirementApplyStatus.textContent = "";
+}
+
+function markRequirementsDirty() {
+  ["S", "A", "B", "C"].forEach(rank => {
+    const textarea = document.getElementById(
+      `input-${rank.toLowerCase()}`
+    );
+    const count = document.querySelector(
+      `[data-rank-count="${rank}"]`
+    );
+    if (count) {
+      count.textContent =
+        `${parseSkillInput(textarea?.value || "").length}件`;
+    }
+  });
+  setRequirementApplyStatus("dirty");
+}
+
+function clearRequirementApplyStatus() {
+  setRequirementApplyStatus("");
+}
+
+document.querySelectorAll(
+  "#input-s, #input-a, #input-b, #input-c"
+).forEach(textarea => {
+  textarea.addEventListener("input", markRequirementsDirty);
+});
+
 if (applyRequirementsButton) {
   applyRequirementsButton.addEventListener(
     "click",
@@ -734,6 +800,8 @@ if (applyRequirementsButton) {
       renderSkillCards("A");
       renderSkillCards("B");
       renderSkillCards("C");
+
+      setRequirementApplyStatus("applied");
 
       console.log(
         "現在のスキル要件:",
@@ -1202,4 +1270,4 @@ document.addEventListener(
 );
 
 
-export { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, setPasteTarget, updateImageSummary };
+export { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, setPasteTarget, updateImageSummary, markRequirementsDirty, clearRequirementApplyStatus };
