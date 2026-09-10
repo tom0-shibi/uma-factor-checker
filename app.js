@@ -1,4 +1,4 @@
-const APP_BUILD = "20260910-skill-match-02";
+const APP_BUILD = "20260910-result-01";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
@@ -6,7 +6,7 @@ console.info(
 
 /* =========================================================
   アプリ内データ
-  スキル要件と最大6人分の画像を保持する。
+  スキル要件・画像・解析結果を最大6人分保持する。
   ========================================================= */
 
 const requirements = {
@@ -17,21 +17,69 @@ const requirements = {
 };
 
 const members = {
-  parentA: { label: "親A", images: [] },
-  grandA1: { label: "親A-祖1", images: [] },
-  grandA2: { label: "親A-祖2", images: [] },
-  parentB: { label: "親B", images: [] },
-  grandB1: { label: "親B-祖1", images: [] },
-  grandB2: { label: "親B-祖2", images: [] }
+  parentA: {
+    label: "親A",
+    images: [],
+    analysisResults: []
+  },
+  grandA1: {
+    label: "親A-祖1",
+    images: [],
+    analysisResults: []
+  },
+  grandA2: {
+    label: "親A-祖2",
+    images: [],
+    analysisResults: []
+  },
+  parentB: {
+    label: "親B",
+    images: [],
+    analysisResults: []
+  },
+  grandB1: {
+    label: "親B-祖1",
+    images: [],
+    analysisResults: []
+  },
+  grandB2: {
+    label: "親B-祖2",
+    images: [],
+    analysisResults: []
+  }
 };
+
+const MEMBER_ORDER = [
+  "parentA",
+  "grandA1",
+  "grandA2",
+  "parentB",
+  "grandB1",
+  "grandB2"
+];
 
 let pasteTargetMember = "parentA";
 let debugLogLines = [];
 
 /* =========================================================
+  解析進捗状態
+  解析中オーバーレイへ現在の処理状況を渡す。
+  ========================================================= */
+
+const analysisProgress = {
+  active: false,
+  totalImages: 0,
+  currentImageNumber: 0,
+  currentMemberLabel: "",
+  currentImageIndex: 0,
+  currentWhiteCard: 0,
+  totalWhiteCards: 0,
+  tesseractProgress: 0
+};
+
+/* =========================================================
   画像解析設定
-  固定pxではなく画像サイズに対する割合を使用する。
-  PNG/JPG・画像サイズ違い・スクロール途中画像へ対応する。
+  現在安定しているカード検出設定を維持する。
   ========================================================= */
 
 const ANALYSIS_CONFIG = {
@@ -49,7 +97,11 @@ const ANALYSIS_CONFIG = {
       widthRatio: 0.33
     }
   },
-  scanXPositions: [0.72, 0.82, 0.92],
+  scanXPositions: [
+    0.72,
+    0.82,
+    0.92
+  ],
   gapLuminanceThreshold: 239,
   minimumGapRatio: 0.003,
   minimumCardHeightRatio: 0.014,
@@ -58,7 +110,7 @@ const ANALYSIS_CONFIG = {
 
 /* =========================================================
   星数判定設定
-  カード内の★1～3を黄色ピクセル量から判定する。
+  現在安定している★1～3判定設定を維持する。
   ========================================================= */
 
 const STAR_CONFIG = {
@@ -79,7 +131,7 @@ const STAR_CONFIG = {
 
 /* =========================================================
   OCR設定
-  現在安定している設定を維持する。
+  現在安定している文字切り出し設定を維持する。
   ========================================================= */
 
 const OCR_CONFIG = {
@@ -95,12 +147,7 @@ const OCR_CONFIG = {
 
 /* =========================================================
   スキル名照合設定
-
-  OCR文字数に応じて必要な類似度を変更する。
-
-  minimumMargin:
-    第1候補と第2候補の類似度差。
-    候補が拮抗している場合は自動確定しない。
+  OCR文字数に応じて類似一致の閾値を切り替える。
   ========================================================= */
 
 const SKILL_MATCH_CONFIG = {
@@ -116,40 +163,611 @@ const SKILL_MATCH_CONFIG = {
 };
 
 /* =========================================================
+  動的UI用CSS追加処理
+  既存HTML/CSSを変更せず解析中表示と集計表を追加する。
+  ========================================================= */
+
+function ensureDynamicStyles() {
+  if (
+    document.getElementById(
+      "dynamic-analysis-style"
+    )
+  ) {
+    return;
+  }
+
+  const style =
+    document.createElement("style");
+
+  style.id =
+    "dynamic-analysis-style";
+
+  style.textContent = `
+    .analysis-progress-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(20, 24, 30, 0.58);
+      backdrop-filter: blur(2px);
+    }
+
+    .analysis-progress-overlay[hidden] {
+      display: none;
+    }
+
+    .analysis-progress-dialog {
+      width: min(520px, 100%);
+      box-sizing: border-box;
+      padding: 28px;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow:
+        0 24px 70px
+        rgba(0, 0, 0, 0.25);
+    }
+
+    .analysis-progress-spinner {
+      width: 42px;
+      height: 42px;
+      margin: 0 auto 18px;
+      border: 5px solid #e4e7eb;
+      border-top-color: #6f63d9;
+      border-radius: 50%;
+      animation:
+        analysis-progress-spin
+        0.85s linear infinite;
+    }
+
+    @keyframes analysis-progress-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .analysis-progress-title {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .analysis-progress-detail {
+      min-height: 1.5em;
+      margin: 0 0 6px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    .analysis-progress-subdetail {
+      min-height: 1.5em;
+      margin: 0 0 18px;
+      text-align: center;
+      color: #666666;
+      font-size: 0.92rem;
+    }
+
+    .analysis-progress-track {
+      width: 100%;
+      height: 13px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8e8ee;
+    }
+
+    .analysis-progress-bar {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background:
+        linear-gradient(
+          90deg,
+          #7167df,
+          #9d66d9
+        );
+      transition:
+        width 0.18s ease;
+    }
+
+    .analysis-progress-percent {
+      margin-top: 8px;
+      text-align: right;
+      color: #555555;
+      font-size: 0.85rem;
+    }
+
+    .factor-result-summary {
+      margin-bottom: 28px;
+    }
+
+    .factor-result-summary h2 {
+      margin-bottom: 8px;
+    }
+
+    .factor-result-note {
+      margin: 0 0 18px;
+      color: #666666;
+      font-size: 0.9rem;
+    }
+
+    .factor-result-rank {
+      margin: 22px 0;
+    }
+
+    .factor-result-rank-title {
+      margin: 0 0 10px;
+      font-size: 1.1rem;
+    }
+
+    .factor-result-table-wrap {
+      overflow-x: auto;
+    }
+
+    .factor-result-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      background: #ffffff;
+    }
+
+    .factor-result-table th,
+    .factor-result-table td {
+      padding: 9px 10px;
+      border: 1px solid #dddddd;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .factor-result-table th {
+      background: #f4f4f7;
+    }
+
+    .factor-result-table td.skill-name-cell {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .factor-result-empty {
+      padding: 14px;
+      border: 1px dashed #cccccc;
+      border-radius: 10px;
+      color: #777777;
+    }
+
+    .factor-result-hit {
+      font-weight: 700;
+    }
+
+    .factor-result-missing {
+      color: #aaaaaa;
+    }
+
+    .factor-result-count {
+      font-weight: 700;
+    }
+
+    body.analysis-running {
+      overflow: hidden;
+    }
+  `;
+
+  document.head.appendChild(
+    style
+  );
+}
+
+/* =========================================================
+  解析中オーバーレイ生成処理
+  ========================================================= */
+
+function ensureAnalysisProgressOverlay() {
+  let overlay =
+    document.getElementById(
+      "analysis-progress-overlay"
+    );
+
+  if (overlay) {
+    return overlay;
+  }
+
+  overlay =
+    document.createElement("div");
+
+  overlay.id =
+    "analysis-progress-overlay";
+
+  overlay.className =
+    "analysis-progress-overlay";
+
+  overlay.hidden = true;
+
+  overlay.innerHTML = `
+    <div
+      class="analysis-progress-dialog"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        class="analysis-progress-spinner"
+        aria-hidden="true"
+      ></div>
+
+      <p
+        id="analysis-progress-title"
+        class="analysis-progress-title"
+      >
+        画像を解析しています
+      </p>
+
+      <p
+        id="analysis-progress-detail"
+        class="analysis-progress-detail"
+      ></p>
+
+      <p
+        id="analysis-progress-subdetail"
+        class="analysis-progress-subdetail"
+      ></p>
+
+      <div
+        class="analysis-progress-track"
+      >
+        <div
+          id="analysis-progress-bar"
+          class="analysis-progress-bar"
+        ></div>
+      </div>
+
+      <div
+        id="analysis-progress-percent"
+        class="analysis-progress-percent"
+      >
+        0%
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(
+    overlay
+  );
+
+  return overlay;
+}
+
+/* =========================================================
+  判定結果集計領域生成処理
+  既存デバッグ表示より上へ集計結果を挿入する。
+  ========================================================= */
+
+function ensureResultSummaryContainer() {
+  let container =
+    document.getElementById(
+      "factor-result-summary"
+    );
+
+  if (container) {
+    return container;
+  }
+
+  container =
+    document.createElement("section");
+
+  container.id =
+    "factor-result-summary";
+
+  container.className =
+    "factor-result-summary";
+
+  const debugContainer =
+    document.getElementById(
+      "analysis-debug"
+    );
+
+  if (
+    debugContainer &&
+    debugContainer.parentNode
+  ) {
+    debugContainer.parentNode.insertBefore(
+      container,
+      debugContainer
+    );
+  } else {
+    document.body.appendChild(
+      container
+    );
+  }
+
+  return container;
+}
+
+/* =========================================================
+  解析進捗率計算処理
+  画像単位＋現在画像内のOCR進捗を合わせて算出する。
+  ========================================================= */
+
+function calculateOverallProgress() {
+  if (
+    analysisProgress.totalImages <= 0
+  ) {
+    return 0;
+  }
+
+  const completedImages =
+    Math.max(
+      0,
+      analysisProgress.currentImageNumber - 1
+    );
+
+  let currentImageProgress = 0;
+
+  if (
+    analysisProgress.totalWhiteCards > 0
+  ) {
+    const completedCards =
+      Math.max(
+        0,
+        analysisProgress.currentWhiteCard - 1
+      );
+
+    currentImageProgress =
+      (
+        completedCards +
+        analysisProgress.tesseractProgress
+      ) /
+      analysisProgress.totalWhiteCards;
+  }
+
+  const progress =
+    (
+      completedImages +
+      currentImageProgress
+    ) /
+    analysisProgress.totalImages;
+
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      progress
+    )
+  );
+}
+
+/* =========================================================
+  解析中表示更新処理
+  ========================================================= */
+
+function updateAnalysisProgressDisplay(
+  detail,
+  subdetail = ""
+) {
+  const detailElement =
+    document.getElementById(
+      "analysis-progress-detail"
+    );
+
+  const subdetailElement =
+    document.getElementById(
+      "analysis-progress-subdetail"
+    );
+
+  const bar =
+    document.getElementById(
+      "analysis-progress-bar"
+    );
+
+  const percent =
+    document.getElementById(
+      "analysis-progress-percent"
+    );
+
+  if (detailElement) {
+    detailElement.textContent =
+      detail;
+  }
+
+  if (subdetailElement) {
+    subdetailElement.textContent =
+      subdetail;
+  }
+
+  const progress =
+    calculateOverallProgress();
+
+  const progressPercent =
+    Math.round(
+      progress * 100
+    );
+
+  if (bar) {
+    bar.style.width =
+      `${progressPercent}%`;
+  }
+
+  if (percent) {
+    percent.textContent =
+      `${progressPercent}%`;
+  }
+}
+
+/* =========================================================
+  解析中表示開始処理
+  ========================================================= */
+
+function showAnalysisProgress(
+  totalImages
+) {
+  ensureDynamicStyles();
+
+  const overlay =
+    ensureAnalysisProgressOverlay();
+
+  analysisProgress.active = true;
+  analysisProgress.totalImages =
+    totalImages;
+  analysisProgress.currentImageNumber = 1;
+  analysisProgress.currentMemberLabel = "";
+  analysisProgress.currentImageIndex = 0;
+  analysisProgress.currentWhiteCard = 0;
+  analysisProgress.totalWhiteCards = 0;
+  analysisProgress.tesseractProgress = 0;
+
+  const title =
+    document.getElementById(
+      "analysis-progress-title"
+    );
+
+  if (title) {
+    title.textContent =
+      "画像を解析しています";
+  }
+
+  overlay.hidden = false;
+
+  document.body.classList.add(
+    "analysis-running"
+  );
+
+  updateAnalysisProgressDisplay(
+    "OCRを準備しています...",
+    `全体 0 / ${totalImages}画像`
+  );
+}
+
+/* =========================================================
+  解析中表示終了処理
+  ========================================================= */
+
+function hideAnalysisProgress() {
+  analysisProgress.active = false;
+
+  const overlay =
+    document.getElementById(
+      "analysis-progress-overlay"
+    );
+
+  if (overlay) {
+    overlay.hidden = true;
+  }
+
+  document.body.classList.remove(
+    "analysis-running"
+  );
+}
+
+/* =========================================================
+  解析完了表示処理
+  結果タブへ移動する直前に100%を表示する。
+  ========================================================= */
+
+async function showAnalysisCompleteProgress() {
+  analysisProgress.currentImageNumber =
+    analysisProgress.totalImages + 1;
+
+  analysisProgress.currentWhiteCard = 0;
+  analysisProgress.totalWhiteCards = 0;
+  analysisProgress.tesseractProgress = 0;
+
+  const title =
+    document.getElementById(
+      "analysis-progress-title"
+    );
+
+  if (title) {
+    title.textContent =
+      "解析が完了しました";
+  }
+
+  updateAnalysisProgressDisplay(
+    "判定結果を表示します...",
+    `${analysisProgress.totalImages}画像の解析が完了しました`
+  );
+
+  const bar =
+    document.getElementById(
+      "analysis-progress-bar"
+    );
+
+  const percent =
+    document.getElementById(
+      "analysis-progress-percent"
+    );
+
+  if (bar) {
+    bar.style.width =
+      "100%";
+  }
+
+  if (percent) {
+    percent.textContent =
+      "100%";
+  }
+
+  await new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        450
+      )
+  );
+}
+
+/* =========================================================
   タブ切り替え処理
-  スキル要件・画像登録・判定結果を切り替える。
   ========================================================= */
 
 const tabButtons =
-  document.querySelectorAll(".tab-button");
+  document.querySelectorAll(
+    ".tab-button"
+  );
 
 const tabContents =
-  document.querySelectorAll(".tab-content");
+  document.querySelectorAll(
+    ".tab-content"
+  );
 
 tabButtons.forEach(button => {
-  button.addEventListener("click", () => {
-    const tabId =
-      button.dataset.tab;
+  button.addEventListener(
+    "click",
+    () => {
+      const tabId =
+        button.dataset.tab;
 
-    tabButtons.forEach(btn => {
-      btn.classList.remove("active");
-    });
+      tabButtons.forEach(btn => {
+        btn.classList.remove(
+          "active"
+        );
+      });
 
-    tabContents.forEach(content => {
-      content.classList.remove("active");
-    });
+      tabContents.forEach(content => {
+        content.classList.remove(
+          "active"
+        );
+      });
 
-    button.classList.add("active");
+      button.classList.add(
+        "active"
+      );
 
-    document
-      .getElementById(tabId)
-      .classList.add("active");
-  });
+      const target =
+        document.getElementById(
+          tabId
+        );
+
+      if (target) {
+        target.classList.add(
+          "active"
+        );
+      }
+    }
+  );
 });
 
 /* =========================================================
   スキル入力整形処理
-  1行1スキルとして配列化し、空行・重複を除去する。
   ========================================================= */
 
 function parseSkillInput(value) {
@@ -157,15 +775,20 @@ function parseSkillInput(value) {
     ...new Set(
       value
         .split(/\r?\n/)
-        .map(skill => skill.trim())
-        .filter(skill => skill !== "")
+        .map(
+          skill =>
+            skill.trim()
+        )
+        .filter(
+          skill =>
+            skill !== ""
+        )
     )
   ];
 }
 
 /* =========================================================
   スキルカード表示処理
-  入力されたスキルをS/A/B/Cごとのカードで表示する。
   ========================================================= */
 
 function renderSkillCards(rank) {
@@ -173,6 +796,10 @@ function renderSkillCards(rank) {
     document.getElementById(
       `cards-${rank.toLowerCase()}`
     );
+
+  if (!container) {
+    return;
+  }
 
   container.innerHTML = "";
 
@@ -203,7 +830,8 @@ function renderSkillCards(rank) {
       () => {
         requirements[rank] =
           requirements[rank].filter(
-            item => item !== skill
+            item =>
+              item !== skill
           );
 
         renderSkillCards(rank);
@@ -211,39 +839,55 @@ function renderSkillCards(rank) {
     );
 
     card.appendChild(text);
-    card.appendChild(deleteButton);
-    container.appendChild(card);
+    card.appendChild(
+      deleteButton
+    );
+
+    container.appendChild(
+      card
+    );
   });
 }
 
 /* =========================================================
   スキル要件反映処理
-  S/A/B/Cの入力欄を内部データへ保存する。
   ========================================================= */
 
-document
-  .getElementById("apply-requirements")
-  .addEventListener(
+const applyRequirementsButton =
+  document.getElementById(
+    "apply-requirements"
+  );
+
+if (applyRequirementsButton) {
+  applyRequirementsButton.addEventListener(
     "click",
     () => {
       requirements.S =
         parseSkillInput(
-          document.getElementById("input-s").value
+          document.getElementById(
+            "input-s"
+          )?.value || ""
         );
 
       requirements.A =
         parseSkillInput(
-          document.getElementById("input-a").value
+          document.getElementById(
+            "input-a"
+          )?.value || ""
         );
 
       requirements.B =
         parseSkillInput(
-          document.getElementById("input-b").value
+          document.getElementById(
+            "input-b"
+          )?.value || ""
         );
 
       requirements.C =
         parseSkillInput(
-          document.getElementById("input-c").value
+          document.getElementById(
+            "input-c"
+          )?.value || ""
         );
 
       renderSkillCards("S");
@@ -257,10 +901,10 @@ document
       );
     }
   );
+}
 
 /* =========================================================
-  スキル要件からOCR照合用辞書を作る処理
-  S/A/B/Cに入力されたスキルをまとめて重複除去する。
+  OCR照合用スキル辞書生成処理
   ========================================================= */
 
 function getRequirementSkillDictionary() {
@@ -275,7 +919,27 @@ function getRequirementSkillDictionary() {
 }
 
 /* =========================================================
-  画像登録画面で使用するDOMを取得する。
+  スキルの要件ランク取得処理
+  ========================================================= */
+
+function getRequirementRank(skillName) {
+  for (
+    const rank
+    of ["S", "A", "B", "C"]
+  ) {
+    if (
+      requirements[rank]
+        .includes(skillName)
+    ) {
+      return rank;
+    }
+  }
+
+  return null;
+}
+
+/* =========================================================
+  画像登録画面DOM取得処理
   ========================================================= */
 
 const fileInputs =
@@ -295,14 +959,18 @@ const memberPanels =
 
 /* =========================================================
   画像追加処理
-  ファイル選択・ドラッグ&ドロップ・貼り付け画像を登録する。
   ========================================================= */
 
-function addImages(memberId, files) {
+function addImages(
+  memberId,
+  files
+) {
   const imageFiles =
     Array.from(files).filter(
       file =>
-        file.type.startsWith("image/")
+        file.type.startsWith(
+          "image/"
+        )
     );
 
   imageFiles.forEach(file => {
@@ -311,37 +979,56 @@ function addImages(memberId, files) {
         `${Date.now()}-${Math.random()}`,
       file,
       url:
-        URL.createObjectURL(file)
+        URL.createObjectURL(
+          file
+        )
     });
   });
 
-  renderImagePreviews(memberId);
+  renderImagePreviews(
+    memberId
+  );
+
   updateImageSummary();
 }
 
 /* =========================================================
   画像プレビュー表示処理
-  登録された画像を人物枠ごとに表示する。
   ========================================================= */
 
-function renderImagePreviews(memberId) {
+function renderImagePreviews(
+  memberId
+) {
   const container =
     document.getElementById(
       `preview-${memberId}`
     );
 
+  if (!container) {
+    return;
+  }
+
   container.innerHTML = "";
 
-  members[memberId].images.forEach(
-    (imageData, index) => {
+  members[
+    memberId
+  ].images.forEach(
+    (
+      imageData,
+      index
+    ) => {
       const item =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       item.className =
         "image-preview-item";
 
       const image =
-        document.createElement("img");
+        document.createElement(
+          "img"
+        );
 
       image.src =
         imageData.url;
@@ -350,7 +1037,9 @@ function renderImagePreviews(memberId) {
         `${members[memberId].label} 画像${index + 1}`;
 
       const number =
-        document.createElement("span");
+        document.createElement(
+          "span"
+        );
 
       number.className =
         "image-number";
@@ -359,7 +1048,9 @@ function renderImagePreviews(memberId) {
         `画像 ${index + 1}`;
 
       const deleteButton =
-        document.createElement("button");
+        document.createElement(
+          "button"
+        );
 
       deleteButton.type =
         "button";
@@ -384,16 +1075,19 @@ function renderImagePreviews(memberId) {
 
       item.appendChild(image);
       item.appendChild(number);
-      item.appendChild(deleteButton);
+      item.appendChild(
+        deleteButton
+      );
 
-      container.appendChild(item);
+      container.appendChild(
+        item
+      );
     }
   );
 }
 
 /* =========================================================
   画像削除処理
-  指定画像を削除し、ObjectURLも解放する。
   ========================================================= */
 
 function removeImage(
@@ -401,7 +1095,9 @@ function removeImage(
   imageId
 ) {
   const target =
-    members[memberId].images.find(
+    members[
+      memberId
+    ].images.find(
       image =>
         image.id === imageId
     );
@@ -412,38 +1108,64 @@ function removeImage(
     );
   }
 
-  members[memberId].images =
-    members[memberId].images.filter(
+  members[
+    memberId
+  ].images =
+    members[
+      memberId
+    ].images.filter(
       image =>
         image.id !== imageId
     );
 
-  renderImagePreviews(memberId);
+  members[
+    memberId
+  ].analysisResults = [];
+
+  renderImagePreviews(
+    memberId
+  );
+
   updateImageSummary();
 }
 
 /* =========================================================
   登録画像数・解析ボタン状態更新処理
-  画像が1枚以上あれば解析を実行可能にする。
   ========================================================= */
 
 function updateImageSummary() {
   const total =
-    Object.values(members).reduce(
-      (sum, member) =>
-        sum + member.images.length,
+    Object.values(
+      members
+    ).reduce(
+      (
+        sum,
+        member
+      ) =>
+        sum +
+        member.images.length,
       0
     );
 
-  document
-    .getElementById("total-image-count")
-    .textContent =
-      total;
+  const countElement =
+    document.getElementById(
+      "total-image-count"
+    );
 
-  document
-    .getElementById("analyze-images")
-    .disabled =
+  if (countElement) {
+    countElement.textContent =
+      total;
+  }
+
+  const analyzeButton =
+    document.getElementById(
+      "analyze-images"
+    );
+
+  if (analyzeButton) {
+    analyzeButton.disabled =
       total === 0;
+  }
 }
 
 /* =========================================================
@@ -466,7 +1188,6 @@ fileInputs.forEach(input => {
 
 /* =========================================================
   ドロップエリアクリック処理
-  貼り付け先を変更し、ファイル選択画面を開く。
   ========================================================= */
 
 dropZones.forEach(zone => {
@@ -476,14 +1197,18 @@ dropZones.forEach(zone => {
       const memberId =
         zone.dataset.member;
 
-      setPasteTarget(memberId);
+      setPasteTarget(
+        memberId
+      );
 
       const input =
         document.querySelector(
           `.image-file-input[data-member="${memberId}"]`
         );
 
-      input.click();
+      if (input) {
+        input.click();
+      }
     }
   );
 });
@@ -525,7 +1250,9 @@ dropZones.forEach(zone => {
       const memberId =
         zone.dataset.member;
 
-      setPasteTarget(memberId);
+      setPasteTarget(
+        memberId
+      );
 
       addImages(
         memberId,
@@ -539,7 +1266,9 @@ dropZones.forEach(zone => {
   クリップボード貼り付け先変更処理
   ========================================================= */
 
-function setPasteTarget(memberId) {
+function setPasteTarget(
+  memberId
+) {
   pasteTargetMember =
     memberId;
 
@@ -560,10 +1289,17 @@ function setPasteTarget(memberId) {
     );
   }
 
-  document
-    .getElementById("paste-target-label")
-    .textContent =
-      members[memberId].label;
+  const label =
+    document.getElementById(
+      "paste-target-label"
+    );
+
+  if (label) {
+    label.textContent =
+      members[
+        memberId
+      ].label;
+  }
 }
 
 /* =========================================================
@@ -612,7 +1348,6 @@ memberPanels.forEach(panel => {
 
 /* =========================================================
   クリップボード画像貼り付け処理
-  Ctrl+V / Cmd+Vで選択中の人物へ画像を追加する。
   ========================================================= */
 
 document.addEventListener(
@@ -627,10 +1362,15 @@ document.addEventListener(
 
     const files = [];
 
-    for (const item of items) {
+    for (
+      const item
+      of items
+    ) {
       if (
         item.kind === "file" &&
-        item.type.startsWith("image/")
+        item.type.startsWith(
+          "image/"
+        )
       ) {
         const file =
           item.getAsFile();
@@ -641,7 +1381,9 @@ document.addEventListener(
       }
     }
 
-    if (files.length === 0) {
+    if (
+      files.length === 0
+    ) {
       return;
     }
 
@@ -660,25 +1402,36 @@ document.addEventListener(
 
 function loadImageElement(file) {
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
       const image =
         new Image();
 
       const url =
-        URL.createObjectURL(file);
+        URL.createObjectURL(
+          file
+        );
 
       image.onload = () => {
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(
+          url
+        );
+
         resolve(image);
       };
 
-      image.onerror = error => {
-        URL.revokeObjectURL(url);
-        reject(error);
-      };
+      image.onerror =
+        error => {
+          URL.revokeObjectURL(
+            url
+          );
 
-      image.src =
-        url;
+          reject(error);
+        };
+
+      image.src = url;
     }
   );
 }
@@ -687,9 +1440,13 @@ function loadImageElement(file) {
   元画像を解析Canvasへ描画する処理
   ========================================================= */
 
-async function drawOriginalImage(file) {
+async function drawOriginalImage(
+  file
+) {
   const image =
-    await loadImageElement(file);
+    await loadImageElement(
+      file
+    );
 
   const canvas =
     document.getElementById(
@@ -726,8 +1483,10 @@ async function drawOriginalImage(file) {
   return {
     canvas,
     ctx,
-    width: canvas.width,
-    height: canvas.height
+    width:
+      canvas.width,
+    height:
+      canvas.height
   };
 }
 
@@ -735,7 +1494,11 @@ async function drawOriginalImage(file) {
   RGBから明るさを計算する処理
   ========================================================= */
 
-function getLuminance(r, g, b) {
+function getLuminance(
+  r,
+  g,
+  b
+) {
   return (
     0.2126 * r +
     0.7152 * g +
@@ -803,9 +1566,18 @@ function getAverageColor(
   }
 
   return {
-    r: Math.round(r / count),
-    g: Math.round(g / count),
-    b: Math.round(b / count)
+    r:
+      Math.round(
+        r / count
+      ),
+    g:
+      Math.round(
+        g / count
+      ),
+    b:
+      Math.round(
+        b / count
+      )
   };
 }
 
@@ -886,10 +1658,13 @@ function detectFactorHeader(
     }
 
     if (
-      greenCount / total >
+      greenCount /
+      total >
       0.55
     ) {
-      matchingRows.push(y);
+      matchingRows.push(
+        y
+      );
     }
   }
 
@@ -900,8 +1675,9 @@ function detectFactorHeader(
   }
 
   const groups = [];
-  let current =
-    [matchingRows[0]];
+  let current = [
+    matchingRows[0]
+  ];
 
   for (
     let i = 1;
@@ -916,14 +1692,19 @@ function detectFactorHeader(
         matchingRows[i]
       );
     } else {
-      groups.push(current);
+      groups.push(
+        current
+      );
 
-      current =
-        [matchingRows[i]];
+      current = [
+        matchingRows[i]
+      ];
     }
   }
 
-  groups.push(current);
+  groups.push(
+    current
+  );
 
   const validGroups =
     groups.filter(
@@ -973,25 +1754,27 @@ function getRowLuminance(
 
   ANALYSIS_CONFIG
     .scanXPositions
-    .forEach(position => {
-      const color =
-        getAverageColor(
-          ctx,
-          columnX +
-            columnWidth *
-            position,
-          y,
-          patchSize,
-          patchSize
-        );
+    .forEach(
+      position => {
+        const color =
+          getAverageColor(
+            ctx,
+            columnX +
+              columnWidth *
+              position,
+            y,
+            patchSize,
+            patchSize
+          );
 
-      total +=
-        getLuminance(
-          color.r,
-          color.g,
-          color.b
-        );
-    });
+        total +=
+          getLuminance(
+            color.r,
+            color.g,
+            color.b
+          );
+      }
+    );
 
   return (
     total /
@@ -1035,8 +1818,10 @@ function detectCardsInColumn(
   const samples = [];
 
   for (
-    let y = factorAreaTop;
-    y < factorAreaBottom;
+    let y =
+      factorAreaTop;
+    y <
+      factorAreaBottom;
     y += 2
   ) {
     samples.push({
@@ -1055,43 +1840,49 @@ function detectCardsInColumn(
   const gaps = [];
   let gapStart = null;
 
-  samples.forEach(sample => {
-    const isGap =
-      sample.luminance >=
-      ANALYSIS_CONFIG
-        .gapLuminanceThreshold;
-
-    if (
-      isGap &&
-      gapStart === null
-    ) {
-      gapStart =
-        sample.y;
-    }
-
-    if (
-      !isGap &&
-      gapStart !== null
-    ) {
-      const gapHeight =
-        sample.y -
-        gapStart;
+  samples.forEach(
+    sample => {
+      const isGap =
+        sample.luminance >=
+        ANALYSIS_CONFIG
+          .gapLuminanceThreshold;
 
       if (
-        gapHeight >=
-        minimumGapHeight
+        isGap &&
+        gapStart === null
       ) {
-        gaps.push({
-          top: gapStart,
-          bottom: sample.y
-        });
+        gapStart =
+          sample.y;
       }
 
-      gapStart = null;
-    }
-  });
+      if (
+        !isGap &&
+        gapStart !== null
+      ) {
+        const gapHeight =
+          sample.y -
+          gapStart;
 
-  if (gapStart !== null) {
+        if (
+          gapHeight >=
+          minimumGapHeight
+        ) {
+          gaps.push({
+            top:
+              gapStart,
+            bottom:
+              sample.y
+          });
+        }
+
+        gapStart = null;
+      }
+    }
+  );
+
+  if (
+    gapStart !== null
+  ) {
     const gapHeight =
       factorAreaBottom -
       gapStart;
@@ -1101,8 +1892,10 @@ function detectCardsInColumn(
       minimumGapHeight
     ) {
       gaps.push({
-        top: gapStart,
-        bottom: factorAreaBottom
+        top:
+          gapStart,
+        bottom:
+          factorAreaBottom
       });
     }
   }
@@ -1133,7 +1926,8 @@ function detectCardsInColumn(
 
   for (
     let i = 0;
-    i < boundaries.length - 1;
+    i <
+      boundaries.length - 1;
     i++
   ) {
     const top =
@@ -1163,7 +1957,8 @@ function detectCardsInColumn(
       );
 
     cards.push({
-      column: columnName,
+      column:
+        columnName,
       row:
         cards.length + 1,
       x:
@@ -1190,7 +1985,7 @@ function detectCardsInColumn(
 }
 
 /* =========================================================
-  因子カード左端の丸アイコン検出処理
+  因子カード左端のアイコン検出処理
   ========================================================= */
 
 function hasFactorIcon(
@@ -1242,8 +2037,10 @@ function hasFactorIcon(
     i += 4
   ) {
     const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
+    const g =
+      data[i + 1];
+    const b =
+      data[i + 2];
 
     const isBlueIcon =
       b - r >= 3 &&
@@ -1267,11 +2064,11 @@ function hasFactorIcon(
     totalPixels++;
   }
 
-  const ratio =
+  return (
     iconPixels /
-    totalPixels;
-
-  return ratio > 0.07;
+    totalPixels >
+    0.07
+  );
 }
 
 /* =========================================================
@@ -1283,9 +2080,18 @@ function hasFullCardBody(
   card
 ) {
   const samplePositions = [
-    { x: 0.70, y: 0.25 },
-    { x: 0.82, y: 0.25 },
-    { x: 0.90, y: 0.25 }
+    {
+      x: 0.70,
+      y: 0.25
+    },
+    {
+      x: 0.82,
+      y: 0.25
+    },
+    {
+      x: 0.90,
+      y: 0.25
+    }
   ];
 
   const patchSize =
@@ -1298,8 +2104,8 @@ function hasFullCardBody(
 
   const colors =
     samplePositions.map(
-      position => {
-        return getAverageColor(
+      position =>
+        getAverageColor(
           ctx,
           card.x +
             card.width *
@@ -1309,30 +2115,36 @@ function hasFullCardBody(
             position.y,
           patchSize,
           patchSize
-        );
-      }
+        )
     );
 
   const average = {
     r:
       colors.reduce(
-        (sum, color) =>
+        (
+          sum,
+          color
+        ) =>
           sum + color.r,
         0
       ) /
       colors.length,
-
     g:
       colors.reduce(
-        (sum, color) =>
+        (
+          sum,
+          color
+        ) =>
           sum + color.g,
         0
       ) /
       colors.length,
-
     b:
       colors.reduce(
-        (sum, color) =>
+        (
+          sum,
+          color
+        ) =>
           sum + color.b,
         0
       ) /
@@ -1365,15 +2177,26 @@ function hasFullCardBody(
 }
 
 /* =========================================================
-  因子カードの共通行間隔を計算する処理
+  因子カードの共通行間隔計算処理
   ========================================================= */
 
-function calculateRowPitch(cards) {
+function calculateRowPitch(
+  cards
+) {
   const yValues = [
     ...new Set(
       cards
-        .map(card => card.y)
-        .sort((a, b) => a - b)
+        .map(
+          card =>
+            card.y
+        )
+        .sort(
+          (
+            a,
+            b
+          ) =>
+            a - b
+        )
     )
   ];
 
@@ -1392,7 +2215,9 @@ function calculateRowPitch(cards) {
       diff >= 40 &&
       diff <= 120
     ) {
-      differences.push(diff);
+      differences.push(
+        diff
+      );
     }
   }
 
@@ -1403,7 +2228,11 @@ function calculateRowPitch(cards) {
   }
 
   differences.sort(
-    (a, b) => a - b
+    (
+      a,
+      b
+    ) =>
+      a - b
   );
 
   return differences[
@@ -1449,53 +2278,72 @@ function buildFactorRows(
 
   const typicalHeights =
     initialCards
-      .map(card => card.height)
-      .filter(cardHeight => {
-        return (
+      .map(
+        card =>
+          card.height
+      )
+      .filter(
+        cardHeight =>
           cardHeight >=
             pitch * 0.65 &&
           cardHeight <=
             pitch * 1.2
-        );
-      })
+      )
       .sort(
-        (a, b) => a - b
+        (
+          a,
+          b
+        ) =>
+          a - b
       );
 
   const cardHeight =
     typicalHeights.length > 0
       ? typicalHeights[
           Math.floor(
-            typicalHeights.length / 2
+            typicalHeights.length /
+            2
           )
         ]
       : pitch * 0.9;
 
   const candidateYs =
     initialCards
-      .map(card => card.y)
+      .map(
+        card =>
+          card.y
+      )
       .sort(
-        (a, b) => a - b
+        (
+          a,
+          b
+        ) =>
+          a - b
       );
 
   const mergedCandidateYs = [];
 
-  candidateYs.forEach(y => {
-    const last =
-      mergedCandidateYs[
-        mergedCandidateYs.length - 1
-      ];
+  candidateYs.forEach(
+    y => {
+      const last =
+        mergedCandidateYs[
+          mergedCandidateYs.length -
+          1
+        ];
 
-    if (
-      last === undefined ||
-      Math.abs(
-        y - last
-      ) >
-        pitch * 0.25
-    ) {
-      mergedCandidateYs.push(y);
+      if (
+        last === undefined ||
+        Math.abs(
+          y - last
+        ) >
+          pitch * 0.25
+      ) {
+        mergedCandidateYs.push(
+          y
+        );
+      }
     }
-  });
+  );
 
   let firstY = null;
 
@@ -1510,7 +2358,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.left.xRatio
+            .columns.left
+            .xRatio
         ),
       y:
         Math.round(
@@ -1520,7 +2369,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.left.widthRatio
+            .columns.left
+            .widthRatio
         ),
       height:
         Math.round(
@@ -1535,7 +2385,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.right.xRatio
+            .columns.right
+            .xRatio
         ),
       y:
         Math.round(
@@ -1545,7 +2396,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.right.widthRatio
+            .columns.right
+            .widthRatio
         ),
       height:
         Math.round(
@@ -1584,7 +2436,9 @@ function buildFactorRows(
     }
   }
 
-  if (firstY === null) {
+  if (
+    firstY === null
+  ) {
     return {
       pitch,
       cardHeight,
@@ -1604,7 +2458,8 @@ function buildFactorRows(
       pitch * rowIndex;
 
     if (
-      y + cardHeight >
+      y +
+      cardHeight >
       factorAreaBottom
     ) {
       break;
@@ -1618,7 +2473,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.left.xRatio
+            .columns.left
+            .xRatio
         ),
       y:
         Math.round(y),
@@ -1626,7 +2482,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.left.widthRatio
+            .columns.left
+            .widthRatio
         ),
       height:
         Math.round(
@@ -1642,7 +2499,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.right.xRatio
+            .columns.right
+            .xRatio
         ),
       y:
         Math.round(y),
@@ -1650,7 +2508,8 @@ function buildFactorRows(
         Math.round(
           width *
           ANALYSIS_CONFIG
-            .columns.right.widthRatio
+            .columns.right
+            .widthRatio
         ),
       height:
         Math.round(
@@ -1725,15 +2584,24 @@ function classifyDetectedCard(
     );
 
   const samplePositions = [
-    { x: 0.68, y: 0.25 },
-    { x: 0.80, y: 0.25 },
-    { x: 0.90, y: 0.25 }
+    {
+      x: 0.68,
+      y: 0.25
+    },
+    {
+      x: 0.80,
+      y: 0.25
+    },
+    {
+      x: 0.90,
+      y: 0.25
+    }
   ];
 
   const colors =
     samplePositions.map(
-      position => {
-        return getAverageColor(
+      position =>
+        getAverageColor(
           ctx,
           card.x +
             card.width *
@@ -1743,35 +2611,41 @@ function classifyDetectedCard(
             position.y,
           patchSize,
           patchSize
-        );
-      }
+        )
     );
 
   const color = {
     r:
       Math.round(
         colors.reduce(
-          (sum, item) =>
+          (
+            sum,
+            item
+          ) =>
             sum + item.r,
           0
         ) /
         colors.length
       ),
-
     g:
       Math.round(
         colors.reduce(
-          (sum, item) =>
+          (
+            sum,
+            item
+          ) =>
             sum + item.g,
           0
         ) /
         colors.length
       ),
-
     b:
       Math.round(
         colors.reduce(
-          (sum, item) =>
+          (
+            sum,
+            item
+          ) =>
             sum + item.b,
           0
         ) /
@@ -1821,7 +2695,9 @@ function classifyDetectedCard(
   星領域算出処理
   ========================================================= */
 
-function getStarArea(card) {
+function getStarArea(
+  card
+) {
   return {
     x:
       Math.round(
@@ -1830,7 +2706,6 @@ function getStarArea(card) {
         STAR_CONFIG
           .area.xRatio
       ),
-
     y:
       Math.round(
         card.y +
@@ -1838,14 +2713,12 @@ function getStarArea(card) {
         STAR_CONFIG
           .area.yRatio
       ),
-
     width:
       Math.round(
         card.width *
         STAR_CONFIG
           .area.widthRatio
       ),
-
     height:
       Math.round(
         card.height *
@@ -1894,7 +2767,9 @@ function detectStarCount(
   card
 ) {
   const area =
-    getStarArea(card);
+    getStarArea(
+      card
+    );
 
   const segmentWidth =
     area.width / 3;
@@ -1938,9 +2813,14 @@ function detectStarCount(
       i < data.length;
       i += 4
     ) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
+      const r =
+        data[i];
+
+      const g =
+        data[i + 1];
+
+      const b =
+        data[i + 2];
 
       if (
         isYellowStarPixel(
@@ -1972,10 +2852,9 @@ function detectStarCount(
 
   return {
     stars:
-      starStates
-        .filter(Boolean)
-        .length,
-
+      starStates.filter(
+        Boolean
+      ).length,
     starStates,
     yellowRatios,
     area
@@ -2073,79 +2952,86 @@ function analyzeFactorImage(
   const leftCards = [];
   const rightCards = [];
 
-  rowResult.rows.forEach(row => {
-    if (row.leftCard) {
-      const card =
-        classifyDetectedCard(
-          ctx,
-          row.leftCard
-        );
+  rowResult.rows.forEach(
+    row => {
+      if (
+        row.leftCard
+      ) {
+        const card =
+          classifyDetectedCard(
+            ctx,
+            row.leftCard
+          );
 
-      const starResult =
-        detectStarCount(
-          ctx,
-          card
-        );
+        const starResult =
+          detectStarCount(
+            ctx,
+            card
+          );
 
-      leftCards.push({
-        ...card,
-        ...starResult
-      });
+        leftCards.push({
+          ...card,
+          ...starResult
+        });
+      }
+
+      if (
+        row.rightCard
+      ) {
+        const card =
+          classifyDetectedCard(
+            ctx,
+            row.rightCard
+          );
+
+        const starResult =
+          detectStarCount(
+            ctx,
+            card
+          );
+
+        rightCards.push({
+          ...card,
+          ...starResult
+        });
+      }
     }
-
-    if (row.rightCard) {
-      const card =
-        classifyDetectedCard(
-          ctx,
-          row.rightCard
-        );
-
-      const starResult =
-        detectStarCount(
-          ctx,
-          card
-        );
-
-      rightCards.push({
-        ...card,
-        ...starResult
-      });
-    }
-  });
+  );
 
   const allCards = [
     ...leftCards,
     ...rightCards
   ];
 
-  allCards.forEach(card => {
-    card.ocrText = "";
-    card.ocrRawText = "";
-    card.ocrConfidence = null;
-    card.ocrPreview = null;
+  allCards.forEach(
+    card => {
+      card.ocrText = "";
+      card.ocrRawText = "";
+      card.ocrConfidence = null;
+      card.ocrPreview = null;
 
-    card.normalizedOcr = "";
+      card.normalizedOcr = "";
 
-    card.matchCandidate = null;
-    card.matchSimilarity = 0;
+      card.matchCandidate = null;
+      card.matchSimilarity = 0;
 
-    card.secondMatchCandidate = null;
-    card.secondMatchSimilarity = 0;
+      card.secondMatchCandidate = null;
+      card.secondMatchSimilarity = 0;
 
-    card.matchSimilarityMargin = 0;
-    card.matchThreshold = 0;
+      card.matchSimilarityMargin = 0;
+      card.matchThreshold = 0;
 
-    card.matchStatus = null;
-  });
+      card.matchStatus = null;
+      card.requirementRank = null;
+    }
+  );
 
   return {
     header,
     factorAreaTop,
     factorAreaBottom,
-
     pitch:
       rowResult.pitch,
-
     leftCards,
     rightCards
   };
@@ -2268,10 +3154,14 @@ function detectSkillTextBounds(
         data[index];
 
       const g =
-        data[index + 1];
+        data[
+          index + 1
+        ];
 
       const b =
-        data[index + 2];
+        data[
+          index + 2
+        ];
 
       if (
         !isSkillTextPixel(
@@ -2382,12 +3272,10 @@ function detectSkillTextBounds(
       Math.round(
         resultX
       ),
-
     y:
       Math.round(
         resultY
       ),
-
     width:
       Math.max(
         1,
@@ -2396,7 +3284,6 @@ function detectSkillTextBounds(
           resultX
         )
       ),
-
     height:
       Math.max(
         1,
@@ -2422,7 +3309,9 @@ function createOcrCanvas(
       card
     );
 
-  if (!textBounds) {
+  if (
+    !textBounds
+  ) {
     return null;
   }
 
@@ -2444,7 +3333,9 @@ function createOcrCanvas(
     );
 
   const ctx =
-    canvas.getContext("2d");
+    canvas.getContext(
+      "2d"
+    );
 
   ctx.fillStyle =
     "#ffffff";
@@ -2481,7 +3372,9 @@ function createOcrCanvas(
   OCR結果の基本整形処理
   ========================================================= */
 
-function normalizeOcrText(text) {
+function normalizeOcrText(
+  text
+) {
   return text
     .replace(
       /\r?\n/g,
@@ -2502,9 +3395,13 @@ function normalizeOcrText(text) {
   スキル照合用文字列正規化処理
   ========================================================= */
 
-function normalizeSkillText(text) {
+function normalizeSkillText(
+  text
+) {
   return text
-    .normalize("NFKC")
+    .normalize(
+      "NFKC"
+    )
     .replace(
       /[〇ＯO]/g,
       "○"
@@ -2525,7 +3422,7 @@ function normalizeSkillText(text) {
 }
 
 /* =========================================================
-  Levenshtein距離を計算する処理
+  Levenshtein距離計算処理
   ========================================================= */
 
 function calculateLevenshteinDistance(
@@ -2555,7 +3452,8 @@ function calculateLevenshteinDistance(
     i <= sourceLength;
     i++
   ) {
-    matrix[i][0] = i;
+    matrix[i][0] =
+      i;
   }
 
   for (
@@ -2563,7 +3461,8 @@ function calculateLevenshteinDistance(
     j <= targetLength;
     j++
   ) {
-    matrix[0][j] = j;
+    matrix[0][j] =
+      j;
   }
 
   for (
@@ -2584,10 +3483,17 @@ function calculateLevenshteinDistance(
 
       matrix[i][j] =
         Math.min(
-          matrix[i - 1][j] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j - 1] +
-            cost
+          matrix[
+            i - 1
+          ][j] + 1,
+          matrix[i][
+            j - 1
+          ] + 1,
+          matrix[
+            i - 1
+          ][
+            j - 1
+          ] + cost
         );
     }
   }
@@ -2598,7 +3504,7 @@ function calculateLevenshteinDistance(
 }
 
 /* =========================================================
-  2つの文字列の類似度を0～1で計算する処理
+  文字列類似度計算処理
   ========================================================= */
 
 function calculateSimilarity(
@@ -2637,9 +3543,7 @@ function calculateSimilarity(
 }
 
 /* =========================================================
-  OCR結果に近いスキル要件候補を探す処理
-
-  第1候補だけでなく第2候補も取得する。
+  OCR結果に近い第1・第2候補を取得する処理
   ========================================================= */
 
 function findBestSkillMatch(
@@ -2666,27 +3570,33 @@ function findBestSkillMatch(
   }
 
   const matches =
-    dictionary.map(skill => {
-      const normalizedSkill =
-        normalizeSkillText(
-          skill
-        );
+    dictionary.map(
+      skill => {
+        const normalizedSkill =
+          normalizeSkillText(
+            skill
+          );
 
-      const similarity =
-        calculateSimilarity(
-          normalizedOcr,
-          normalizedSkill
-        );
+        const similarity =
+          calculateSimilarity(
+            normalizedOcr,
+            normalizedSkill
+          );
 
-      return {
-        candidate: skill,
-        normalizedSkill,
-        similarity
-      };
-    });
+        return {
+          candidate:
+            skill,
+          normalizedSkill,
+          similarity
+        };
+      }
+    );
 
   matches.sort(
-    (a, b) =>
+    (
+      a,
+      b
+    ) =>
       b.similarity -
       a.similarity
   );
@@ -2707,34 +3617,29 @@ function findBestSkillMatch(
       ? second.similarity
       : 0;
 
-  const similarityMargin =
-    best
-      ? bestSimilarity -
-        secondSimilarity
-      : 0;
-
   return {
     candidate:
       best
         ? best.candidate
         : null,
-
     similarity:
       bestSimilarity,
-
     secondCandidate:
       second
         ? second.candidate
         : null,
-
     secondSimilarity,
-    similarityMargin,
+    similarityMargin:
+      best
+        ? bestSimilarity -
+          secondSimilarity
+        : 0,
     normalizedOcr
   };
 }
 
 /* =========================================================
-  OCR文字数に応じた類似度閾値取得処理
+  OCR文字数別類似度閾値取得処理
   ========================================================= */
 
 function getSkillMatchThreshold(
@@ -2752,7 +3657,7 @@ function getSkillMatchThreshold(
 }
 
 /* =========================================================
-  OCR結果と候補の一致状態を判定する処理
+  OCR結果一致状態判定処理
   ========================================================= */
 
 function determineMatchStatus(
@@ -2762,7 +3667,9 @@ function determineMatchStatus(
   secondSimilarity,
   similarityMargin
 ) {
-  if (!candidate) {
+  if (
+    !candidate
+  ) {
     return "unmatched";
   }
 
@@ -2784,7 +3691,8 @@ function determineMatchStatus(
     );
 
   if (
-    similarity < threshold
+    similarity <
+    threshold
   ) {
     return "unmatched";
   }
@@ -2814,43 +3722,69 @@ async function createOcrWorker() {
       "ocr-status"
     );
 
-  status.textContent =
-    "OCRを準備しています...";
+  if (status) {
+    status.textContent =
+      "OCRを準備しています...";
+  }
+
+  updateAnalysisProgressDisplay(
+    "OCRを準備しています...",
+    `全体 0 / ${analysisProgress.totalImages}画像`
+  );
 
   const worker =
     await Tesseract.createWorker(
       "jpn",
       1,
       {
-        logger: message => {
-          if (
-            message.status ===
-            "recognizing text"
-          ) {
-            const percent =
-              Math.round(
-                message.progress *
-                100
-              );
+        logger:
+          message => {
+            if (
+              message.status ===
+              "recognizing text"
+            ) {
+              analysisProgress
+                .tesseractProgress =
+                  message.progress;
 
-            status.textContent =
-              `OCR実行中... ${percent}%`;
+              const percent =
+                Math.round(
+                  message.progress *
+                  100
+                );
+
+              if (status) {
+                status.textContent =
+                  `OCR実行中... ${percent}%`;
+              }
+
+              if (
+                analysisProgress.active
+              ) {
+                updateAnalysisProgressDisplay(
+                  `${analysisProgress.currentMemberLabel} / 画像${analysisProgress.currentImageIndex + 1}`,
+                  `白因子OCR ${analysisProgress.currentWhiteCard} / ${analysisProgress.totalWhiteCards} ・ OCR処理 ${percent}%`
+                );
+              }
+            }
           }
-        }
       }
     );
 
   await worker.setParameters({
-    tessedit_pageseg_mode: "7",
-    preserve_interword_spaces: "1",
-    user_defined_dpi: "300"
+    tessedit_pageseg_mode:
+      "7",
+    preserve_interword_spaces:
+      "1",
+    user_defined_dpi:
+      "300"
   });
 
   return worker;
 }
 
 /* =========================================================
-  白因子カード1件をOCRする処理
+  白因子カード1件OCR処理
   ========================================================= */
 
 async function recognizeSkillName(
@@ -2864,7 +3798,9 @@ async function recognizeSkillName(
       card
     );
 
-  if (!ocrCanvas) {
+  if (
+    !ocrCanvas
+  ) {
     return {
       ocrText: "",
       ocrRawText: "",
@@ -2879,27 +3815,25 @@ async function recognizeSkillName(
     );
 
   const rawText =
-    result.data.text || "";
+    result.data.text ||
+    "";
 
   return {
     ocrText:
       normalizeOcrText(
         rawText
       ),
-
     ocrRawText:
       rawText,
-
     ocrConfidence:
       result.data
         .confidence ?? 0,
-
     ocrCanvas
   };
 }
 
 /* =========================================================
-  白因子だけOCRし、スキル要件との類似照合も実行する処理
+  白因子OCR＋スキル要件照合処理
   ========================================================= */
 
 async function runOcrForWhiteCards(
@@ -2926,6 +3860,35 @@ async function runOcrForWhiteCards(
       "white"
   );
 
+  analysisProgress
+    .currentMemberLabel =
+      memberLabel;
+
+  analysisProgress
+    .currentImageIndex =
+      imageIndex;
+
+  analysisProgress
+    .totalWhiteCards =
+      whiteCards.length;
+
+  analysisProgress
+    .currentWhiteCard = 0;
+
+  analysisProgress
+    .tesseractProgress = 0;
+
+  if (
+    whiteCards.length === 0
+  ) {
+    updateAnalysisProgressDisplay(
+      `${memberLabel} / 画像${imageIndex + 1}`,
+      "白因子は検出されませんでした"
+    );
+
+    return;
+  }
+
   for (
     let i = 0;
     i < whiteCards.length;
@@ -2934,8 +3897,25 @@ async function runOcrForWhiteCards(
     const card =
       whiteCards[i];
 
-    status.textContent =
+    analysisProgress
+      .currentWhiteCard =
+        i + 1;
+
+    analysisProgress
+      .tesseractProgress = 0;
+
+    const message =
       `${memberLabel} / 画像${imageIndex + 1}：白因子OCR ${i + 1}/${whiteCards.length}`;
+
+    if (status) {
+      status.textContent =
+        message;
+    }
+
+    updateAnalysisProgressDisplay(
+      `${memberLabel} / 画像${imageIndex + 1}`,
+      `白因子OCR ${i + 1} / ${whiteCards.length}`
+    );
 
     const result =
       await recognizeSkillName(
@@ -2968,36 +3948,68 @@ async function runOcrForWhiteCards(
       );
 
     card.normalizedOcr =
-      matchResult.normalizedOcr;
+      matchResult
+        .normalizedOcr;
 
     card.matchCandidate =
-      matchResult.candidate;
+      matchResult
+        .candidate;
 
     card.matchSimilarity =
-      matchResult.similarity;
+      matchResult
+        .similarity;
 
     card.secondMatchCandidate =
-      matchResult.secondCandidate;
+      matchResult
+        .secondCandidate;
 
     card.secondMatchSimilarity =
-      matchResult.secondSimilarity;
+      matchResult
+        .secondSimilarity;
 
     card.matchSimilarityMargin =
-      matchResult.similarityMargin;
+      matchResult
+        .similarityMargin;
 
     card.matchThreshold =
       getSkillMatchThreshold(
-        matchResult.normalizedOcr
+        matchResult
+          .normalizedOcr
       );
 
     card.matchStatus =
       determineMatchStatus(
-        matchResult.normalizedOcr,
-        matchResult.candidate,
-        matchResult.similarity,
-        matchResult.secondSimilarity,
-        matchResult.similarityMargin
+        matchResult
+          .normalizedOcr,
+        matchResult
+          .candidate,
+        matchResult
+          .similarity,
+        matchResult
+          .secondSimilarity,
+        matchResult
+          .similarityMargin
       );
+
+    card.requirementRank =
+      (
+        card.matchStatus ===
+          "exact" ||
+        card.matchStatus ===
+          "similar"
+      )
+        ? getRequirementRank(
+            card.matchCandidate
+          )
+        : null;
+
+    analysisProgress
+      .tesseractProgress = 1;
+
+    updateAnalysisProgressDisplay(
+      `${memberLabel} / 画像${imageIndex + 1}`,
+      `白因子OCR ${i + 1} / ${whiteCards.length}`
+    );
   }
 }
 
@@ -3021,7 +4033,9 @@ function createCardThumbnail(
     card.height;
 
   const cropCtx =
-    cropCanvas.getContext("2d");
+    cropCanvas.getContext(
+      "2d"
+    );
 
   cropCtx.drawImage(
     canvas,
@@ -3042,6 +4056,39 @@ function createCardThumbnail(
 }
 
 /* =========================================================
+  HTML表示用文字列エスケープ処理
+  OCR文字列やユーザー入力によるHTML崩れを防止する。
+  ========================================================= */
+
+function escapeHtml(
+  value
+) {
+  return String(
+    value ?? ""
+  )
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+}
+
+/* =========================================================
   解析デバッグ結果表示処理
   ========================================================= */
 
@@ -3056,6 +4103,10 @@ function renderAnalysisDebug(
       "analysis-debug"
     );
 
+  if (!container) {
+    return;
+  }
+
   const section =
     document.createElement(
       "section"
@@ -3065,12 +4116,16 @@ function renderAnalysisDebug(
     "analysis-debug-section";
 
   const title =
-    document.createElement("h3");
+    document.createElement(
+      "h3"
+    );
 
   title.textContent =
     `${memberLabel} / 画像${imageIndex + 1}`;
 
-  section.appendChild(title);
+  section.appendChild(
+    title
+  );
 
   const summary =
     document.createElement(
@@ -3087,7 +4142,9 @@ function renderAnalysisDebug(
     <span>行間隔：${analysis.pitch ?? "-"}</span>
   `;
 
-  section.appendChild(summary);
+  section.appendChild(
+    summary
+  );
 
   const table =
     document.createElement(
@@ -3114,6 +4171,7 @@ function renderAnalysisDebug(
         <th>候補差</th>
         <th>閾値</th>
         <th>一致</th>
+        <th>要件</th>
         <th>信頼度</th>
         <th>星判定率</th>
         <th>RGB</th>
@@ -3134,178 +4192,200 @@ function renderAnalysisDebug(
     ...analysis.rightCards
   ];
 
-  allCards.forEach(card => {
-    const tr =
-      document.createElement("tr");
+  allCards.forEach(
+    card => {
+      const tr =
+        document.createElement(
+          "tr"
+        );
 
-    const preview =
-      createCardThumbnail(
-        canvas,
-        card
-      );
+      const preview =
+        createCardThumbnail(
+          canvas,
+          card
+        );
 
-    const ocrPreviewHtml =
-      card.ocrPreview
-        ? `
+      const ocrPreviewHtml =
+        card.ocrPreview
+          ? `
+            <img
+              class="debug-ocr-thumbnail"
+              src="${card.ocrPreview}"
+              alt="OCR画像"
+            >
+          `
+          : "-";
+
+      const confidenceText =
+        card.ocrConfidence !== null
+          ? card.ocrConfidence
+              .toFixed(1)
+          : "-";
+
+      const ratioText =
+        card.yellowRatios
+          .map(
+            ratio =>
+              ratio.toFixed(3)
+          )
+          .join("/");
+
+      const candidateText =
+        card.matchCandidate ||
+        "-";
+
+      const similarityText =
+        card.factorType ===
+        "white"
+          ? card.matchSimilarity
+              .toFixed(3)
+          : "-";
+
+      const secondCandidateText =
+        card.secondMatchCandidate ||
+        "-";
+
+      const secondSimilarityText =
+        card.factorType ===
+        "white"
+          ? card.secondMatchSimilarity
+              .toFixed(3)
+          : "-";
+
+      const marginText =
+        card.factorType ===
+        "white"
+          ? card.matchSimilarityMargin
+              .toFixed(3)
+          : "-";
+
+      const thresholdText =
+        card.factorType ===
+        "white"
+          ? card.matchThreshold
+              .toFixed(3)
+          : "-";
+
+      let matchStatusText =
+        "-";
+
+      if (
+        card.matchStatus ===
+        "exact"
+      ) {
+        matchStatusText =
+          "完全一致";
+      } else if (
+        card.matchStatus ===
+        "similar"
+      ) {
+        matchStatusText =
+          "類似一致";
+      } else if (
+        card.matchStatus ===
+        "unmatched"
+      ) {
+        matchStatusText =
+          "未確定";
+      }
+
+      const rankText =
+        card.requirementRank ||
+        "-";
+
+      tr.innerHTML = `
+        <td>
           <img
-            class="debug-ocr-thumbnail"
-            src="${card.ocrPreview}"
-            alt="OCR画像"
+            class="debug-thumbnail"
+            src="${preview}"
+            alt="因子カード"
           >
-        `
-        : "-";
+        </td>
 
-    const confidenceText =
-      card.ocrConfidence !== null
-        ? card.ocrConfidence
-            .toFixed(1)
-        : "-";
+        <td>
+          ${ocrPreviewHtml}
+        </td>
 
-    const ratioText =
-      card.yellowRatios
-        .map(
-          ratio =>
-            ratio.toFixed(3)
-        )
-        .join("/");
+        <td>${escapeHtml(card.column)}</td>
+        <td>${card.row}</td>
 
-    const candidateText =
-      card.matchCandidate ||
-      "-";
+        <td>
+          <span
+            class="factor-type factor-${escapeHtml(card.factorType)}"
+          >
+            ${escapeHtml(card.factorType)}
+          </span>
+        </td>
 
-    const similarityText =
-      card.factorType ===
-      "white"
-        ? card.matchSimilarity
-            .toFixed(3)
-        : "-";
+        <td>${card.stars}</td>
 
-    const secondCandidateText =
-      card.secondMatchCandidate ||
-      "-";
+        <td>
+          ${escapeHtml(card.ocrText || "-")}
+        </td>
 
-    const secondSimilarityText =
-      card.factorType ===
-      "white"
-        ? card.secondMatchSimilarity
-            .toFixed(3)
-        : "-";
+        <td>
+          ${escapeHtml(candidateText)}
+        </td>
 
-    const marginText =
-      card.factorType ===
-      "white"
-        ? card.matchSimilarityMargin
-            .toFixed(3)
-        : "-";
+        <td>
+          ${similarityText}
+        </td>
 
-    const thresholdText =
-      card.factorType ===
-      "white"
-        ? card.matchThreshold
-            .toFixed(3)
-        : "-";
+        <td>
+          ${escapeHtml(secondCandidateText)}
+        </td>
 
-    let matchStatusText = "-";
+        <td>
+          ${secondSimilarityText}
+        </td>
 
-    if (
-      card.matchStatus ===
-      "exact"
-    ) {
-      matchStatusText =
-        "完全一致";
-    } else if (
-      card.matchStatus ===
-      "similar"
-    ) {
-      matchStatusText =
-        "類似一致";
-    } else if (
-      card.matchStatus ===
-      "unmatched"
-    ) {
-      matchStatusText =
-        "未確定";
+        <td>
+          ${marginText}
+        </td>
+
+        <td>
+          ${thresholdText}
+        </td>
+
+        <td>
+          ${matchStatusText}
+        </td>
+
+        <td>
+          ${rankText}
+        </td>
+
+        <td>
+          ${confidenceText}
+        </td>
+
+        <td>
+          ${ratioText}
+        </td>
+
+        <td>
+          ${card.color.r},
+          ${card.color.g},
+          ${card.color.b}
+        </td>
+
+        <td>${card.y}</td>
+        <td>${card.height}</td>
+      `;
+
+      tbody.appendChild(
+        tr
+      );
     }
+  );
 
-    tr.innerHTML = `
-      <td>
-        <img
-          class="debug-thumbnail"
-          src="${preview}"
-          alt="因子カード"
-        >
-      </td>
+  section.appendChild(
+    table
+  );
 
-      <td>
-        ${ocrPreviewHtml}
-      </td>
-
-      <td>${card.column}</td>
-      <td>${card.row}</td>
-
-      <td>
-        <span class="factor-type factor-${card.factorType}">
-          ${card.factorType}
-        </span>
-      </td>
-
-      <td>${card.stars}</td>
-
-      <td>
-        ${card.ocrText || "-"}
-      </td>
-
-      <td>
-        ${candidateText}
-      </td>
-
-      <td>
-        ${similarityText}
-      </td>
-
-      <td>
-        ${secondCandidateText}
-      </td>
-
-      <td>
-        ${secondSimilarityText}
-      </td>
-
-      <td>
-        ${marginText}
-      </td>
-
-      <td>
-        ${thresholdText}
-      </td>
-
-      <td>
-        ${matchStatusText}
-      </td>
-
-      <td>
-        ${confidenceText}
-      </td>
-
-      <td>
-        ${ratioText}
-      </td>
-
-      <td>
-        ${card.color.r},
-        ${card.color.g},
-        ${card.color.b}
-      </td>
-
-      <td>${card.y}</td>
-      <td>${card.height}</td>
-    `;
-
-    tbody.appendChild(tr);
-  });
-
-  section.appendChild(table);
-  container.appendChild(section);
+  container.appendChild(
+    section
+  );
 
   const logLines = [];
 
@@ -3336,84 +4416,89 @@ function renderAnalysisDebug(
   logLines.push("");
 
   logLines.push(
-    "画像\t列\tNo.\t種類\t星数\tOCR結果\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t信頼度\t星判定率\tRGB\tY\t高さ"
+    "画像\t列\tNo.\t種類\t星数\tOCR結果\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t要件\t信頼度\t星判定率\tRGB\tY\t高さ"
   );
 
-  allCards.forEach(card => {
-    const ratioText =
-      card.yellowRatios
-        .map(
-          ratio =>
-            ratio.toFixed(3)
-        )
-        .join("/");
+  allCards.forEach(
+    card => {
+      const ratioText =
+        card.yellowRatios
+          .map(
+            ratio =>
+              ratio.toFixed(3)
+          )
+          .join("/");
 
-    let matchStatusText = "";
+      let matchStatusText =
+        "";
 
-    if (
-      card.matchStatus ===
-      "exact"
-    ) {
-      matchStatusText =
-        "完全一致";
-    } else if (
-      card.matchStatus ===
-      "similar"
-    ) {
-      matchStatusText =
-        "類似一致";
-    } else if (
-      card.matchStatus ===
-      "unmatched"
-    ) {
-      matchStatusText =
-        "未確定";
+      if (
+        card.matchStatus ===
+        "exact"
+      ) {
+        matchStatusText =
+          "完全一致";
+      } else if (
+        card.matchStatus ===
+        "similar"
+      ) {
+        matchStatusText =
+          "類似一致";
+      } else if (
+        card.matchStatus ===
+        "unmatched"
+      ) {
+        matchStatusText =
+          "未確定";
+      }
+
+      logLines.push(
+        [
+          "因子カード",
+          card.column,
+          card.row,
+          card.factorType,
+          card.stars,
+          card.ocrText || "",
+          card.matchCandidate || "",
+          card.factorType ===
+          "white"
+            ? card.matchSimilarity
+                .toFixed(3)
+            : "",
+          card.secondMatchCandidate ||
+            "",
+          card.factorType ===
+          "white"
+            ? card.secondMatchSimilarity
+                .toFixed(3)
+            : "",
+          card.factorType ===
+          "white"
+            ? card.matchSimilarityMargin
+                .toFixed(3)
+            : "",
+          card.factorType ===
+          "white"
+            ? card.matchThreshold
+                .toFixed(3)
+            : "",
+          matchStatusText,
+          card.requirementRank ||
+            "",
+          card.ocrConfidence !==
+          null
+            ? card.ocrConfidence
+                .toFixed(1)
+            : "",
+          ratioText,
+          `${card.color.r}, ${card.color.g}, ${card.color.b}`,
+          card.y,
+          card.height
+        ].join("\t")
+      );
     }
-
-    logLines.push(
-      [
-        "因子カード",
-        card.column,
-        card.row,
-        card.factorType,
-        card.stars,
-        card.ocrText || "",
-
-        card.matchCandidate || "",
-
-        card.factorType === "white"
-          ? card.matchSimilarity.toFixed(3)
-          : "",
-
-        card.secondMatchCandidate || "",
-
-        card.factorType === "white"
-          ? card.secondMatchSimilarity.toFixed(3)
-          : "",
-
-        card.factorType === "white"
-          ? card.matchSimilarityMargin.toFixed(3)
-          : "",
-
-        card.factorType === "white"
-          ? card.matchThreshold.toFixed(3)
-          : "",
-
-        matchStatusText,
-
-        card.ocrConfidence !== null
-          ? card.ocrConfidence.toFixed(1)
-          : "",
-
-        ratioText,
-
-        `${card.color.r}, ${card.color.g}, ${card.color.b}`,
-
-        card.y,
-        card.height
-      ].join("\t")
-    );
-  });
+  );
 
   debugLogLines.push(
     ...logLines,
@@ -3422,7 +4507,7 @@ function renderAnalysisDebug(
 }
 
 /* =========================================================
-  画像単位の解析エラー表示処理
+  画像単位解析エラー表示処理
   ========================================================= */
 
 function renderAnalysisError(
@@ -3435,30 +4520,43 @@ function renderAnalysisError(
       "analysis-debug"
     );
 
-  const section =
-    document.createElement(
-      "section"
+  if (container) {
+    const section =
+      document.createElement(
+        "section"
+      );
+
+    section.className =
+      "analysis-debug-section";
+
+    const title =
+      document.createElement(
+        "h3"
+      );
+
+    title.textContent =
+      `${memberLabel} / 画像${imageIndex + 1}`;
+
+    const message =
+      document.createElement(
+        "p"
+      );
+
+    message.textContent =
+      `この画像は解析できませんでした：${error.message}`;
+
+    section.appendChild(
+      title
     );
 
-  section.className =
-    "analysis-debug-section";
+    section.appendChild(
+      message
+    );
 
-  const title =
-    document.createElement("h3");
-
-  title.textContent =
-    `${memberLabel} / 画像${imageIndex + 1}`;
-
-  const message =
-    document.createElement("p");
-
-  message.textContent =
-    `この画像は解析できませんでした：${error.message}`;
-
-  section.appendChild(title);
-  section.appendChild(message);
-
-  container.appendChild(section);
+    container.appendChild(
+      section
+    );
+  }
 
   debugLogLines.push(
     `${memberLabel} / 画像${imageIndex + 1}`
@@ -3473,6 +4571,575 @@ function renderAnalysisError(
   );
 
   debugLogLines.push("");
+}
+
+/* =========================================================
+  人物単位の解析結果集約処理
+  同一人物・同一スキルが複数画像に存在した場合は最大★を採用する。
+  ========================================================= */
+
+function aggregateMemberSkills(
+  memberId
+) {
+  const member =
+    members[memberId];
+
+  const skillMap =
+    new Map();
+
+  member.analysisResults.forEach(
+    imageResult => {
+      const cards = [
+        ...imageResult.analysis
+          .leftCards,
+        ...imageResult.analysis
+          .rightCards
+      ];
+
+      cards.forEach(
+        card => {
+          if (
+            card.factorType !==
+            "white"
+          ) {
+            return;
+          }
+
+          if (
+            card.matchStatus !==
+              "exact" &&
+            card.matchStatus !==
+              "similar"
+          ) {
+            return;
+          }
+
+          if (
+            !card.matchCandidate ||
+            !card.requirementRank
+          ) {
+            return;
+          }
+
+          const skillName =
+            card.matchCandidate;
+
+          const existing =
+            skillMap.get(
+              skillName
+            );
+
+          if (
+            !existing ||
+            card.stars >
+            existing.stars
+          ) {
+            skillMap.set(
+              skillName,
+              {
+                skillName,
+                stars:
+                  card.stars,
+                rank:
+                  card.requirementRank,
+                matchStatus:
+                  card.matchStatus,
+                ocrText:
+                  card.ocrText,
+                similarity:
+                  card.matchSimilarity,
+                imageIndex:
+                  imageResult.imageIndex,
+                column:
+                  card.column,
+                row:
+                  card.row
+              }
+            );
+          }
+        }
+      );
+    }
+  );
+
+  return skillMap;
+}
+
+/* =========================================================
+  6人分のスキル集計処理
+  ========================================================= */
+
+function buildOverallSkillSummary() {
+  const memberSkillMaps = {};
+
+  MEMBER_ORDER.forEach(
+    memberId => {
+      memberSkillMaps[
+        memberId
+      ] =
+        aggregateMemberSkills(
+          memberId
+        );
+    }
+  );
+
+  const result = {
+    S: [],
+    A: [],
+    B: [],
+    C: []
+  };
+
+  for (
+    const rank
+    of ["S", "A", "B", "C"]
+  ) {
+    requirements[
+      rank
+    ].forEach(
+      skillName => {
+        const memberValues = {};
+        let ownedCount = 0;
+        let totalStars = 0;
+
+        MEMBER_ORDER.forEach(
+          memberId => {
+            const found =
+              memberSkillMaps[
+                memberId
+              ].get(
+                skillName
+              ) ||
+              null;
+
+            memberValues[
+              memberId
+            ] =
+              found;
+
+            if (found) {
+              ownedCount++;
+              totalStars +=
+                found.stars;
+            }
+          }
+        );
+
+        result[
+          rank
+        ].push({
+          skillName,
+          rank,
+          memberValues,
+          ownedCount,
+          totalStars
+        });
+      }
+    );
+  }
+
+  return result;
+}
+
+/* =========================================================
+  星数表示変換処理
+  ========================================================= */
+
+function formatStars(
+  stars
+) {
+  if (
+    !stars ||
+    stars < 1
+  ) {
+    return "-";
+  }
+
+  return (
+    "★".repeat(
+      Math.min(
+        stars,
+        3
+      )
+    ) +
+    "☆".repeat(
+      Math.max(
+        0,
+        3 - stars
+      )
+    )
+  );
+}
+
+/* =========================================================
+  S/A/B/C別集計結果表示処理
+  ========================================================= */
+
+function renderOverallSkillSummary() {
+  const container =
+    ensureResultSummaryContainer();
+
+  const summary =
+    buildOverallSkillSummary();
+
+  container.innerHTML = "";
+
+  const heading =
+    document.createElement(
+      "h2"
+    );
+
+  heading.textContent =
+    "スキル要件 判定結果";
+
+  container.appendChild(
+    heading
+  );
+
+  const note =
+    document.createElement(
+      "p"
+    );
+
+  note.className =
+    "factor-result-note";
+
+  note.textContent =
+    "完全一致・類似一致した要件スキルを集計しています。同じ人物の複数画像に同じスキルが写っている場合は1件として扱い、最も高い★数を採用します。";
+
+  container.appendChild(
+    note
+  );
+
+  const totalRequirements =
+    Object.values(
+      requirements
+    ).reduce(
+      (
+        sum,
+        skills
+      ) =>
+        sum + skills.length,
+      0
+    );
+
+  if (
+    totalRequirements === 0
+  ) {
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+    empty.className =
+      "factor-result-empty";
+
+    empty.textContent =
+      "スキル要件が登録されていません。スキル要件を設定してから再度解析してください。";
+
+    container.appendChild(
+      empty
+    );
+
+    return;
+  }
+
+  for (
+    const rank
+    of ["S", "A", "B", "C"]
+  ) {
+    if (
+      summary[
+        rank
+      ].length === 0
+    ) {
+      continue;
+    }
+
+    const section =
+      document.createElement(
+        "section"
+      );
+
+    section.className =
+      `factor-result-rank factor-result-rank-${rank.toLowerCase()}`;
+
+    const rankTitle =
+      document.createElement(
+        "h3"
+      );
+
+    rankTitle.className =
+      "factor-result-rank-title";
+
+    rankTitle.textContent =
+      `${rank}ランク`;
+
+    section.appendChild(
+      rankTitle
+    );
+
+    const tableWrap =
+      document.createElement(
+        "div"
+      );
+
+    tableWrap.className =
+      "factor-result-table-wrap";
+
+    const table =
+      document.createElement(
+        "table"
+      );
+
+    table.className =
+      "factor-result-table";
+
+    const thead =
+      document.createElement(
+        "thead"
+      );
+
+    const headerRow =
+      document.createElement(
+        "tr"
+      );
+
+    const headers = [
+      "スキル",
+      ...MEMBER_ORDER.map(
+        memberId =>
+          members[
+            memberId
+          ].label
+      ),
+      "所持数",
+      "★合計"
+    ];
+
+    headers.forEach(
+      headerText => {
+        const th =
+          document.createElement(
+            "th"
+          );
+
+        th.textContent =
+          headerText;
+
+        headerRow.appendChild(
+          th
+        );
+      }
+    );
+
+    thead.appendChild(
+      headerRow
+    );
+
+    table.appendChild(
+      thead
+    );
+
+    const tbody =
+      document.createElement(
+        "tbody"
+      );
+
+    summary[
+      rank
+    ].forEach(
+      skillResult => {
+        const tr =
+          document.createElement(
+            "tr"
+          );
+
+        const skillCell =
+          document.createElement(
+            "td"
+          );
+
+        skillCell.className =
+          "skill-name-cell";
+
+        skillCell.textContent =
+          skillResult.skillName;
+
+        tr.appendChild(
+          skillCell
+        );
+
+        MEMBER_ORDER.forEach(
+          memberId => {
+            const td =
+              document.createElement(
+                "td"
+              );
+
+            const found =
+              skillResult
+                .memberValues[
+                  memberId
+                ];
+
+            if (found) {
+              td.className =
+                "factor-result-hit";
+
+              td.textContent =
+                formatStars(
+                  found.stars
+                );
+
+              td.title =
+                `${found.matchStatus === "exact" ? "完全一致" : "類似一致"} / OCR: ${found.ocrText}`;
+            } else {
+              td.className =
+                "factor-result-missing";
+
+              td.textContent =
+                "-";
+            }
+
+            tr.appendChild(
+              td
+            );
+          }
+        );
+
+        const ownedCountCell =
+          document.createElement(
+            "td"
+          );
+
+        ownedCountCell.className =
+          "factor-result-count";
+
+        ownedCountCell.textContent =
+          `${skillResult.ownedCount}/6`;
+
+        tr.appendChild(
+          ownedCountCell
+        );
+
+        const totalStarsCell =
+          document.createElement(
+            "td"
+          );
+
+        totalStarsCell.textContent =
+          String(
+            skillResult.totalStars
+          );
+
+        tr.appendChild(
+          totalStarsCell
+        );
+
+        tbody.appendChild(
+          tr
+        );
+      }
+    );
+
+    table.appendChild(
+      tbody
+    );
+
+    tableWrap.appendChild(
+      table
+    );
+
+    section.appendChild(
+      tableWrap
+    );
+
+    container.appendChild(
+      section
+    );
+  }
+}
+
+/* =========================================================
+  集計結果をデバッグログへ追加する処理
+  ========================================================= */
+
+function appendSummaryToDebugLog() {
+  const summary =
+    buildOverallSkillSummary();
+
+  debugLogLines.push(
+    "===== 集計結果 ====="
+  );
+
+  debugLogLines.push(
+    `BUILD：${APP_BUILD}`
+  );
+
+  debugLogLines.push("");
+
+  for (
+    const rank
+    of ["S", "A", "B", "C"]
+  ) {
+    if (
+      summary[
+        rank
+      ].length === 0
+    ) {
+      continue;
+    }
+
+    debugLogLines.push(
+      `[${rank}]`
+    );
+
+    debugLogLines.push(
+      [
+        "スキル",
+        ...MEMBER_ORDER.map(
+          memberId =>
+            members[
+              memberId
+            ].label
+        ),
+        "所持数",
+        "★合計"
+      ].join("\t")
+    );
+
+    summary[
+      rank
+    ].forEach(
+      result => {
+        debugLogLines.push(
+          [
+            result.skillName,
+            ...MEMBER_ORDER.map(
+              memberId => {
+                const found =
+                  result
+                    .memberValues[
+                      memberId
+                    ];
+
+                return found
+                  ? formatStars(
+                      found.stars
+                    )
+                  : "";
+              }
+            ),
+            `${result.ownedCount}/6`,
+            result.totalStars
+          ].join("\t")
+        );
+      }
+    );
+
+    debugLogLines.push("");
+  }
 }
 
 /* =========================================================
@@ -3492,93 +5159,196 @@ async function copyDebugLog() {
   }
 
   const text =
-    debugLogLines.join("\n");
+    debugLogLines.join(
+      "\n"
+    );
 
   try {
-    await navigator.clipboard
-      .writeText(text);
+    await navigator
+      .clipboard
+      .writeText(
+        text
+      );
 
-    status.textContent =
-      "コピーしました";
+    if (status) {
+      status.textContent =
+        "コピーしました";
 
-    setTimeout(
-      () => {
-        status.textContent = "";
-      },
-      2000
-    );
+      setTimeout(
+        () => {
+          status.textContent =
+            "";
+        },
+        2000
+      );
+    }
   } catch (error) {
     console.error(
       "デバッグログのコピーに失敗しました",
       error
     );
 
-    status.textContent =
-      "コピーに失敗しました";
+    if (status) {
+      status.textContent =
+        "コピーに失敗しました";
+    }
   }
 }
 
-document
-  .getElementById("copy-debug-log")
-  .addEventListener(
+const copyDebugButton =
+  document.getElementById(
+    "copy-debug-log"
+  );
+
+if (copyDebugButton) {
+  copyDebugButton.addEventListener(
     "click",
     copyDebugLog
   );
+}
 
 /* =========================================================
-  画像解析ボタン処理
-
-  1. OCR worker生成
-  2. カード検出
-  3. 色・星判定
-  4. 白因子OCR
-  5. スキル要件との類似照合
-  6. 第1・第2候補の比較
-  7. デバッグ表示
+  全人物の保存済み解析結果初期化処理
+  再解析時に古い結果が混ざらないようにする。
   ========================================================= */
 
-document
-  .getElementById("analyze-images")
-  .addEventListener(
+function resetAnalysisResults() {
+  MEMBER_ORDER.forEach(
+    memberId => {
+      members[
+        memberId
+      ].analysisResults = [];
+    }
+  );
+}
+
+/* =========================================================
+  解析対象画像総数取得処理
+  ========================================================= */
+
+function getTotalImageCount() {
+  return MEMBER_ORDER.reduce(
+    (
+      total,
+      memberId
+    ) =>
+      total +
+      members[
+        memberId
+      ].images.length,
+    0
+  );
+}
+
+/* =========================================================
+  画像解析メイン処理
+
+  1. 解析中オーバーレイ表示
+  2. OCR worker生成
+  3. カード検出
+  4. 色・星判定
+  5. 白因子OCR
+  6. スキル要件との類似照合
+  7. 人物ごとに解析結果保存
+  8. 同一人物内の重複除去
+  9. 6人分集計
+  10. 結果表示
+  ========================================================= */
+
+const analyzeImagesButton =
+  document.getElementById(
+    "analyze-images"
+  );
+
+if (analyzeImagesButton) {
+  analyzeImagesButton.addEventListener(
     "click",
     async () => {
+      const totalImages =
+        getTotalImageCount();
+
+      if (
+        totalImages === 0
+      ) {
+        return;
+      }
+
       const debugContainer =
         document.getElementById(
           "analysis-debug"
         );
 
-      debugContainer.innerHTML = "";
+      if (debugContainer) {
+        debugContainer.innerHTML =
+          "";
+      }
+
+      const resultContainer =
+        ensureResultSummaryContainer();
+
+      resultContainer.innerHTML =
+        "";
 
       debugLogLines = [];
+
+      resetAnalysisResults();
 
       const copyButton =
         document.getElementById(
           "copy-debug-log"
         );
 
-      copyButton.disabled =
+      if (copyButton) {
+        copyButton.disabled =
+          true;
+      }
+
+      const copyStatus =
+        document.getElementById(
+          "copy-debug-status"
+        );
+
+      if (copyStatus) {
+        copyStatus.textContent =
+          "";
+      }
+
+      const ocrStatus =
+        document.getElementById(
+          "ocr-status"
+        );
+
+      if (ocrStatus) {
+        ocrStatus.textContent =
+          "";
+      }
+
+      analyzeImagesButton.disabled =
         true;
 
-      document
-        .getElementById(
-          "copy-debug-status"
-        )
-        .textContent = "";
-
-      document
-        .getElementById(
-          "ocr-status"
-        )
-        .textContent = "";
+      showAnalysisProgress(
+        totalImages
+      );
 
       const activeMembers =
-        Object.entries(members)
+        MEMBER_ORDER
           .filter(
-            ([, member]) =>
-              member.images.length > 0
+            memberId =>
+              members[
+                memberId
+              ].images.length > 0
+          )
+          .map(
+            memberId => [
+              memberId,
+              members[
+                memberId
+              ]
+            ]
           );
 
       let ocrWorker = null;
+      let globalImageNumber = 0;
 
       try {
         ocrWorker =
@@ -3589,19 +5359,39 @@ document
           error
         );
 
-        document
-          .getElementById(
-            "ocr-status"
-          )
-          .textContent =
+        if (ocrStatus) {
+          ocrStatus.textContent =
             "OCRの初期化に失敗しました。";
+        }
+
+        updateAnalysisProgressDisplay(
+          "OCRの初期化に失敗しました",
+          error.message ||
+          "Tesseract.jsを確認してください。"
+        );
+
+        await new Promise(
+          resolve =>
+            setTimeout(
+              resolve,
+              1200
+            )
+        );
+
+        hideAnalysisProgress();
+
+        analyzeImagesButton.disabled =
+          false;
 
         return;
       }
 
       try {
         for (
-          const [, member]
+          const [
+            memberId,
+            member
+          ]
           of activeMembers
         ) {
           for (
@@ -3609,6 +5399,34 @@ document
             i < member.images.length;
             i++
           ) {
+            globalImageNumber++;
+
+            analysisProgress
+              .currentImageNumber =
+                globalImageNumber;
+
+            analysisProgress
+              .currentMemberLabel =
+                member.label;
+
+            analysisProgress
+              .currentImageIndex =
+                i;
+
+            analysisProgress
+              .currentWhiteCard = 0;
+
+            analysisProgress
+              .totalWhiteCards = 0;
+
+            analysisProgress
+              .tesseractProgress = 0;
+
+            updateAnalysisProgressDisplay(
+              `${member.label} / 画像${i + 1}`,
+              `カードを検出しています... ・ 全体 ${globalImageNumber} / ${totalImages}画像`
+            );
+
             const imageData =
               member.images[i];
 
@@ -3622,6 +5440,11 @@ document
                 await drawOriginalImage(
                   imageData.file
                 );
+
+              updateAnalysisProgressDisplay(
+                `${member.label} / 画像${i + 1}`,
+                `因子カードを解析しています... ・ 全体 ${globalImageNumber} / ${totalImages}画像`
+              );
 
               const analysis =
                 analyzeFactorImage(
@@ -3638,11 +5461,34 @@ document
                 i
               );
 
+              member
+                .analysisResults
+                .push({
+                  imageId:
+                    imageData.id,
+                  imageIndex:
+                    i,
+                  analysis
+                });
+
               renderAnalysisDebug(
                 member.label,
                 i,
                 canvas,
                 analysis
+              );
+
+              analysisProgress
+                .currentWhiteCard =
+                  analysisProgress
+                    .totalWhiteCards;
+
+              analysisProgress
+                .tesseractProgress = 1;
+
+              updateAnalysisProgressDisplay(
+                `${member.label} / 画像${i + 1}`,
+                `解析完了 ・ 全体 ${globalImageNumber} / ${totalImages}画像`
               );
             } catch (error) {
               console.error(
@@ -3655,36 +5501,74 @@ document
                 i,
                 error
               );
+
+              updateAnalysisProgressDisplay(
+                `${member.label} / 画像${i + 1}`,
+                `この画像の解析に失敗しました。次の画像へ進みます。`
+              );
             }
           }
         }
       } finally {
-        if (ocrWorker) {
-          await ocrWorker.terminate();
+        if (
+          ocrWorker
+        ) {
+          try {
+            await ocrWorker
+              .terminate();
+          } catch (error) {
+            console.warn(
+              "OCR worker終了時にエラーが発生しました",
+              error
+            );
+          }
         }
       }
 
-      document
-        .getElementById(
-          "ocr-status"
-        )
-        .textContent =
+      renderOverallSkillSummary();
+
+      appendSummaryToDebugLog();
+
+      if (ocrStatus) {
+        ocrStatus.textContent =
           "解析が完了しました。";
+      }
 
-      copyButton.disabled =
-        debugLogLines.length === 0;
+      if (copyButton) {
+        copyButton.disabled =
+          debugLogLines.length ===
+          0;
+      }
 
-      document
-        .querySelector(
+      await showAnalysisCompleteProgress();
+
+      const resultTabButton =
+        document.querySelector(
           '[data-tab="results"]'
-        )
-        .click();
+        );
+
+      if (resultTabButton) {
+        resultTabButton.click();
+      }
+
+      hideAnalysisProgress();
+
+      analyzeImagesButton.disabled =
+        false;
     }
   );
+}
 
 /* =========================================================
   初期状態設定
   ========================================================= */
 
-setPasteTarget("parentA");
+ensureDynamicStyles();
+ensureAnalysisProgressOverlay();
+ensureResultSummaryContainer();
+
+setPasteTarget(
+  "parentA"
+);
+
 updateImageSummary();
