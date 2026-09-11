@@ -17,10 +17,11 @@ import {
 import {
   getShortSkillFallbackDecision,
   shouldRunShortSkillFallback,
+  evaluateStrongShortSkillFallbackResult,
   isStrongShortSkillFallbackResult
 } from "../assets/js/matching/fallback-policy.js";
 
-assert.equal(APP_BUILD, "20260911-matching-03");
+assert.equal(APP_BUILD, "20260911-matching-04");
 assert.deepEqual(SKILL_MATCH_CONFIG, {
   thresholds: {
     1: 1.00,
@@ -81,6 +82,11 @@ for (const skill of [
   "レースの真髄・速",
   "アメリカンドリーム",
   "心弾んで",
+  "左回り○",
+  "気合十分",
+  "いざ我が道へ！",
+  "品行方正",
+  "たぎる血潮",
   "マイルコーナー〇",
   "マイル直線○",
   "秋ウマ娘○"
@@ -91,6 +97,8 @@ for (const skill of [
 for (const [ocrText, expected] of [
   ["向こう見すず", "向こう見ず"],
   ["向こう見すずビ", "向こう見ず"],
+  ["を左回り〇", "左回り○"],
+  ["マイルコーナーのO〇", "マイルコーナー○"],
   ["マイルコーナーの〇", "マイルコーナー○"],
   ["秋ウマ娘〇ンー", "秋ウマ娘○"],
   ["負けん気器量", "負けん気"],
@@ -271,5 +279,93 @@ assert.equal(
   false,
   "通常結果と同程度の弱いfallbackは採用しない"
 );
+
+assert.equal(
+  isStrongShortSkillFallbackResult({
+    fallbackAssessment: { finalStatus: "confirmed" },
+    fallbackMatchResult: {
+      candidate: "二刀流",
+      similarity: 0.60,
+      similarityMargin: 0.20
+    },
+    fallbackConfidence: 45,
+    normalMatchResult: {
+      candidate: "二刀流",
+      similarity: 0.40,
+      similarityMargin: 0.178
+    }
+  }),
+  true,
+  "同一候補へ類似度が明確に改善した安全なfallbackは採用する"
+);
+
+assert.deepEqual(
+  evaluateStrongShortSkillFallbackResult({
+    fallbackAssessment: { finalStatus: "confirmed" },
+    fallbackMatchResult: {
+      candidate: "二刀流",
+      similarity: 0.60,
+      similarityMargin: 0.20
+    },
+    fallbackConfidence: 45,
+    normalMatchResult: {
+      candidate: "二刀流",
+      similarity: 0.40,
+      similarityMargin: 0.178
+    }
+  }).reason,
+  "fallback-consistent-improvement",
+  "採用理由をdebugログ向けに保持する"
+);
+
+assert.equal(
+  isStrongShortSkillFallbackResult({
+    fallbackAssessment: { finalStatus: "confirmed" },
+    fallbackMatchResult: {
+      candidate: "別候補",
+      similarity: 0.60,
+      similarityMargin: 0.20
+    },
+    fallbackConfidence: 70,
+    normalMatchResult: {
+      candidate: "二刀流",
+      similarity: 0.40,
+      similarityMargin: 0.178
+    }
+  }),
+  false,
+  "fallbackで別候補へ寄った場合は採用しない"
+);
+
+for (const [label, overrides] of [
+  ["confidence不足", { fallbackConfidence: 39 }],
+  [
+    "類似度改善不足",
+    {
+      fallbackSimilarity: 0.54,
+      fallbackMargin: 0.20
+    }
+  ],
+  ["候補差悪化", { fallbackMargin: 0.17 }]
+]) {
+  assert.equal(
+    isStrongShortSkillFallbackResult({
+      fallbackAssessment: { finalStatus: "confirmed" },
+      fallbackMatchResult: {
+        candidate: "二刀流",
+        similarity: overrides.fallbackSimilarity ?? 0.60,
+        similarityMargin: overrides.fallbackMargin ?? 0.20
+      },
+      fallbackConfidence: overrides.fallbackConfidence ?? 45,
+      normalMatchResult: {
+        candidate: "二刀流",
+        similarity: 0.40,
+        similarityMargin: 0.178
+      }
+    }),
+    false,
+    label
+  );
+}
 
 console.log("matching regression tests: OK");

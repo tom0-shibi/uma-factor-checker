@@ -6,7 +6,8 @@ const SHORT_SKILL_FALLBACK_POLICY = {
   maximumConfirmedSimilarityBuffer: 0.05,
   maximumUnresolvedSimilarityGap: 0.25,
   minimumUnresolvedSimilarity: 0.35,
-  minimumStrongFallbackConfidence: 60
+  minimumStrongFallbackConfidence: 40,
+  minimumStrongSimilarityImprovement: 0.15
 };
 
 function getShortSkillFallbackDecision({
@@ -74,31 +75,58 @@ function shouldRunShortSkillFallback(options) {
   return getShortSkillFallbackDecision(options).shouldRun;
 }
 
-function isStrongShortSkillFallbackResult({
+function evaluateStrongShortSkillFallbackResult({
   fallbackAssessment,
   fallbackMatchResult,
   fallbackConfidence,
   normalMatchResult
 }) {
   if (fallbackAssessment.finalStatus !== "confirmed") {
-    return false;
+    return {
+      eligible: false,
+      reason: "fallback-not-confirmed"
+    };
   }
 
   if (fallbackMatchResult.similarity === 1) {
-    return true;
+    return {
+      eligible: true,
+      reason: "fallback-exact-match"
+    };
   }
 
-  return (
-    fallbackMatchResult.candidate === normalMatchResult.candidate &&
-    fallbackConfidence >=
-      SHORT_SKILL_FALLBACK_POLICY.minimumStrongFallbackConfidence &&
-    fallbackMatchResult.similarity > normalMatchResult.similarity &&
-    fallbackMatchResult.similarityMargin > normalMatchResult.similarityMargin
-  );
+  const checks = {
+    sameCandidate:
+      fallbackMatchResult.candidate === normalMatchResult.candidate,
+    sufficientConfidence:
+      fallbackConfidence >=
+        SHORT_SKILL_FALLBACK_POLICY.minimumStrongFallbackConfidence,
+    sufficientSimilarityImprovement:
+      fallbackMatchResult.similarity - normalMatchResult.similarity >=
+        SHORT_SKILL_FALLBACK_POLICY.minimumStrongSimilarityImprovement,
+    marginNotWorse:
+      fallbackMatchResult.similarityMargin >= normalMatchResult.similarityMargin
+  };
+  const failedChecks = Object.entries(checks)
+    .filter(([, passed]) => !passed)
+    .map(([name]) => name);
+
+  return {
+    eligible: failedChecks.length === 0,
+    reason: failedChecks.length === 0
+      ? "fallback-consistent-improvement"
+      : `failed:${failedChecks.join(",")}`,
+    checks
+  };
+}
+
+function isStrongShortSkillFallbackResult(options) {
+  return evaluateStrongShortSkillFallbackResult(options).eligible;
 }
 
 export {
   getShortSkillFallbackDecision,
   shouldRunShortSkillFallback,
+  evaluateStrongShortSkillFallbackResult,
   isStrongShortSkillFallbackResult
 };
