@@ -1,6 +1,32 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
 import { ensureResultSummaryContainer } from "../ui/ui.js";
 import { getRequirementRankLabel } from "../preset/preset-manager.js";
+import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js";
+import {
+  RANKS,
+  buildOverallSkillSummary as buildResultModel,
+  getReviewItems,
+  setManualCorrection,
+  ignoreRecognition,
+  clearManualCorrection
+} from "./result-model.js";
+
+const openReviewGroups = new Set();
+
+function applyReviewGroupOpenState(details, groupKey) {
+  details.open = openReviewGroups.has(groupKey);
+  details.addEventListener("toggle", () => {
+    if (details.open) {
+      openReviewGroups.add(groupKey);
+    } else {
+      openReviewGroups.delete(groupKey);
+    }
+  });
+}
+
+function resetReviewAccordionState() {
+  openReviewGroups.clear();
+}
 
 /* =========================================================
   因子カード切り抜きプレビュー生成処理
@@ -201,6 +227,21 @@ function renderAnalysisDebug(
           canvas,
           card
         );
+
+      if (
+        card.factorType === "white" &&
+        (
+          card.finalStatus === "review" ||
+          (
+            card.finalStatus === "unresolved" &&
+            !card.ocrText &&
+            card.ocrFallbackAttempted
+          )
+        ) &&
+        !card.reviewThumbnail
+      ) {
+        card.reviewThumbnail = preview;
+      }
 
       const ocrPreviewHtml =
         card.ocrPreview
@@ -629,169 +670,6 @@ function renderAnalysisError(
 }
 
 /* =========================================================
-  人物単位の解析結果集約処理
-  同一人物・同一スキルが複数画像に存在した場合は最大★を採用する。
-  ========================================================= */
-
-function aggregateMemberSkills(
-  memberId
-) {
-  const member =
-    members[memberId];
-
-  const skillMap =
-    new Map();
-
-  member.analysisResults.forEach(
-    imageResult => {
-      const cards = [
-        ...imageResult.analysis
-          .leftCards,
-        ...imageResult.analysis
-          .rightCards
-      ];
-
-      cards.forEach(
-        card => {
-          if (
-            card.factorType !==
-            "white"
-          ) {
-            return;
-          }
-
-          if (card.finalStatus !== "confirmed") {
-            return;
-          }
-
-          if (
-            !card.canonicalName ||
-            !card.requirementRank
-          ) {
-            return;
-          }
-
-          const skillName =
-            card.canonicalName;
-
-          const existing =
-            skillMap.get(
-              skillName
-            );
-
-          if (
-            !existing ||
-            card.stars >
-            existing.stars
-          ) {
-            skillMap.set(
-              skillName,
-              {
-                skillName,
-                stars:
-                  card.stars,
-                rank:
-                  card.requirementRank,
-                matchStatus:
-                  card.matchStatus,
-                ocrText:
-                  card.ocrText,
-                similarity:
-                  card.matchSimilarity,
-                imageIndex:
-                  imageResult.imageIndex,
-                column:
-                  card.column,
-                row:
-                  card.row
-              }
-            );
-          }
-        }
-      );
-    }
-  );
-
-  return skillMap;
-}
-
-/* =========================================================
-  6人分のスキル集計処理
-  ========================================================= */
-
-function buildOverallSkillSummary() {
-  const memberSkillMaps = {};
-
-  MEMBER_ORDER.forEach(
-    memberId => {
-      memberSkillMaps[
-        memberId
-      ] =
-        aggregateMemberSkills(
-          memberId
-        );
-    }
-  );
-
-  const result = {
-    S: [],
-    A: [],
-    B: [],
-    C: []
-  };
-
-  for (
-    const rank
-    of ["S", "A", "B", "C"]
-  ) {
-    requirements[
-      rank
-    ].forEach(
-      skillName => {
-        const memberValues = {};
-        let ownedCount = 0;
-        let totalStars = 0;
-
-        MEMBER_ORDER.forEach(
-          memberId => {
-            const found =
-              memberSkillMaps[
-                memberId
-              ].get(
-                skillName
-              ) ||
-              null;
-
-            memberValues[
-              memberId
-            ] =
-              found;
-
-            if (found) {
-              ownedCount++;
-              totalStars +=
-                found.stars;
-            }
-          }
-        );
-
-        result[
-          rank
-        ].push({
-          skillName,
-          rank,
-          memberValues,
-          ownedCount,
-          totalStars
-        });
-      }
-    );
-  }
-
-  return result;
-}
-
-/* =========================================================
   星数表示変換処理
   ========================================================= */
 
@@ -821,6 +699,493 @@ function formatStars(
   );
 }
 
+function appendResultTableColumns(table) {
+  const colgroup = document.createElement("colgroup");
+  const columnClasses = [
+    "result-col-skill",
+    ...MEMBER_ORDER.map(() => "result-col-member"),
+    "result-col-count",
+    "result-col-stars"
+  ];
+
+  columnClasses.forEach(className => {
+    const column = document.createElement("col");
+    column.className = className;
+    colgroup.appendChild(column);
+  });
+  table.appendChild(colgroup);
+}
+
+function renderMemberSummary(container, model) {
+  const section = document.createElement("section");
+  section.className = "result-member-summary";
+  const title = document.createElement("h3");
+  title.textContent = "結果サマリー";
+  section.appendChild(title);
+
+  const wrap = document.createElement("div");
+  wrap.className = "result-summary-table-wrap";
+  const table = document.createElement("table");
+  table.className = "result-summary-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>メンバー</th>
+        <th>S</th>
+        <th>A</th>
+        <th>B</th>
+        <th>C</th>
+        <th>合計</th>
+      </tr>
+    </thead>
+  `;
+  const tbody = document.createElement("tbody");
+
+  model.memberSummary.forEach(item => {
+    const row = document.createElement("tr");
+    const values = item.registered
+      ? [
+          members[item.memberId].label,
+          ...RANKS.map(rank => item.counts[rank]),
+          item.total
+        ]
+      : [members[item.memberId].label, "-", "-", "-", "-", "-"];
+    values.forEach(value => {
+      const cell = document.createElement("td");
+      cell.textContent = String(value);
+      row.appendChild(cell);
+    });
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  section.appendChild(wrap);
+  container.appendChild(section);
+}
+
+function formatCandidateButtonLabel(name, similarity) {
+  return `${name} ${Math.round(similarity * 100)}%`;
+}
+
+function applyManualChoice(card, canonicalName) {
+  setManualCorrection(card, canonicalName);
+  renderOverallSkillSummary();
+}
+
+function renderLegacyReviewItems(container) {
+  const items = getReviewItems();
+  const unresolvedItems = items.filter(
+    item => !item.card.manualCorrection
+  );
+  const section = document.createElement("section");
+  section.className = "result-review-section";
+  const heading = document.createElement("h3");
+  heading.textContent = unresolvedItems.length > 0
+    ? `要確認 ${unresolvedItems.length}件`
+    : "要確認なし";
+  section.appendChild(heading);
+
+  if (items.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "result-review-empty";
+    empty.textContent = "確認が必要なOCR結果はありません。";
+    section.appendChild(empty);
+    container.appendChild(section);
+    return;
+  }
+
+  const candidates = getCanonicalSkillCandidates();
+  items.forEach((item, itemIndex) => {
+    const card = item.card;
+    const article = document.createElement("article");
+    article.className = "result-review-item";
+    if (card.manualCorrection) {
+      article.classList.add("is-resolved");
+    }
+
+    const location = document.createElement("h4");
+    location.textContent =
+      `${item.memberLabel} / 画像${item.imageIndex + 1} / ${card.column}${card.row}`;
+    article.appendChild(location);
+
+    const details = document.createElement("p");
+    details.className = "result-review-details";
+    details.textContent = item.original.ocrText
+      ? `OCR: ${item.original.ocrText} / ${formatStars(card.stars)}`
+      : `OCR: 取得できませんでした / ${formatStars(card.stars)}`;
+    article.appendChild(details);
+
+    if (card.manualCorrection) {
+      const resolved = document.createElement("p");
+      resolved.className = "result-review-resolution";
+      resolved.textContent = card.manualCorrection.ignored
+        ? "対応: 無視"
+        : `手動確定: ${card.manualCorrection.canonicalName}`;
+      article.appendChild(resolved);
+      const clearButton = document.createElement("button");
+      clearButton.type = "button";
+      clearButton.className = "secondary-button compact-button";
+      clearButton.textContent = "訂正を解除";
+      clearButton.addEventListener("click", () => {
+        clearManualCorrection(card);
+        renderOverallSkillSummary();
+      });
+      article.appendChild(clearButton);
+      section.appendChild(article);
+      return;
+    }
+
+    if (item.type === "review") {
+      const quickChoices = [
+        [item.original.firstCandidate, item.original.firstSimilarity],
+        [item.original.secondCandidate, item.original.secondSimilarity]
+      ].filter(([name], index, all) =>
+        name && all.findIndex(([otherName]) => otherName === name) === index
+      );
+      const quickArea = document.createElement("div");
+      quickArea.className = "result-review-quick-choices";
+      quickChoices.forEach(([name, similarity]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary-button compact-button";
+        button.textContent = formatCandidateButtonLabel(name, similarity);
+        button.addEventListener("click", () => applyManualChoice(card, name));
+        quickArea.appendChild(button);
+      });
+      article.appendChild(quickArea);
+    }
+
+    const controls = document.createElement("div");
+    controls.className = "result-review-controls";
+    const select = document.createElement("select");
+    select.setAttribute(
+      "aria-label",
+      `${item.memberLabel} 画像${item.imageIndex + 1} ${card.column}${card.row}の正式名称`
+    );
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "その他から正式名称を選択";
+    select.appendChild(placeholder);
+    candidates.forEach(candidate => {
+      const option = document.createElement("option");
+      option.value = candidate;
+      option.textContent = candidate;
+      select.appendChild(option);
+    });
+    controls.appendChild(select);
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "primary-button compact-button";
+    confirmButton.textContent = "この内容で確定";
+    confirmButton.disabled = true;
+    select.addEventListener("change", () => {
+      confirmButton.disabled = !select.value;
+    });
+    confirmButton.addEventListener("click", () => {
+      if (select.value) {
+        applyManualChoice(card, select.value);
+      }
+    });
+    controls.appendChild(confirmButton);
+
+    const ignoreButton = document.createElement("button");
+    ignoreButton.type = "button";
+    ignoreButton.className = "secondary-button compact-button";
+    ignoreButton.textContent = "無視";
+    ignoreButton.addEventListener("click", () => {
+      ignoreRecognition(card);
+      renderOverallSkillSummary();
+    });
+    controls.appendChild(ignoreButton);
+    article.appendChild(controls);
+    article.dataset.reviewIndex = String(itemIndex);
+    section.appendChild(article);
+  });
+
+  container.appendChild(section);
+}
+
+function formatReviewPosition(item) {
+  const columnLabel = item.card.column === "left" ? "左列" : "右列";
+  return `画像${item.imageIndex + 1}・${columnLabel}${item.card.row}行目`;
+}
+
+function createReviewArticle(item, candidates) {
+  const card = item.card;
+  const article = document.createElement("article");
+  article.className = "result-review-item compact-review-item";
+  if (card.manualCorrection) {
+    article.classList.add("is-resolved");
+  }
+
+  const header = document.createElement("div");
+  header.className = "result-review-item-header";
+  const location = document.createElement("h4");
+  location.textContent = formatReviewPosition(item);
+  header.appendChild(location);
+  const status = document.createElement("span");
+  status.className = "result-review-status";
+  status.textContent = item.type === "review" ? "要確認" : "未認識";
+  header.appendChild(status);
+  article.appendChild(header);
+
+  if (card.reviewThumbnail) {
+    const imageLink = document.createElement("a");
+    imageLink.href = card.reviewThumbnail;
+    imageLink.target = "_blank";
+    imageLink.rel = "noopener";
+    imageLink.title = "クリックしてカード画像を拡大";
+    const image = document.createElement("img");
+    image.className = "result-review-thumbnail";
+    image.src = card.reviewThumbnail;
+    image.alt = `${item.memberLabel} ${formatReviewPosition(item)}の因子カード`;
+    imageLink.appendChild(image);
+    article.appendChild(imageLink);
+  } else {
+    const unavailable = document.createElement("p");
+    unavailable.className = "result-review-image-unavailable";
+    unavailable.textContent = "カード画像を表示できません";
+    article.appendChild(unavailable);
+  }
+
+  const recognition = document.createElement("div");
+  recognition.className = "result-review-recognition";
+  const ocr = document.createElement("p");
+  ocr.innerHTML = `<strong>OCR:</strong> ${escapeHtml(
+    item.original.ocrText || "認識できませんでした"
+  )}`;
+  const stars = document.createElement("p");
+  stars.innerHTML = `<strong>星:</strong> ${formatStars(card.stars)}`;
+  recognition.append(ocr, stars);
+  article.appendChild(recognition);
+
+  if (card.manualCorrection) {
+    const resolved = document.createElement("p");
+    resolved.className = "result-review-resolution";
+    resolved.textContent = card.manualCorrection.ignored
+      ? "対応: 無視"
+      : `手動確定: ${card.manualCorrection.canonicalName}`;
+    article.appendChild(resolved);
+    const clearButton = document.createElement("button");
+    clearButton.type = "button";
+    clearButton.className = "secondary-button compact-button";
+    clearButton.textContent = card.manualCorrection.ignored
+      ? "無視を解除"
+      : "訂正を解除";
+    clearButton.addEventListener("click", () => {
+      clearManualCorrection(card);
+      renderOverallSkillSummary();
+    });
+    article.appendChild(clearButton);
+    return article;
+  }
+
+  if (item.type === "review") {
+    const candidateLabel = document.createElement("p");
+    candidateLabel.className = "result-review-candidate-label";
+    candidateLabel.textContent = "優先候補";
+    article.appendChild(candidateLabel);
+    const quickChoices = [
+      [item.original.firstCandidate, item.original.firstSimilarity],
+      [item.original.secondCandidate, item.original.secondSimilarity]
+    ].filter(([name], index, all) =>
+      name && all.findIndex(([otherName]) => otherName === name) === index
+    );
+    const quickArea = document.createElement("div");
+    quickArea.className = "result-review-quick-choices";
+    quickChoices.forEach(([name, similarity]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary-button compact-button";
+      button.textContent = formatCandidateButtonLabel(name, similarity);
+      button.addEventListener("click", () => applyManualChoice(card, name));
+      quickArea.appendChild(button);
+    });
+    article.appendChild(quickArea);
+  }
+
+  const controls = document.createElement("div");
+  controls.className = "result-review-controls";
+  const select = document.createElement("select");
+  select.setAttribute(
+    "aria-label",
+    `${item.memberLabel} ${formatReviewPosition(item)}の正式名称`
+  );
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = item.type === "review"
+    ? "別のスキルを選択"
+    : "正しいスキルを選択";
+  select.appendChild(placeholder);
+  candidates.forEach(candidate => {
+    const option = document.createElement("option");
+    option.value = candidate;
+    option.textContent = candidate;
+    select.appendChild(option);
+  });
+  controls.appendChild(select);
+
+  const confirmButton = document.createElement("button");
+  confirmButton.type = "button";
+  confirmButton.className = "primary-button compact-button";
+  confirmButton.textContent = "確定";
+  confirmButton.disabled = true;
+  select.addEventListener("change", () => {
+    confirmButton.disabled = !select.value;
+  });
+  confirmButton.addEventListener("click", () => {
+    if (select.value) {
+      applyManualChoice(card, select.value);
+    }
+  });
+  controls.appendChild(confirmButton);
+
+  const ignoreWrap = document.createElement("span");
+  ignoreWrap.className = "result-review-ignore-wrap";
+  const ignoreButton = document.createElement("button");
+  ignoreButton.type = "button";
+  ignoreButton.className = "secondary-button compact-button";
+  ignoreButton.textContent = "無視";
+  ignoreButton.title = "該当するスキルがない場合や要件外因子はこちら";
+  ignoreButton.addEventListener("click", () => {
+    ignoreRecognition(card);
+    renderOverallSkillSummary();
+  });
+  const ignoreHelp = document.createElement("small");
+  ignoreHelp.textContent = "該当するスキルがない場合";
+  ignoreWrap.append(ignoreButton, ignoreHelp);
+  controls.appendChild(ignoreWrap);
+  article.appendChild(controls);
+  return article;
+}
+
+function createReviewMemberGroup(memberId, items, candidates) {
+  const details = document.createElement("details");
+  details.className = "review-member-group";
+  applyReviewGroupOpenState(details, `member:${memberId}`);
+  const summary = document.createElement("summary");
+  const label = document.createElement("span");
+  label.textContent = members[memberId].label;
+  const count = document.createElement("span");
+  count.className = "review-member-count";
+  count.textContent = `${items.length}件`;
+  summary.append(label, count);
+  details.appendChild(summary);
+  const content = document.createElement("div");
+  content.className = "review-member-content";
+  items.forEach(item => {
+    content.appendChild(createReviewArticle(item, candidates));
+  });
+  details.appendChild(content);
+  return details;
+}
+
+function renderReviewItems(container) {
+  const items = getReviewItems();
+  const unresolvedItems = items.filter(item => !item.card.manualCorrection);
+  const resolvedItems = items.filter(item => item.card.manualCorrection);
+  const section = document.createElement("section");
+  section.className = "result-review-section";
+  const heading = document.createElement("h3");
+  heading.textContent = unresolvedItems.length > 0
+    ? `要確認 ${unresolvedItems.length}件`
+    : "✓ 要確認項目はありません";
+  section.appendChild(heading);
+
+  const guide = document.createElement("p");
+  guide.className = "result-review-guide";
+  guide.textContent =
+    "OCR結果が不確かな項目です。カード画像を確認して正しいスキルを選択してください。候補に正解がない場合や、要件に関係のない因子・レース因子・シナリオ因子は「無視」を選択してください。";
+  section.appendChild(guide);
+
+  const candidates = getCanonicalSkillCandidates();
+  MEMBER_ORDER.forEach(memberId => {
+    const memberItems = unresolvedItems.filter(item => item.memberId === memberId);
+    if (memberItems.length > 0) {
+      section.appendChild(
+        createReviewMemberGroup(memberId, memberItems, candidates)
+      );
+    }
+  });
+
+  if (resolvedItems.length > 0) {
+    const resolvedGroup = document.createElement("details");
+    resolvedGroup.className = "review-member-group review-resolved-group";
+    applyReviewGroupOpenState(resolvedGroup, "resolved");
+    const summary = document.createElement("summary");
+    summary.textContent = `対応済み（${resolvedItems.length}件）`;
+    resolvedGroup.appendChild(summary);
+    const content = document.createElement("div");
+    content.className = "review-member-content";
+    resolvedItems.forEach(item => {
+      content.appendChild(createReviewArticle(item, candidates));
+    });
+    resolvedGroup.appendChild(content);
+    section.appendChild(resolvedGroup);
+  }
+
+  container.appendChild(section);
+}
+
+function renderManualResolutionDebug() {
+  const debugContainer = document.getElementById("analysis-debug");
+  if (!debugContainer) {
+    return;
+  }
+
+  document.getElementById("manual-resolution-debug")?.remove();
+  const items = getReviewItems();
+  if (items.length === 0) {
+    return;
+  }
+
+  const section = document.createElement("section");
+  section.id = "manual-resolution-debug";
+  section.className = "analysis-debug-section";
+  const title = document.createElement("h3");
+  title.textContent = "要確認・手動訂正状態";
+  section.appendChild(title);
+  const table = document.createElement("table");
+  table.className = "debug-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>対象</th>
+        <th>元OCR</th>
+        <th>元status</th>
+        <th>effective正式名称</th>
+        <th>effective status</th>
+        <th>resolutionSource</th>
+        <th>要件</th>
+      </tr>
+    </thead>
+  `;
+  const tbody = document.createElement("tbody");
+  items.forEach(item => {
+    const row = document.createElement("tr");
+    const values = [
+      `${item.memberLabel} / 画像${item.imageIndex + 1} / ${item.card.column}${item.card.row}`,
+      item.original.ocrText || "-",
+      item.original.status,
+      item.effective.canonicalName || "-",
+      item.effective.status,
+      item.effective.resolutionSource,
+      item.effective.requirementRank || "-"
+    ];
+    values.forEach(value => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.appendChild(cell);
+    });
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+  section.appendChild(table);
+  debugContainer.appendChild(section);
+}
+
 /* =========================================================
   S/A/B/C別集計結果表示処理
   ========================================================= */
@@ -829,8 +1194,8 @@ function renderOverallSkillSummary() {
   const container =
     ensureResultSummaryContainer();
 
-  const summary =
-    buildOverallSkillSummary();
+  const model = buildResultModel();
+  const summary = model.ranks;
 
   container.innerHTML = "";
 
@@ -855,11 +1220,15 @@ function renderOverallSkillSummary() {
     "factor-result-note";
 
   note.textContent =
-    "完全一致・類似一致した要件スキルを集計しています。同じ人物の複数画像に同じスキルが写っている場合は1件として扱い、最も高い★数を採用します。";
+    "OCR・fallback・手動訂正で確定した要件スキルを集計しています。同じ人物の複数画像に同じスキルが写っている場合は1件として扱い、最も高い★数を採用します。";
 
   container.appendChild(
     note
   );
+
+  renderMemberSummary(container, model);
+  renderReviewItems(container);
+  renderManualResolutionDebug();
 
   const totalRequirements =
     Object.values(
@@ -945,6 +1314,8 @@ function renderOverallSkillSummary() {
     table.className =
       "factor-result-table";
 
+    appendResultTableColumns(table);
+
     const thead =
       document.createElement(
         "thead"
@@ -963,7 +1334,7 @@ function renderOverallSkillSummary() {
             memberId
           ].label
       ),
-      "所持数",
+      "面数",
       "★合計"
     ];
 
@@ -1043,7 +1414,13 @@ function renderOverallSkillSummary() {
                 );
 
               td.title =
-                `${found.matchStatus === "exact" ? "完全一致" : "類似一致"} / OCR: ${found.ocrText}`;
+                `${
+                  found.resolutionSource === "manual"
+                    ? "手動確定"
+                    : found.matchStatus === "exact"
+                      ? "完全一致"
+                      : "類似一致"
+                } / OCR: ${found.ocrText || "未認識"}`;
             } else {
               td.className =
                 "factor-result-missing";
@@ -1067,7 +1444,20 @@ function renderOverallSkillSummary() {
           "factor-result-count";
 
         ownedCountCell.textContent =
-          `${skillResult.ownedCount}/6`;
+          `${skillResult.ownedCount}/${model.registeredMemberCount}`;
+
+        const countBadge = document.createElement("span");
+        countBadge.className = "factor-result-count-badge";
+        if (model.registeredMemberCount <= 2) {
+          countBadge.classList.add("is-insufficient");
+          countBadge.textContent = "判定対象不足";
+        } else if (skillResult.ownedCount < 3) {
+          countBadge.classList.add("is-warning");
+          countBadge.textContent = "3面未満";
+        }
+        if (countBadge.textContent) {
+          ownedCountCell.appendChild(countBadge);
+        }
 
         tr.appendChild(
           ownedCountCell
@@ -1116,8 +1506,8 @@ function renderOverallSkillSummary() {
   ========================================================= */
 
 function appendSummaryToDebugLog() {
-  const summary =
-    buildOverallSkillSummary();
+  const model = buildResultModel();
+  const summary = model.ranks;
 
   debugLogLines.push(
     "===== 集計結果 ====="
@@ -1154,7 +1544,7 @@ function appendSummaryToDebugLog() {
               memberId
             ].label
         ),
-        "所持数",
+        "面数",
         "★合計"
       ].join("\t")
     );
@@ -1181,7 +1571,7 @@ function appendSummaryToDebugLog() {
                   : "";
               }
             ),
-            `${result.ownedCount}/6`,
+            `${result.ownedCount}/${model.registeredMemberCount}`,
             result.totalStars
           ].join("\t")
         );
@@ -1257,4 +1647,48 @@ if (copyDebugButton) {
   );
 }
 
-export { renderAnalysisDebug, renderAnalysisError, renderOverallSkillSummary, appendSummaryToDebugLog };
+const debugModeToggle =
+  document.getElementById(
+    "debug-mode-toggle"
+  );
+
+function updateDebugModeDisplay() {
+  const enabled = Boolean(debugModeToggle?.checked);
+  const debugActions = document.getElementById("debug-actions");
+  const debugContainer = document.getElementById("analysis-debug");
+
+  if (debugActions) {
+    debugActions.hidden = !enabled;
+  }
+  if (debugContainer) {
+    debugContainer.hidden = !enabled;
+  }
+}
+
+if (debugModeToggle) {
+  debugModeToggle.addEventListener(
+    "change",
+    updateDebugModeDisplay
+  );
+  updateDebugModeDisplay();
+}
+
+document.addEventListener(
+  "requirements-applied",
+  () => {
+    const hasAnalysisResults = MEMBER_ORDER.some(
+      memberId => members[memberId].analysisResults.length > 0
+    );
+    if (hasAnalysisResults) {
+      renderOverallSkillSummary();
+    }
+  }
+);
+
+export {
+  renderAnalysisDebug,
+  renderAnalysisError,
+  renderOverallSkillSummary,
+  appendSummaryToDebugLog,
+  resetReviewAccordionState
+};
