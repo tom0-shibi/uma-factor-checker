@@ -160,6 +160,11 @@ function renderAnalysisDebug(
         <th>候補差</th>
         <th>閾値</th>
         <th>一致</th>
+        <th>最終status</th>
+        <th>要確認理由</th>
+        <th>近似候補群</th>
+        <th>fallback</th>
+        <th>fallback結果</th>
         <th>要件</th>
         <th>信頼度</th>
         <th>星判定率</th>
@@ -276,7 +281,18 @@ function renderAnalysisDebug(
       ) {
         matchStatusText =
           "未確定";
+      } else if (
+        card.matchStatus ===
+        "review"
+      ) {
+        matchStatusText =
+          "要確認";
       }
+
+      const fallbackResultsText =
+        card.ocrFallbackResults?.length
+          ? JSON.stringify(card.ocrFallbackResults)
+          : "-";
 
       const rankText =
         card.requirementRank ||
@@ -339,6 +355,16 @@ function renderAnalysisDebug(
         <td>
           ${matchStatusText}
         </td>
+
+        <td>${escapeHtml(card.finalStatus || "-")}</td>
+
+        <td>${escapeHtml(card.reviewReason || "-")}</td>
+
+        <td>${card.hasSimilarCandidateGroup ? "あり" : "なし"}</td>
+
+        <td>${card.ocrFallbackAttempted ? "実行" : "未実行"}</td>
+
+        <td>${escapeHtml(fallbackResultsText)}</td>
 
         <td>
           ${rankText}
@@ -405,7 +431,7 @@ function renderAnalysisDebug(
   logLines.push("");
 
   logLines.push(
-    "画像\t列\tNo.\t種類\t星数\tOCR結果\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t要件\t信頼度\t星判定率\tRGB\tY\t高さ"
+    "画像\t列\tNo.\t種類\t星数\tOCR結果\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t最終status\t要確認理由\t近似候補群\tfallback実行\tfallback結果\t要件\t信頼度\t星判定率\tRGB\tY\t高さ"
   );
 
   allCards.forEach(
@@ -439,6 +465,12 @@ function renderAnalysisDebug(
       ) {
         matchStatusText =
           "未確定";
+      } else if (
+        card.matchStatus ===
+        "review"
+      ) {
+        matchStatusText =
+          "要確認";
       }
 
       logLines.push(
@@ -473,6 +505,19 @@ function renderAnalysisDebug(
                 .toFixed(3)
             : "",
           matchStatusText,
+          card.finalStatus || "",
+          card.reviewReason || "",
+          card.hasSimilarCandidateGroup
+            ? "あり"
+            : "なし",
+          card.ocrFallbackAttempted
+            ? "実行"
+            : "未実行",
+          card.ocrFallbackResults?.length
+            ? JSON.stringify(
+                card.ocrFallbackResults
+              )
+            : "",
           card.requirementRank ||
             "",
           card.ocrConfidence !==
