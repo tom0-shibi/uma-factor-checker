@@ -18,7 +18,7 @@ import {
 } from "../matching/candidate-provider.js";
 import {
   getShortSkillFallbackDecision,
-  isStrongShortSkillFallbackResult
+  evaluateStrongShortSkillFallbackResult
 } from "../matching/fallback-policy.js";
 
 const SHORT_SKILL_FALLBACK_CONFIG = {
@@ -471,6 +471,134 @@ function applyBinaryThreshold(canvas, threshold) {
   );
 }
 
+function applyLocalThreshold(
+  sourceCanvas,
+  {
+    radius = 5,
+    offset = 10
+  } = {}
+) {
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceCanvas.width;
+  canvas.height = sourceCanvas.height;
+  const ctx = canvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+  );
+  const sourceCtx = sourceCanvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+  );
+  const sourceImageData = sourceCtx.getImageData(
+    0,
+    0,
+    sourceCanvas.width,
+    sourceCanvas.height
+  );
+  const resultImageData = ctx.createImageData(
+    canvas.width,
+    canvas.height
+  );
+  const width = canvas.width;
+  const height = canvas.height;
+  const integral = new Float64Array((width + 1) * (height + 1));
+
+  for (let y = 0; y < height; y++) {
+    let rowTotal = 0;
+    for (let x = 0; x < width; x++) {
+      const index = (y * width + x) * 4;
+      rowTotal += getLuminance(
+        sourceImageData.data[index],
+        sourceImageData.data[index + 1],
+        sourceImageData.data[index + 2]
+      );
+      integral[(y + 1) * (width + 1) + x + 1] =
+        integral[y * (width + 1) + x + 1] + rowTotal;
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    const top = Math.max(0, y - radius);
+    const bottom = Math.min(height - 1, y + radius);
+    for (let x = 0; x < width; x++) {
+      const left = Math.max(0, x - radius);
+      const right = Math.min(width - 1, x + radius);
+      const sum =
+        integral[(bottom + 1) * (width + 1) + right + 1] -
+        integral[top * (width + 1) + right + 1] -
+        integral[(bottom + 1) * (width + 1) + left] +
+        integral[top * (width + 1) + left];
+      const area = (right - left + 1) * (bottom - top + 1);
+      const index = (y * width + x) * 4;
+      const luminance = getLuminance(
+        sourceImageData.data[index],
+        sourceImageData.data[index + 1],
+        sourceImageData.data[index + 2]
+      );
+      const value = luminance < sum / area - offset ? 0 : 255;
+      resultImageData.data[index] = value;
+      resultImageData.data[index + 1] = value;
+      resultImageData.data[index + 2] = value;
+      resultImageData.data[index + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(resultImageData, 0, 0);
+  return canvas;
+}
+
+function applyDarkMorphology(sourceCanvas, operation) {
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceCanvas.width;
+  canvas.height = sourceCanvas.height;
+  const ctx = canvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+  );
+  const sourceCtx = sourceCanvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+  );
+  const sourceImageData = sourceCtx.getImageData(
+    0,
+    0,
+    sourceCanvas.width,
+    sourceCanvas.height
+  );
+  const resultImageData = ctx.createImageData(canvas.width, canvas.height);
+
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      let value = operation === "dilate" ? 255 : 0;
+      for (let offsetY = -1; offsetY <= 1; offsetY++) {
+        for (let offsetX = -1; offsetX <= 1; offsetX++) {
+          const sampleX = Math.max(0, Math.min(canvas.width - 1, x + offsetX));
+          const sampleY = Math.max(0, Math.min(canvas.height - 1, y + offsetY));
+          const sample = sourceImageData.data[(sampleY * canvas.width + sampleX) * 4];
+          value = operation === "dilate"
+            ? Math.min(value, sample)
+            : Math.max(value, sample);
+        }
+      }
+      const index = (y * canvas.width + x) * 4;
+      resultImageData.data[index] = value;
+      resultImageData.data[index + 1] = value;
+      resultImageData.data[index + 2] = value;
+      resultImageData.data[index + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(resultImageData, 0, 0);
+  return canvas;
+}
+
+function applyDarkClosing(sourceCanvas) {
+  return applyDarkMorphology(
+    applyDarkMorphology(sourceCanvas, "dilate"),
+    "erode"
+  );
+}
+
 function calculateOtsuThreshold(canvas) {
   const ctx = canvas.getContext(
     "2d",
@@ -583,6 +711,18 @@ function createShortSkillFallbackVariants(sourceCanvas) {
     )
   );
   const variants = [];
+  const blueChannelContrast = copyCanvasWithPixelTransform(
+    sourceCanvas,
+    (r, g, b) => Math.max(
+      0,
+      Math.min(255, Math.round((b - 128) * 2 + 128))
+    )
+  );
+  const localThreshold = applyLocalThreshold(
+    sourceCanvas,
+    { radius: 5, offset: 10 }
+  );
+  const locallyThresholdedClosed = applyDarkClosing(localThreshold);
 
   for (const threshold of SHORT_SKILL_FALLBACK_CONFIG.binaryThresholds) {
     const legacyScaled = createScaledFallbackCanvas(
@@ -628,6 +768,26 @@ function createShortSkillFallbackVariants(sourceCanvas) {
         sourceCanvas,
         { scale: 3, paddingRatio: 0.14, smoothing: true }
       )
+    },
+    {
+      name: "channel-blue-contrast-nearest-3x",
+      preprocessing:
+        "青チャンネル抽出 → コントラスト強調 → 3倍拡大（smoothing OFF）",
+      psm: "7",
+      canvas: createScaledFallbackCanvas(
+        blueChannelContrast,
+        { scale: 3, paddingRatio: 0.12, smoothing: false }
+      )
+    },
+    {
+      name: "local-threshold-morph-close-nearest-3x",
+      preprocessing:
+        "局所二値化（radius 5 / offset 10） → 3x3 closing → 3倍拡大（smoothing OFF）",
+      psm: "7",
+      canvas: createScaledFallbackCanvas(
+        locallyThresholdedClosed,
+        { scale: 3, paddingRatio: 0.12, smoothing: false }
+      )
     }
   );
 
@@ -668,7 +828,9 @@ function createEmptyTextPsmVariants(variants) {
   const psmVariants = [
     ["grayscale-contrast-smooth-2x", "8"],
     ["color-smooth-3x-wide-padding", "8"],
-    ["grayscale-contrast-nearest-3x", "13"]
+    ["grayscale-contrast-nearest-3x", "13"],
+    ["channel-blue-contrast-nearest-3x", "8"],
+    ["local-threshold-morph-close-nearest-3x", "13"]
   ];
 
   return psmVariants.map(([name, psm]) => {
@@ -770,14 +932,19 @@ async function recognizeShortSkillFallback(
         matchContext
       );
 
-      const eligibleForAdoption =
-        fallbackReason !== "weak-short-canonical-match" ||
-        isStrongShortSkillFallbackResult({
+      const adoptionEvaluation =
+        fallbackReason === "weak-short-canonical-match"
+          ? evaluateStrongShortSkillFallbackResult({
           fallbackAssessment: assessment,
           fallbackMatchResult: matchResult,
           fallbackConfidence: result.data.confidence ?? 0,
           normalMatchResult
-        });
+          })
+          : {
+              eligible: assessment.finalStatus === "confirmed",
+              reason: "standard-fallback-policy"
+            };
+      const eligibleForAdoption = adoptionEvaluation.eligible;
 
       attempts.push({
         variant: variant.name,
@@ -797,7 +964,8 @@ async function recognizeShortSkillFallback(
         similarityMargin: matchResult.similarityMargin,
         status: assessment.finalStatus,
         reason: assessment.reason,
-        eligibleForAdoption
+        eligibleForAdoption,
+        adoptionEvaluation
       });
 
       if (
