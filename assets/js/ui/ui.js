@@ -807,6 +807,10 @@ if (applyRequirementsButton) {
         "現在のスキル要件:",
         requirements
       );
+
+      document.dispatchEvent(
+        new CustomEvent("requirements-applied")
+      );
     }
   );
 }

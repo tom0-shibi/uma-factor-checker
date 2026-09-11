@@ -1,7 +1,7 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
 import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js";
 import { createOcrWorker, runOcrForWhiteCards } from "./ocr/ocr.js";
-import { renderAnalysisDebug, renderAnalysisError, renderOverallSkillSummary, appendSummaryToDebugLog } from "./result/results.js";
+import { renderAnalysisDebug, renderAnalysisError, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState } from "./result/results.js";
 import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, setPasteTarget, updateImageSummary } from "./ui/ui.js";
 import { initializePresetManager } from "./preset/preset-manager.js";
 
@@ -94,6 +94,8 @@ if (analyzeImagesButton) {
         "";
 
       debugLogLines.length = 0;
+
+      resetReviewAccordionState();
 
       resetAnalysisResults();
 

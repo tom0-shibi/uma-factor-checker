@@ -449,6 +449,266 @@ body {
   font-size: 16px;
 }
 
+.debug-mode-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 14px auto 0;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.result-member-summary,
+.result-review-section {
+  margin: 22px 0;
+}
+
+.result-summary-table-wrap,
+.factor-result-table-wrap {
+  overflow-x: auto;
+}
+
+.result-summary-table {
+  width: min(620px, 100%);
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.result-summary-table th,
+.result-summary-table td {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.result-summary-table th {
+  background: #f4f4f7;
+}
+
+.result-summary-table th:first-child,
+.result-summary-table td:first-child {
+  min-width: 100px;
+  text-align: left;
+}
+
+.result-review-section {
+  padding: 16px;
+  border: 1px solid #e2d89b;
+  border-radius: 12px;
+  background: #fffdf2;
+}
+
+.result-review-empty {
+  margin-bottom: 0;
+  color: #666;
+}
+
+.result-review-guide {
+  margin: 0 0 14px;
+  color: #5f5740;
+  line-height: 1.65;
+}
+
+.review-member-group {
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid #ddd5ad;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.review-member-group > summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #fffaf0;
+  font-weight: 700;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.review-resolved-group > summary {
+  background: #f2f8f4;
+}
+
+.review-member-count {
+  margin-left: auto;
+  color: #725f21;
+  font-size: 13px;
+}
+
+.review-member-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+
+.result-review-item {
+  margin-top: 0;
+  padding: 14px;
+  border: 1px solid #e4dfc4;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.compact-review-item {
+  min-width: 0;
+}
+
+.result-review-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.result-review-item-header h4 {
+  margin: 0;
+}
+
+.result-review-status {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fff0c2;
+  color: #815b00;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.result-review-thumbnail {
+  display: block;
+  width: min(360px, 100%);
+  height: auto;
+  max-height: 100px;
+  object-fit: contain;
+  object-position: left center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #eee;
+}
+
+.result-review-image-unavailable {
+  width: min(360px, 100%);
+  margin: 0 0 10px;
+  padding: 16px;
+  box-sizing: border-box;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  color: #777;
+  text-align: center;
+}
+
+.result-review-recognition {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 10px;
+}
+
+.result-review-recognition p,
+.result-review-candidate-label {
+  margin: 0;
+}
+
+.result-review-candidate-label {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.result-review-ignore-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.result-review-ignore-wrap small {
+  color: #777;
+  font-size: 10px;
+}
+
+.result-review-item.is-resolved {
+  border-color: #b7d9c1;
+  background: #f4fbf6;
+}
+
+.result-review-item h4,
+.result-review-details,
+.result-review-resolution {
+  margin: 0 0 10px;
+}
+
+.result-review-quick-choices,
+.result-review-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.result-review-controls select {
+  min-width: min(320px, 100%);
+  padding: 8px 10px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.compact-button {
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.factor-result-table {
+  table-layout: fixed;
+}
+
+.factor-result-table .result-col-skill {
+  width: 24%;
+}
+
+.factor-result-table .result-col-member {
+  width: 9%;
+}
+
+.factor-result-table .result-col-count {
+  width: 12%;
+}
+
+.factor-result-table .result-col-stars {
+  width: 10%;
+}
+
+.factor-result-count-badge {
+  display: block;
+  width: fit-content;
+  margin: 4px auto 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.factor-result-count-badge.is-warning {
+  background: #fff0c2;
+  color: #815b00;
+}
+
+.factor-result-count-badge.is-insufficient {
+  background: #eee;
+  color: #666;
+}
+
 .analysis-debug-section {
   margin-bottom: 30px;
   padding: 16px;
