@@ -1,4 +1,7 @@
-import { OCR_CONFIG, analysisProgress } from "../config.js";
+import {
+  OCR_CONFIG,
+  analysisProgress
+} from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
 import { updateAnalysisProgressDisplay } from "../ui/ui.js";
 import {
@@ -8,15 +11,17 @@ import {
   normalizeSkillText,
   findBestSkillMatch,
   getSkillMatchThreshold,
-  determineMatchStatus
+  createSkillMatchContext,
+  assessSkillMatch
 } from "../matching/matching.js";
+import {
+  shouldRunShortSkillFallback
+} from "../matching/fallback-policy.js";
 
 const SHORT_SKILL_FALLBACK_CONFIG = {
-  maximumLength: 3,
+  maximumLength: 4,
   minimumLength: 2,
-  maximumInitialConfidence: 40,
-  thresholds: [165, 195, 220],
-  scale: 1.5
+  binaryThresholds: [165, 195, 220]
 };
 
 /* =========================================================
@@ -355,24 +360,15 @@ function createOcrCanvas(
   通常OCRが低信頼かつ未確定の場合にだけ使用する。
   ========================================================= */
 
-function createShortSkillFallbackCanvas(
+function copyCanvasWithPixelTransform(
   sourceCanvas,
-  threshold
+  transform
 ) {
   const canvas =
     document.createElement("canvas");
 
-  canvas.width =
-    Math.round(
-      sourceCanvas.width *
-      SHORT_SKILL_FALLBACK_CONFIG.scale
-    );
-
-  canvas.height =
-    Math.round(
-      sourceCanvas.height *
-      SHORT_SKILL_FALLBACK_CONFIG.scale
-    );
+  canvas.width = sourceCanvas.width;
+  canvas.height = sourceCanvas.height;
 
   const ctx =
     canvas.getContext(
@@ -382,20 +378,10 @@ function createShortSkillFallbackCanvas(
       }
     );
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(
     sourceCanvas,
     0,
-    0,
-    canvas.width,
-    canvas.height
+    0
   );
 
   const imageData =
@@ -411,21 +397,15 @@ function createShortSkillFallbackCanvas(
     index < imageData.data.length;
     index += 4
   ) {
-    const luminance =
-      getLuminance(
-        imageData.data[index],
-        imageData.data[index + 1],
-        imageData.data[index + 2]
-      );
+    const transformed = transform(
+      imageData.data[index],
+      imageData.data[index + 1],
+      imageData.data[index + 2]
+    );
 
-    const value =
-      luminance < threshold
-        ? 0
-        : 255;
-
-    imageData.data[index] = value;
-    imageData.data[index + 1] = value;
-    imageData.data[index + 2] = value;
+    imageData.data[index] = transformed;
+    imageData.data[index + 1] = transformed;
+    imageData.data[index + 2] = transformed;
   }
 
   ctx.putImageData(
@@ -437,74 +417,402 @@ function createShortSkillFallbackCanvas(
   return canvas;
 }
 
+function createScaledFallbackCanvas(
+  sourceCanvas,
+  {
+    scale,
+    paddingRatio,
+    smoothing
+  }
+) {
+  const paddingX = Math.round(
+    sourceCanvas.width * paddingRatio
+  );
+  const paddingY = Math.round(
+    sourceCanvas.height * paddingRatio
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(
+    (sourceCanvas.width + paddingX * 2) * scale
+  );
+  canvas.height = Math.round(
+    (sourceCanvas.height + paddingY * 2) * scale
+  );
+
+  const ctx = canvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+  );
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = smoothing;
+  if (smoothing) {
+    ctx.imageSmoothingQuality = "high";
+  }
+  ctx.drawImage(
+    sourceCanvas,
+    Math.round(paddingX * scale),
+    Math.round(paddingY * scale),
+    Math.round(sourceCanvas.width * scale),
+    Math.round(sourceCanvas.height * scale)
+  );
+
+  return canvas;
+}
+
+function applyBinaryThreshold(canvas, threshold) {
+  return copyCanvasWithPixelTransform(
+    canvas,
+    (r, g, b) =>
+      getLuminance(r, g, b) < threshold ? 0 : 255
+  );
+}
+
+function calculateOtsuThreshold(canvas) {
+  const ctx = canvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+  );
+  const data = ctx.getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  ).data;
+  const histogram = Array(256).fill(0);
+
+  for (let index = 0; index < data.length; index += 4) {
+    histogram[Math.round(getLuminance(
+      data[index],
+      data[index + 1],
+      data[index + 2]
+    ))]++;
+  }
+
+  const pixelCount = data.length / 4;
+  let weightedTotal = 0;
+  for (let value = 0; value < histogram.length; value++) {
+    weightedTotal += value * histogram[value];
+  }
+
+  let backgroundWeight = 0;
+  let backgroundTotal = 0;
+  let maximumVariance = -1;
+  let selectedThreshold = 0;
+
+  for (let value = 0; value < histogram.length; value++) {
+    backgroundWeight += histogram[value];
+    if (backgroundWeight === 0) {
+      continue;
+    }
+
+    const foregroundWeight = pixelCount - backgroundWeight;
+    if (foregroundWeight === 0) {
+      break;
+    }
+
+    backgroundTotal += value * histogram[value];
+    const backgroundMean = backgroundTotal / backgroundWeight;
+    const foregroundMean =
+      (weightedTotal - backgroundTotal) / foregroundWeight;
+    const variance =
+      backgroundWeight * foregroundWeight *
+      (backgroundMean - foregroundMean) ** 2;
+
+    if (variance > maximumVariance) {
+      maximumVariance = variance;
+      selectedThreshold = value;
+    }
+  }
+
+  return selectedThreshold;
+}
+
+function getFallbackCanvasStats(canvas) {
+  const ctx = canvas.getContext(
+    "2d",
+    { willReadFrequently: true }
+  );
+  const data = ctx.getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  ).data;
+  let minimumLuminance = 255;
+  let maximumLuminance = 0;
+  let darkPixels = 0;
+
+  for (let index = 0; index < data.length; index += 4) {
+    const luminance = getLuminance(
+      data[index],
+      data[index + 1],
+      data[index + 2]
+    );
+    minimumLuminance = Math.min(minimumLuminance, luminance);
+    maximumLuminance = Math.max(maximumLuminance, luminance);
+    if (luminance < 200) {
+      darkPixels++;
+    }
+  }
+
+  return {
+    width: canvas.width,
+    height: canvas.height,
+    minimumLuminance: Number(minimumLuminance.toFixed(1)),
+    maximumLuminance: Number(maximumLuminance.toFixed(1)),
+    darkPixelRatio: Number(
+      (darkPixels / (data.length / 4)).toFixed(4)
+    )
+  };
+}
+
+function createShortSkillFallbackVariants(sourceCanvas) {
+  const grayscale = copyCanvasWithPixelTransform(
+    sourceCanvas,
+    (r, g, b) => Math.round(getLuminance(r, g, b))
+  );
+  const contrast = copyCanvasWithPixelTransform(
+    grayscale,
+    value => Math.max(
+      0,
+      Math.min(255, Math.round((value - 128) * 1.8 + 128))
+    )
+  );
+  const variants = [];
+
+  for (const threshold of SHORT_SKILL_FALLBACK_CONFIG.binaryThresholds) {
+    const legacyScaled = createScaledFallbackCanvas(
+      sourceCanvas,
+      { scale: 1.5, paddingRatio: 0, smoothing: false }
+    );
+    variants.push({
+      name: `legacy-binary-${threshold}-1.5x`,
+      preprocessing:
+        `旧fallback：1.5倍拡大（smoothing OFF） → 輝度二値化 ${threshold}`,
+      psm: "7",
+      canvas: applyBinaryThreshold(legacyScaled, threshold)
+    });
+  }
+
+  variants.push(
+    {
+      name: "grayscale-contrast-smooth-2x",
+      preprocessing:
+        "グレースケール → コントラスト強調 → 2倍拡大（smoothing ON）",
+      psm: "7",
+      canvas: createScaledFallbackCanvas(
+        contrast,
+        { scale: 2, paddingRatio: 0.10, smoothing: true }
+      )
+    },
+    {
+      name: "grayscale-contrast-nearest-3x",
+      preprocessing:
+        "グレースケール → コントラスト強調 → 3倍拡大（smoothing OFF）",
+      psm: "7",
+      canvas: createScaledFallbackCanvas(
+        contrast,
+        { scale: 3, paddingRatio: 0.10, smoothing: false }
+      )
+    },
+    {
+      name: "color-smooth-3x-wide-padding",
+      preprocessing:
+        "元画像 → 余白追加 → 3倍拡大（smoothing ON）",
+      psm: "7",
+      canvas: createScaledFallbackCanvas(
+        sourceCanvas,
+        { scale: 3, paddingRatio: 0.14, smoothing: true }
+      )
+    }
+  );
+
+  for (const threshold of SHORT_SKILL_FALLBACK_CONFIG.binaryThresholds) {
+    const scaledGrayscale = createScaledFallbackCanvas(
+      grayscale,
+      { scale: 2.5, paddingRatio: 0.10, smoothing: false }
+    );
+    variants.push({
+      name: `grayscale-binary-${threshold}-2.5x`,
+      preprocessing:
+        `グレースケール → 2.5倍拡大（smoothing OFF） → 二値化 ${threshold}`,
+      psm: "7",
+      canvas: applyBinaryThreshold(scaledGrayscale, threshold)
+    });
+  }
+
+  const adaptiveSource = createScaledFallbackCanvas(
+    grayscale,
+    { scale: 3, paddingRatio: 0.12, smoothing: false }
+  );
+  const adaptiveThreshold = calculateOtsuThreshold(adaptiveSource);
+  variants.push({
+    name: "grayscale-otsu-nearest-3x",
+    preprocessing:
+      `グレースケール → 3倍拡大（smoothing OFF） → Otsu二値化 ${adaptiveThreshold}`,
+    psm: "7",
+    canvas: applyBinaryThreshold(
+      adaptiveSource,
+      adaptiveThreshold
+    )
+  });
+
+  return variants;
+}
+
+function createEmptyTextPsmVariants(variants) {
+  const psmVariants = [
+    ["grayscale-contrast-smooth-2x", "8"],
+    ["color-smooth-3x-wide-padding", "8"],
+    ["grayscale-contrast-nearest-3x", "13"]
+  ];
+
+  return psmVariants.map(([name, psm]) => {
+    const source = variants.find(variant => variant.name === name);
+    return {
+      ...source,
+      name: `${source.name}-psm${psm}`,
+      preprocessing: `${source.preprocessing} → PSM ${psm}`,
+      psm
+    };
+  });
+}
+
 async function recognizeShortSkillFallback(
   worker,
   ocrCanvas,
-  dictionary
+  matchContext,
+  initialOcrText
 ) {
   let bestResult = null;
+  const attempts = [];
 
-  for (
-    const threshold
-    of SHORT_SKILL_FALLBACK_CONFIG.thresholds
-  ) {
-    const fallbackCanvas =
-      createShortSkillFallbackCanvas(
-        ocrCanvas,
-        threshold
-      );
-
-    const result =
-      await worker.recognize(
-        fallbackCanvas
-      );
-
-    const rawText =
-      result.data.text || "";
-
-    const ocrText =
-      normalizeOcrText(
-        rawText
-      );
-
-    const matchResult =
-      findBestSkillMatch(
-        ocrText,
-        dictionary
-      );
-
-    const matchStatus =
-      determineMatchStatus(
-        matchResult.normalizedOcr,
-        matchResult.candidate,
-        matchResult.similarity,
-        matchResult.secondSimilarity,
-        matchResult.similarityMargin
-      );
+  function isBetterFallback(matchResult, confidence) {
+    if (!bestResult) {
+      return true;
+    }
 
     if (
-      matchStatus === "exact" ||
-      matchStatus === "similar"
+      matchResult.similarity !==
+        bestResult.matchResult.similarity
     ) {
-      if (
-        !bestResult ||
+      return (
         matchResult.similarity >
-          bestResult.matchResult.similarity
+        bestResult.matchResult.similarity
+      );
+    }
+
+    if (
+      matchResult.similarityMargin !==
+        bestResult.matchResult.similarityMargin
+    ) {
+      return (
+        matchResult.similarityMargin >
+        bestResult.matchResult.similarityMargin
+      );
+    }
+
+    return confidence > bestResult.ocrConfidence;
+  }
+
+  const baseVariants =
+    createShortSkillFallbackVariants(
+      ocrCanvas
+    );
+
+  const variants = initialOcrText
+    ? baseVariants
+    : [
+        ...baseVariants,
+        ...createEmptyTextPsmVariants(baseVariants)
+      ];
+
+  let activePsm = "7";
+
+  try {
+    for (const variant of variants) {
+      const fallbackCanvas = variant.canvas;
+
+      if (variant.psm !== activePsm) {
+        await worker.setParameters({
+          tessedit_pageseg_mode: variant.psm
+        });
+        activePsm = variant.psm;
+      }
+
+      const result =
+        await worker.recognize(
+          fallbackCanvas
+        );
+
+      const rawText =
+        result.data.text || "";
+
+      const ocrText =
+        normalizeOcrText(
+          rawText
+        );
+
+      const matchResult =
+        findBestSkillMatch(
+          ocrText,
+          matchContext.dictionary
+        );
+
+      const assessment = assessSkillMatch(
+        matchResult,
+        matchContext
+      );
+
+      attempts.push({
+        variant: variant.name,
+        preprocessing: variant.preprocessing,
+        psm: variant.psm,
+        canvas: getFallbackCanvasStats(fallbackCanvas),
+        ocrText,
+        confidence: result.data.confidence ?? 0,
+        firstCandidate: matchResult.candidate,
+        firstSimilarity: matchResult.similarity,
+        secondCandidate: matchResult.secondCandidate,
+        secondSimilarity: matchResult.secondSimilarity,
+        similarityMargin: matchResult.similarityMargin,
+        status: assessment.finalStatus,
+        reason: assessment.reason
+      });
+
+      if (
+        assessment.finalStatus === "confirmed" &&
+        isBetterFallback(
+          matchResult,
+          result.data.confidence ?? 0
+        )
       ) {
         bestResult = {
+          variant: variant.name,
+          preprocessing: variant.preprocessing,
+          psm: variant.psm,
           ocrText,
           ocrRawText: rawText,
           ocrConfidence:
             result.data.confidence ?? 0,
           ocrCanvas: fallbackCanvas,
           matchResult,
-          matchStatus
+          assessment
         };
       }
     }
+  } finally {
+    if (activePsm !== "7") {
+      await worker.setParameters({
+        tessedit_pageseg_mode: "7",
+        preserve_interword_spaces: "1",
+        user_defined_dpi: "300"
+      });
+    }
   }
 
-  return bestResult;
+  return { bestResult, attempts };
 }
 
 /* =========================================================
@@ -645,6 +953,11 @@ async function runOcrForWhiteCards(
 
   const dictionary =
     getRequirementSkillDictionary();
+
+  const matchContext =
+    createSkillMatchContext(
+      dictionary
+    );
 
   const shortSkillDictionary =
     dictionary.filter(skill => {
@@ -789,35 +1102,69 @@ async function runOcrForWhiteCards(
           .normalizedOcr
       );
 
-    card.matchStatus =
-      determineMatchStatus(
-        matchResult
-          .normalizedOcr,
-        matchResult
-          .candidate,
-        matchResult
-          .similarity,
-        matchResult
-          .secondSimilarity,
-        matchResult
-          .similarityMargin
+    const assessment =
+      assessSkillMatch(
+        matchResult,
+        matchContext
       );
 
-    if (
-      card.matchStatus ===
-        "unmatched" &&
-      card.ocrConfidence <
-        SHORT_SKILL_FALLBACK_CONFIG
-          .maximumInitialConfidence &&
-      shortSkillDictionary.length > 0 &&
-      result.ocrCanvas
-    ) {
-      const fallback =
+    card.matchStatus =
+      assessment.matchStatus;
+
+    card.matchClassification =
+      assessment.matchClassification ||
+      assessment.matchStatus;
+
+    card.finalStatus =
+      assessment.finalStatus;
+
+    card.reviewReason =
+      assessment.reason;
+
+    card.hasSimilarCandidateGroup =
+      assessment.hasSimilarCandidateGroup;
+
+    card.similarCandidates =
+      assessment.similarCandidates;
+
+    card.ambiguousCandidates =
+      assessment.ambiguousCandidates;
+
+    card.ocrFallbackAttempted = false;
+
+    card.ocrFallbackUsed = false;
+
+    card.ocrFallbackVariant = null;
+
+    card.ocrFallbackPreprocessing = null;
+
+    card.ocrFallbackPsm = null;
+
+    card.ocrFallbackResults = [];
+
+    if (shouldRunShortSkillFallback({
+      finalStatus: card.finalStatus,
+      ocrConfidence: card.ocrConfidence,
+      shortSkillCount: shortSkillDictionary.length,
+      hasOcrCanvas: Boolean(result.ocrCanvas)
+    })) {
+      card.ocrFallbackAttempted = true;
+
+      const fallbackAttempt =
         await recognizeShortSkillFallback(
           worker,
           result.ocrCanvas,
-          shortSkillDictionary
+          createSkillMatchContext(
+            shortSkillDictionary
+          ),
+          card.ocrText
         );
+
+      card.ocrFallbackResults =
+        fallbackAttempt.attempts;
+
+      const fallback =
+        fallbackAttempt.bestResult;
 
       if (fallback) {
         card.ocrText =
@@ -866,12 +1213,72 @@ async function runOcrForWhiteCards(
           );
 
         card.matchStatus =
-          fallback.matchStatus;
+          fallback.assessment
+            .matchStatus;
+
+        card.matchClassification =
+          fallback.assessment
+            .matchClassification ||
+          fallback.assessment
+            .matchStatus;
+
+        card.finalStatus =
+          fallback.assessment
+            .finalStatus;
+
+        card.reviewReason =
+          fallback.assessment
+            .reason;
+
+        card.hasSimilarCandidateGroup =
+          fallback.assessment
+            .hasSimilarCandidateGroup;
+
+        card.similarCandidates =
+          fallback.assessment
+            .similarCandidates;
+
+        card.ambiguousCandidates =
+          fallback.assessment
+            .ambiguousCandidates;
 
         card.ocrFallbackUsed =
           true;
+
+        card.ocrFallbackVariant =
+          fallback.variant;
+
+        card.ocrFallbackPreprocessing =
+          fallback.preprocessing;
+
+        card.ocrFallbackPsm =
+          fallback.psm;
+      } else {
+        card.reviewReason =
+          "low-confidence-short-skill";
       }
     }
+
+    card.skillMatchResult = {
+      status: card.finalStatus,
+      ocrText: card.ocrText,
+      firstCandidate: card.matchCandidate,
+      firstSimilarity: card.matchSimilarity,
+      secondCandidate: card.secondMatchCandidate,
+      secondSimilarity: card.secondMatchSimilarity,
+      reason: card.reviewReason,
+      hasSimilarCandidateGroup:
+        card.hasSimilarCandidateGroup,
+      similarCandidates: card.similarCandidates,
+      ambiguousCandidates: card.ambiguousCandidates,
+      fallbackAttempted: card.ocrFallbackAttempted,
+      fallbackUsed: card.ocrFallbackUsed,
+      fallbackVariant: card.ocrFallbackVariant,
+      fallbackPreprocessing:
+        card.ocrFallbackPreprocessing,
+      fallbackPsm: card.ocrFallbackPsm,
+      fallbackResults: card.ocrFallbackResults
+    };
 
     card.requirementRank =
       (
@@ -896,4 +1303,8 @@ async function runOcrForWhiteCards(
 }
 
 
-export { createOcrWorker, runOcrForWhiteCards };
+export {
+  createOcrWorker,
+  runOcrForWhiteCards,
+  createShortSkillFallbackVariants
+};

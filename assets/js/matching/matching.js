@@ -1,4 +1,8 @@
 import { requirements, SKILL_MATCH_CONFIG } from "../config.js";
+import {
+  createCandidateComparisonIndex,
+  evaluateCandidateAmbiguity
+} from "./candidate-comparison.js";
 
 /* =========================================================
   OCR照合用スキル辞書生成処理
@@ -352,25 +356,6 @@ function determineMatchStatus(
     return "exact";
   }
 
-  const seasonalAwakeningMatch =
-    normalizedCandidate.match(
-      /^([春夏秋冬])の目覚め$/
-    );
-
-  if (seasonalAwakeningMatch) {
-    const recognizedSeason =
-      normalizedOcr.match(
-        /^([春夏秋冬])の目覚め/
-      )?.[1] || null;
-
-    if (
-      recognizedSeason !==
-      seasonalAwakeningMatch[1]
-    ) {
-      return "unmatched";
-    }
-  }
-
   const threshold =
     getSkillMatchThreshold(
       normalizedOcr
@@ -398,6 +383,100 @@ function determineMatchStatus(
   return "similar";
 }
 
+function createSkillMatchContext(dictionary) {
+  return {
+    dictionary,
+    comparisonIndex: createCandidateComparisonIndex(
+      dictionary,
+      normalizeSkillText
+    )
+  };
+}
+
+function assessSkillMatch(matchResult, matchContext) {
+  const matchStatus = determineMatchStatus(
+    matchResult.normalizedOcr,
+    matchResult.candidate,
+    matchResult.similarity,
+    matchResult.secondSimilarity,
+    matchResult.similarityMargin
+  );
+  const ambiguity = matchResult.candidate
+    ? evaluateCandidateAmbiguity(
+        matchResult.normalizedOcr,
+        matchResult.candidate,
+        matchContext.comparisonIndex,
+        normalizeSkillText
+      )
+    : {
+        hasSimilarCandidateGroup: false,
+        similarCandidates: [],
+        ambiguousCandidates: [],
+        isAmbiguous: false
+      };
+
+  if (matchStatus === "exact") {
+    return {
+      matchStatus,
+      finalStatus: "confirmed",
+      reason: null,
+      ...ambiguity
+    };
+  }
+
+  const meetsSimilarityThreshold =
+    matchResult.similarity >=
+      getSkillMatchThreshold(matchResult.normalizedOcr);
+
+  if (
+    meetsSimilarityThreshold &&
+    ambiguity.isAmbiguous
+  ) {
+    return {
+      matchStatus: "review",
+      matchClassification: "similar",
+      finalStatus: "review",
+      reason: "ambiguous-similar-candidates",
+      ...ambiguity
+    };
+  }
+
+  const secondCandidateIsSimilarPeer =
+    ambiguity.similarCandidates.includes(
+      matchResult.secondCandidate
+    );
+
+  if (
+    matchStatus === "unmatched" &&
+    meetsSimilarityThreshold &&
+    secondCandidateIsSimilarPeer &&
+    !ambiguity.isAmbiguous
+  ) {
+    return {
+      matchStatus: "similar",
+      finalStatus: "confirmed",
+      reason: null,
+      ...ambiguity
+    };
+  }
+
+  if (matchStatus === "similar") {
+    return {
+      matchStatus,
+      finalStatus: "confirmed",
+      reason: null,
+      ...ambiguity
+    };
+  }
+
+  return {
+    matchStatus,
+    finalStatus: "unresolved",
+    reason: "no-confident-match",
+    ...ambiguity
+  };
+}
+
 
 export {
   getRequirementSkillDictionary,
@@ -406,5 +485,7 @@ export {
   normalizeSkillText,
   findBestSkillMatch,
   getSkillMatchThreshold,
-  determineMatchStatus
+  determineMatchStatus,
+  createSkillMatchContext,
+  assessSkillMatch
 };
