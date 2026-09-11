@@ -5,32 +5,27 @@ import {
 } from "./candidate-comparison.js";
 
 /* =========================================================
-  OCR照合用スキル辞書生成処理
-  ========================================================= */
-
-function getRequirementSkillDictionary() {
-  return [
-    ...new Set([
-      ...requirements.S,
-      ...requirements.A,
-      ...requirements.B,
-      ...requirements.C
-    ])
-  ];
-}
-
-/* =========================================================
   スキルの要件ランク取得処理
   ========================================================= */
 
 function getRequirementRank(skillName) {
+  const normalizedSkillName =
+    normalizeSkillText(
+      skillName
+    );
+
   for (
     const rank
     of ["S", "A", "B", "C"]
   ) {
     if (
       requirements[rank]
-        .includes(skillName)
+        .some(
+          requirementName =>
+            normalizeSkillText(
+              requirementName
+            ) === normalizedSkillName
+        )
     ) {
       return rank;
     }
@@ -479,7 +474,6 @@ function assessSkillMatch(matchResult, matchContext) {
 
 
 export {
-  getRequirementSkillDictionary,
   getRequirementRank,
   normalizeOcrText,
   normalizeSkillText,

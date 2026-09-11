@@ -5,7 +5,6 @@ import {
 import { getLuminance } from "../analysis/image-analysis.js";
 import { updateAnalysisProgressDisplay } from "../ui/ui.js";
 import {
-  getRequirementSkillDictionary,
   getRequirementRank,
   normalizeOcrText,
   normalizeSkillText,
@@ -15,7 +14,11 @@ import {
   assessSkillMatch
 } from "../matching/matching.js";
 import {
-  shouldRunShortSkillFallback
+  getCanonicalSkillCandidates
+} from "../matching/candidate-provider.js";
+import {
+  getShortSkillFallbackDecision,
+  isStrongShortSkillFallbackResult
 } from "../matching/fallback-policy.js";
 
 const SHORT_SKILL_FALLBACK_CONFIG = {
@@ -683,7 +686,9 @@ async function recognizeShortSkillFallback(
   worker,
   ocrCanvas,
   matchContext,
-  initialOcrText
+  initialOcrText,
+  fallbackReason,
+  normalMatchResult
 ) {
   let bestResult = null;
   const attempts = [];
@@ -765,6 +770,15 @@ async function recognizeShortSkillFallback(
         matchContext
       );
 
+      const eligibleForAdoption =
+        fallbackReason !== "weak-short-canonical-match" ||
+        isStrongShortSkillFallbackResult({
+          fallbackAssessment: assessment,
+          fallbackMatchResult: matchResult,
+          fallbackConfidence: result.data.confidence ?? 0,
+          normalMatchResult
+        });
+
       attempts.push({
         variant: variant.name,
         preprocessing: variant.preprocessing,
@@ -772,17 +786,23 @@ async function recognizeShortSkillFallback(
         canvas: getFallbackCanvasStats(fallbackCanvas),
         ocrText,
         confidence: result.data.confidence ?? 0,
+        canonicalName:
+          assessment.finalStatus === "confirmed"
+            ? matchResult.candidate
+            : null,
         firstCandidate: matchResult.candidate,
         firstSimilarity: matchResult.similarity,
         secondCandidate: matchResult.secondCandidate,
         secondSimilarity: matchResult.secondSimilarity,
         similarityMargin: matchResult.similarityMargin,
         status: assessment.finalStatus,
-        reason: assessment.reason
+        reason: assessment.reason,
+        eligibleForAdoption
       });
 
       if (
         assessment.finalStatus === "confirmed" &&
+        eligibleForAdoption &&
         isBetterFallback(
           matchResult,
           result.data.confidence ?? 0
@@ -952,7 +972,7 @@ async function runOcrForWhiteCards(
     );
 
   const dictionary =
-    getRequirementSkillDictionary();
+    getCanonicalSkillCandidates();
 
   const matchContext =
     createSkillMatchContext(
@@ -1118,6 +1138,11 @@ async function runOcrForWhiteCards(
     card.finalStatus =
       assessment.finalStatus;
 
+    card.canonicalName =
+      assessment.finalStatus === "confirmed"
+        ? matchResult.candidate
+        : null;
+
     card.reviewReason =
       assessment.reason;
 
@@ -1142,12 +1167,38 @@ async function runOcrForWhiteCards(
 
     card.ocrFallbackResults = [];
 
-    if (shouldRunShortSkillFallback({
+    card.normalOcrResult = {
+      ocrText: card.ocrText,
+      confidence: card.ocrConfidence,
+      firstCandidate: card.matchCandidate,
+      firstSimilarity: card.matchSimilarity,
+      secondCandidate: card.secondMatchCandidate,
+      secondSimilarity: card.secondMatchSimilarity,
+      similarityMargin: card.matchSimilarityMargin,
+      threshold: card.matchThreshold,
+      matchStatus: card.matchStatus,
       finalStatus: card.finalStatus,
-      ocrConfidence: card.ocrConfidence,
-      shortSkillCount: shortSkillDictionary.length,
-      hasOcrCanvas: Boolean(result.ocrCanvas)
-    })) {
+      canonicalName: card.canonicalName,
+      reason: card.reviewReason
+    };
+
+    const fallbackDecision =
+      getShortSkillFallbackDecision({
+        finalStatus: card.finalStatus,
+        matchStatus: card.matchStatus,
+        ocrConfidence: card.ocrConfidence,
+        shortSkillCount: shortSkillDictionary.length,
+        hasOcrCanvas: Boolean(result.ocrCanvas),
+        candidateLength: card.matchCandidate
+          ? normalizeSkillText(card.matchCandidate).length
+          : 0,
+        firstSimilarity: card.matchSimilarity,
+        threshold: card.matchThreshold
+      });
+
+    card.ocrFallbackReason = fallbackDecision.reason;
+
+    if (fallbackDecision.shouldRun) {
       card.ocrFallbackAttempted = true;
 
       const fallbackAttempt =
@@ -1157,7 +1208,9 @@ async function runOcrForWhiteCards(
           createSkillMatchContext(
             shortSkillDictionary
           ),
-          card.ocrText
+          card.ocrText,
+          fallbackDecision.reason,
+          matchResult
         );
 
       card.ocrFallbackResults =
@@ -1226,6 +1279,11 @@ async function runOcrForWhiteCards(
           fallback.assessment
             .finalStatus;
 
+        card.canonicalName =
+          fallback.assessment.finalStatus === "confirmed"
+            ? fallback.matchResult.candidate
+            : null;
+
         card.reviewReason =
           fallback.assessment
             .reason;
@@ -1254,14 +1312,25 @@ async function runOcrForWhiteCards(
         card.ocrFallbackPsm =
           fallback.psm;
       } else {
-        card.reviewReason =
-          "low-confidence-short-skill";
+        if (
+          fallbackDecision.reason === "weak-short-canonical-match" &&
+          card.finalStatus === "confirmed"
+        ) {
+          card.matchStatus = "review";
+          card.matchClassification = "review";
+          card.finalStatus = "review";
+          card.canonicalName = null;
+          card.reviewReason = "weak-short-canonical-match";
+        } else if (!card.reviewReason) {
+          card.reviewReason = fallbackDecision.reason;
+        }
       }
     }
 
     card.skillMatchResult = {
       status: card.finalStatus,
       ocrText: card.ocrText,
+      canonicalName: card.canonicalName,
       firstCandidate: card.matchCandidate,
       firstSimilarity: card.matchSimilarity,
       secondCandidate: card.secondMatchCandidate,
@@ -1272,25 +1341,26 @@ async function runOcrForWhiteCards(
       similarCandidates: card.similarCandidates,
       ambiguousCandidates: card.ambiguousCandidates,
       fallbackAttempted: card.ocrFallbackAttempted,
+      fallbackReason: card.ocrFallbackReason,
       fallbackUsed: card.ocrFallbackUsed,
       fallbackVariant: card.ocrFallbackVariant,
       fallbackPreprocessing:
         card.ocrFallbackPreprocessing,
       fallbackPsm: card.ocrFallbackPsm,
-      fallbackResults: card.ocrFallbackResults
+      fallbackResults: card.ocrFallbackResults,
+      normalOcrResult: card.normalOcrResult
     };
 
     card.requirementRank =
-      (
-        card.matchStatus ===
-          "exact" ||
-        card.matchStatus ===
-          "similar"
-      )
+      card.finalStatus === "confirmed" &&
+      card.canonicalName
         ? getRequirementRank(
-            card.matchCandidate
+            card.canonicalName
           )
         : null;
+
+    card.skillMatchResult.requirementRank =
+      card.requirementRank;
 
     analysisProgress
       .tesseractProgress = 1;
