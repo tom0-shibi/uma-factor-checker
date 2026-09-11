@@ -6,7 +6,7 @@
     <title>Uma Factor Checker</title>
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260911-matching-04"
+      href="./assets/css/style.css?v=20260911-result-summary-03"
     />
   </head>
   <body>
@@ -291,6 +291,11 @@
           登録画像：<strong id="total-image-count">0</strong> 枚
         </div>
 
+        <label class="debug-mode-toggle">
+          <input id="debug-mode-toggle" type="checkbox" />
+          デバッグモード
+        </label>
+
         <div class="action-area">
           <button id="analyze-images" class="primary-button" disabled>
             画像を解析
@@ -302,10 +307,10 @@
         <h2>判定結果</h2>
 
         <p class="description">
-          現在は因子カード検出・色判定・星数判定を確認するデバッグ段階です。
+          解析結果の確認、要確認項目の手動訂正、スキル要件ごとの集計ができます。
         </p>
 
-        <div class="debug-actions">
+        <div id="debug-actions" class="debug-actions" hidden>
           <button id="copy-debug-log" class="secondary-button" disabled>
             デバッグログをコピー
           </button>
@@ -314,7 +319,7 @@
         </div>
         <div id="ocr-status" class="ocr-status"></div>
 
-        <div id="analysis-debug"></div>
+        <div id="analysis-debug" hidden></div>
       </section>
     </main>
 
@@ -323,7 +328,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260911-matching-04"
+      src="./assets/js/app.js?v=20260911-result-summary-03"
     ></script>
   </body>
 </html>
