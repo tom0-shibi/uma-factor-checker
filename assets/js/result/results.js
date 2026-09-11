@@ -153,6 +153,7 @@ function renderAnalysisDebug(
         <th>種類</th>
         <th>星数</th>
         <th>OCR結果</th>
+        <th>正式名称</th>
         <th>第1候補</th>
         <th>第1類似度</th>
         <th>第2候補</th>
@@ -164,6 +165,8 @@ function renderAnalysisDebug(
         <th>要確認理由</th>
         <th>近似候補群</th>
         <th>fallback</th>
+        <th>fallback理由</th>
+        <th>通常OCR判定</th>
         <th>fallback結果</th>
         <th>要件</th>
         <th>信頼度</th>
@@ -294,6 +297,11 @@ function renderAnalysisDebug(
           ? JSON.stringify(card.ocrFallbackResults)
           : "-";
 
+      const normalOcrResultText =
+        card.normalOcrResult
+          ? JSON.stringify(card.normalOcrResult)
+          : "-";
+
       const rankText =
         card.requirementRank ||
         "-";
@@ -326,6 +334,10 @@ function renderAnalysisDebug(
 
         <td>
           ${escapeHtml(card.ocrText || "-")}
+        </td>
+
+        <td>
+          ${escapeHtml(card.canonicalName || "-")}
         </td>
 
         <td>
@@ -363,6 +375,10 @@ function renderAnalysisDebug(
         <td>${card.hasSimilarCandidateGroup ? "あり" : "なし"}</td>
 
         <td>${card.ocrFallbackAttempted ? "実行" : "未実行"}</td>
+
+        <td>${escapeHtml(card.ocrFallbackReason || "-")}</td>
+
+        <td>${escapeHtml(normalOcrResultText)}</td>
 
         <td>${escapeHtml(fallbackResultsText)}</td>
 
@@ -431,7 +447,7 @@ function renderAnalysisDebug(
   logLines.push("");
 
   logLines.push(
-    "画像\t列\tNo.\t種類\t星数\tOCR結果\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t最終status\t要確認理由\t近似候補群\tfallback実行\tfallback結果\t要件\t信頼度\t星判定率\tRGB\tY\t高さ"
+    "画像\t列\tNo.\t種類\t星数\tOCR結果\t正式名称\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t最終status\t要確認理由\t近似候補群\tfallback実行\tfallback理由\t通常OCR判定\tfallback結果\t要件\t信頼度\t星判定率\tRGB\tY\t高さ"
   );
 
   allCards.forEach(
@@ -481,6 +497,7 @@ function renderAnalysisDebug(
           card.factorType,
           card.stars,
           card.ocrText || "",
+          card.canonicalName || "",
           card.matchCandidate || "",
           card.factorType ===
           "white"
@@ -513,6 +530,10 @@ function renderAnalysisDebug(
           card.ocrFallbackAttempted
             ? "実行"
             : "未実行",
+          card.ocrFallbackReason || "",
+          card.normalOcrResult
+            ? JSON.stringify(card.normalOcrResult)
+            : "",
           card.ocrFallbackResults?.length
             ? JSON.stringify(
                 card.ocrFallbackResults
@@ -639,24 +660,19 @@ function aggregateMemberSkills(
             return;
           }
 
-          if (
-            card.matchStatus !==
-              "exact" &&
-            card.matchStatus !==
-              "similar"
-          ) {
+          if (card.finalStatus !== "confirmed") {
             return;
           }
 
           if (
-            !card.matchCandidate ||
+            !card.canonicalName ||
             !card.requirementRank
           ) {
             return;
           }
 
           const skillName =
-            card.matchCandidate;
+            card.canonicalName;
 
           const existing =
             skillMap.get(
