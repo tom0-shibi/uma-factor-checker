@@ -131,30 +131,30 @@ function formatStars(stars) {
 function formatDiscordSummary(model, memberLabels, presetName) {
   const familyDefinitions = [
     {
-      label: "A系",
+      label: "親A",
       members: [
-        ["parentA", "親"],
-        ["parentAGrand1", "祖1"],
-        ["parentAGrand2", "祖2"]
+        ["parentA", null],
+        ["grandA1", "祖1"],
+        ["grandA2", "祖2"]
       ]
     },
     {
-      label: "B系",
+      label: "親B",
       members: [
-        ["parentB", "親"],
-        ["parentBGrand1", "祖1"],
-        ["parentBGrand2", "祖2"]
+        ["parentB", null],
+        ["grandB1", "祖1"],
+        ["grandB2", "祖2"]
       ]
     }
   ];
 
   const ownerLabels = {
     parentA: "親A",
-    parentAGrand1: "A祖1",
-    parentAGrand2: "A祖2",
+    grandA1: "A祖1",
+    grandA2: "A祖2",
     parentB: "親B",
-    parentBGrand1: "B祖1",
-    parentBGrand2: "B祖2"
+    grandB1: "B祖1",
+    grandB2: "B祖2"
   };
 
   const summaryByMember =
@@ -181,9 +181,12 @@ function formatDiscordSummary(model, memberLabels, presetName) {
 
     if (registered.length > 0) {
       lines.push(
-        `* ${family.label}｜${registered.map(entry =>
-          `${entry.shortLabel} \`${RANKS.map(rank => `${rank}: ${entry.item.counts[rank]}`).join(" / ")}\``
-        ).join(" / ")}`
+        `* ${registered.map(entry => {
+          const prefix = entry.shortLabel
+            ? entry.shortLabel
+            : family.label;
+          return `${prefix} \`${RANKS.map(rank => `${rank}: ${entry.item.counts[rank]}`).join(" / ")}\``;
+        }).join("｜")}`
       );
     }
   });
@@ -211,6 +214,39 @@ function formatDiscordSummary(model, memberLabels, presetName) {
         `* **${skill.skillName}** \`${skill.ownedCount}/${model.registeredMemberCount}\`${ownerText}`
       );
     });
+  }
+
+  const metadataLines =
+    model.registeredMemberIds
+      .map(memberId => {
+        const info = model.factorInfo?.[memberId];
+        if (
+          !info ||
+          !Object.values(info).some(Boolean)
+        ) {
+          return null;
+        }
+
+        const values = [
+          ["青", info.blue],
+          ["赤", info.red],
+          ["緑", info.green]
+        ]
+          .filter(([, value]) => value)
+          .map(([label, value]) =>
+            `${label}: ${value.name}${formatStars(value.stars)}`
+          );
+
+        return `* ${ownerLabels[memberId] || memberLabels[memberId]}｜${values.join(" / ")}`;
+      })
+      .filter(Boolean);
+
+  if (metadataLines.length > 0) {
+    lines.push(
+      "",
+      "### ■ 因子情報",
+      ...metadataLines
+    );
   }
 
   return lines.join("\n");

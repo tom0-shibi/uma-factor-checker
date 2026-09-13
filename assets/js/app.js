@@ -1,6 +1,6 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
 import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js";
-import { createOcrWorker, runOcrForWhiteCards } from "./ocr/ocr.js";
+import { createOcrWorker, runOcrForFactorMetadata, runOcrForWhiteCards } from "./ocr/ocr.js";
 import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js";
 import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js";
 import { initializePresetManager } from "./preset/preset-manager.js";
@@ -322,6 +322,28 @@ if (analyzeImagesButton) {
 
                 continue;
               }
+
+              const factorMetadata =
+                await runOcrForFactorMetadata(
+                  ocrWorker,
+                  canvas,
+                  analysis
+                );
+
+              debugLogLines.push(
+                "factor metadata:",
+                `member=${memberId}`,
+                `imageIndex=${i + 1}`,
+                `metadataFound=${analysis.factorMetadataFound}`,
+                `layout=${analysis.classificationLayout}`,
+                `blue=${factorMetadata.blue?.name ?? "-"}`,
+                `blueStars=${factorMetadata.blue?.stars ?? "-"}`,
+                `red=${factorMetadata.red?.name ?? "-"}`,
+                `redStars=${factorMetadata.red?.stars ?? "-"}`,
+                `green=${factorMetadata.green?.name ?? "-"}`,
+                `greenStars=${factorMetadata.green?.stars ?? "-"}`,
+                ""
+              );
 
               await runOcrForWhiteCards(
                 ocrWorker,

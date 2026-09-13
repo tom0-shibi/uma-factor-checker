@@ -1108,6 +1108,80 @@ function renderResultShareActions(container, model) {
   container.appendChild(section);
 }
 
+function renderFactorInfo(container, model) {
+  const details =
+    document.createElement("details");
+
+  details.className =
+    "factor-metadata-section";
+
+  const summary =
+    document.createElement("summary");
+
+  summary.textContent =
+    "因子情報";
+
+  details.appendChild(summary);
+
+  const memberIds =
+    model.registeredMemberIds.filter(
+      memberId =>
+        Object.values(
+          model.factorInfo?.[memberId] ?? {}
+        ).some(Boolean)
+    );
+
+  if (memberIds.length === 0) {
+    const empty =
+      document.createElement("p");
+    empty.className =
+      "factor-metadata-empty";
+    empty.textContent =
+      "因子情報を取得できる画像がありません。";
+    details.appendChild(empty);
+  } else {
+    const grid =
+      document.createElement("div");
+    grid.className =
+      "factor-metadata-grid";
+
+    memberIds.forEach(memberId => {
+      const article =
+        document.createElement("article");
+      const heading =
+        document.createElement("h4");
+      heading.textContent =
+        members[memberId].label;
+      article.appendChild(heading);
+
+      [
+        ["blue", "青"],
+        ["red", "赤"],
+        ["green", "緑"]
+      ].forEach(([type, label]) => {
+        const value =
+          model.factorInfo[memberId][type];
+        if (!value) {
+          return;
+        }
+        const row =
+          document.createElement("p");
+        row.className =
+          `factor-metadata-row factor-metadata-${type}`;
+        row.textContent =
+          `${label}　${value.name} ${formatStars(value.stars)}`;
+        article.appendChild(row);
+      });
+
+      grid.appendChild(article);
+    });
+
+    details.appendChild(grid);
+  }
+
+  container.appendChild(details);
+}
+
 function appendResultTableColumns(table) {
   const colgroup = document.createElement("colgroup");
   const columnClasses = [
@@ -1668,6 +1742,7 @@ function renderOverallSkillSummary() {
   );
 
   renderMemberSummary(container, model);
+  renderFactorInfo(container, model);
   renderReviewItems(container);
   renderManualResolutionDebug();
 

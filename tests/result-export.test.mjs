@@ -13,11 +13,11 @@ import {
 
 const memberLabels = {
   parentA: "親A",
-  parentAGrand1: "親A-祖1",
-  parentAGrand2: "親A-祖2",
+  grandA1: "親A-祖1",
+  grandA2: "親A-祖2",
   parentB: "親B",
-  parentBGrand1: "親B-祖1",
-  parentBGrand2: "親B-祖2"
+  grandB1: "親B-祖1",
+  grandB2: "親B-祖2"
 };
 
 const memberSummary = Object.keys(memberLabels).map(
@@ -36,19 +36,31 @@ const memberSummary = Object.keys(memberLabels).map(
 
 const memberValues = {
   parentA: { stars: 2 },
-  parentAGrand1: { stars: 1 },
-  parentAGrand2: null,
+  grandA1: { stars: 1 },
+  grandA2: null,
   parentB: null,
-  parentBGrand1: null,
-  parentBGrand2: null
+  grandB1: null,
+  grandB2: null
 };
 
 const model = {
   memberSummary,
   registeredMemberIds: Object.keys(memberLabels).filter(
-    id => id !== "parentAGrand2"
+    id => id !== "grandA2"
   ),
   registeredMemberCount: 5,
+  factorInfo: {
+    parentA: {
+      blue: { name: "スピード", stars: 3 },
+      red: { name: "マイル", stars: 2 },
+      green: { name: "継承固有", stars: 2 }
+    },
+    grandA1: {
+      blue: { name: "パワー", stars: 2 },
+      red: null,
+      green: null
+    }
+  },
   ranks: {
     S: [
       {
@@ -111,9 +123,10 @@ const discord = formatDiscordSummary(
   "検証用"
 );
 assert.match(discord, /\* プリセット：検証用/);
-assert.match(discord, /\* A系｜親 `S: 2 \/ A: 0 \/ B: 0 \/ C: 0` \/ 祖1 `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
-assert.match(discord, /\* B系｜親 `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
-assert.doesNotMatch(discord, /A系[^\n]*祖2/);
+assert.match(discord, /\* 親A `S: 2 \/ A: 0 \/ B: 0 \/ C: 0`｜祖1 `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
+assert.match(discord, /\* 親B `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
+assert.doesNotMatch(discord, /親A[^\n]*祖2/);
+assert.doesNotMatch(discord, /A系|B系/);
 assert.match(discord, /\* \*\*左回り○\*\* `2\/5`｜親A ★★ \/ A祖1 ★/);
 assert.match(discord, /\* \*\*シンパシー\*\* `0\/5`/);
 assert.ok(
@@ -121,11 +134,11 @@ assert.ok(
   discord.indexOf("**シンパシー**")
 );
 assert.equal(
-  discord.split("\n").filter(line => line.startsWith("* A系｜")).length,
+  discord.split("\n").filter(line => line.startsWith("* 親A ")).length,
   1
 );
 assert.equal(
-  discord.split("\n").filter(line => line.startsWith("* B系｜")).length,
+  discord.split("\n").filter(line => line.startsWith("* 親B ")).length,
   1
 );
 
@@ -145,7 +158,7 @@ const sixMemberDiscord = formatDiscordSummary(
 assert.equal(
   sixMemberDiscord
     .split("\n")
-    .filter(line => /\* [AB]系｜/.test(line))
+    .filter(line => /\* 親[AB] /.test(line))
     .length,
   2
 );
@@ -164,7 +177,7 @@ const parentAOnlyModel = {
       ...model.ranks.S[0],
       memberValues: {
         ...model.ranks.S[0].memberValues,
-        parentAGrand1: null
+        grandA1: null
       },
       ownedCount: 1,
       totalStars: 2
@@ -176,9 +189,12 @@ const parentAOnlyDiscord = formatDiscordSummary(
   memberLabels,
   "検証用"
 );
-assert.match(parentAOnlyDiscord, /\* A系｜親 `S: 2 \/ A: 0 \/ B: 0 \/ C: 0`/);
-assert.doesNotMatch(parentAOnlyDiscord, /\* B系｜/);
+assert.match(parentAOnlyDiscord, /\* 親A `S: 2 \/ A: 0 \/ B: 0 \/ C: 0`/);
+assert.doesNotMatch(parentAOnlyDiscord, /\* 親B /);
 assert.match(parentAOnlyDiscord, /\* \*\*左回り○\*\* `1\/1`｜親A ★★/);
+assert.match(discord, /### ■ 因子情報/);
+assert.match(discord, /\* 親A｜青: スピード★★★ \/ 赤: マイル★★ \/ 緑: 継承固有★★/);
+assert.match(discord, /\* A祖1｜青: パワー★★/);
 assert.equal(getDiscordLengthWarning("a".repeat(2000)), "");
 assert.equal(
   getDiscordLengthWarning("a".repeat(2001)),

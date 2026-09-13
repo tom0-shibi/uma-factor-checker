@@ -166,6 +166,46 @@ function buildMemberSummary(memberSkillMaps) {
   });
 }
 
+function buildMemberFactorInfo() {
+  return Object.fromEntries(
+    MEMBER_ORDER.map(memberId => {
+      const factorInfo = {
+        blue: null,
+        red: null,
+        green: null
+      };
+
+      members[memberId].analysisResults.forEach(
+        imageResult => {
+          const metadata =
+            imageResult.analysis.factorMetadata;
+
+          if (!metadata) {
+            return;
+          }
+
+          ["blue", "red", "green"].forEach(
+            type => {
+              if (
+                !factorInfo[type] &&
+                metadata[type]
+              ) {
+                factorInfo[type] = {
+                  ...metadata[type],
+                  imageIndex:
+                    imageResult.imageIndex
+                };
+              }
+            }
+          );
+        }
+      );
+
+      return [memberId, factorInfo];
+    })
+  );
+}
+
 function buildOverallSkillSummary() {
   const memberSkillMaps = Object.fromEntries(
     MEMBER_ORDER.map(memberId => [
@@ -205,6 +245,7 @@ function buildOverallSkillSummary() {
   return {
     ranks: result,
     memberSummary: buildMemberSummary(memberSkillMaps),
+    factorInfo: buildMemberFactorInfo(),
     registeredMemberIds,
     registeredMemberCount: registeredMemberIds.length
   };
@@ -262,6 +303,7 @@ export {
   ignoreRecognition,
   clearManualCorrection,
   aggregateMemberSkills,
+  buildMemberFactorInfo,
   buildOverallSkillSummary,
   getReviewItems
 };

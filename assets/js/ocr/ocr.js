@@ -20,6 +20,9 @@ import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
 } from "../matching/fallback-policy.js";
+import {
+  createFactorMetadata
+} from "../analysis/factor-metadata.js";
 
 const SHORT_SKILL_FALLBACK_CONFIG = {
   maximumLength: 4,
@@ -1124,6 +1127,69 @@ async function recognizeSkillName(
 }
 
 /* =========================================================
+  青・赤・緑因子情報取得処理
+  白因子の要件照合とは分離し、緑因子の名称OCRは行わない。
+  ========================================================= */
+
+async function runOcrForFactorMetadata(
+  worker,
+  sourceCanvas,
+  analysis
+) {
+  const cards = [
+    ...analysis.leftCards,
+    ...analysis.rightCards
+  ];
+
+  const blueCard =
+    cards.find(
+      card => card.factorType === "blue"
+    ) ?? null;
+
+  const redCard =
+    cards.find(
+      card => card.factorType === "red"
+    ) ?? null;
+
+  const greenCard =
+    cards.find(
+      card => card.factorType === "green"
+    ) ?? null;
+
+  const blueRecognition = blueCard
+    ? await recognizeSkillName(
+        worker,
+        sourceCanvas,
+        blueCard
+      )
+    : null;
+
+  const redRecognition = redCard
+    ? await recognizeSkillName(
+        worker,
+        sourceCanvas,
+        redCard
+      )
+    : null;
+
+  analysis.factorMetadata =
+    createFactorMetadata({
+      blueCard,
+      blueRecognition,
+      redCard,
+      redRecognition,
+      greenCard
+    });
+
+  analysis.factorMetadataFound =
+    Object.values(
+      analysis.factorMetadata
+    ).some(Boolean);
+
+  return analysis.factorMetadata;
+}
+
+/* =========================================================
   白因子OCR＋スキル要件照合処理
   ========================================================= */
 
@@ -1543,6 +1609,7 @@ async function runOcrForWhiteCards(
 
 export {
   createOcrWorker,
+  runOcrForFactorMetadata,
   runOcrForWhiteCards,
   createShortSkillFallbackVariants
 };
