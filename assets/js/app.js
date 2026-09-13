@@ -1,6 +1,6 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
 import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js";
-import { createOcrWorker, runOcrForWhiteCards } from "./ocr/ocr.js";
+import { createOcrWorker, runOcrForFactorMetadata, runOcrForWhiteCards } from "./ocr/ocr.js";
 import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js";
 import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js";
 import { initializePresetManager } from "./preset/preset-manager.js";
@@ -322,6 +322,41 @@ if (analyzeImagesButton) {
 
                 continue;
               }
+
+              const factorMetadata =
+                await runOcrForFactorMetadata(
+                  ocrWorker,
+                  canvas,
+                  analysis
+                );
+
+              debugLogLines.push(
+                "factor metadata:",
+                `member=${memberId}`,
+                `imageIndex=${i + 1}`,
+                `metadataFound=${analysis.factorMetadataFound}`,
+                `layout=${analysis.classificationLayout}`,
+                `blueCardFound=${Boolean(factorMetadata.blue)}`,
+                `blueRawOcr=${JSON.stringify(factorMetadata.blue?.rawOcrText ?? "")}`,
+                `blueNormalized=${JSON.stringify(factorMetadata.blue?.normalizedOcrText ?? "")}`,
+                `blueCandidate=${factorMetadata.blue?.candidate ?? "-"}`,
+                `blueSimilarity=${factorMetadata.blue?.similarity?.toFixed(3) ?? "-"}`,
+                `blueConfidence=${factorMetadata.blue?.confidence?.toFixed(1) ?? "-"}`,
+                `blueCanonical=${factorMetadata.blue?.name ?? "-"}`,
+                `blueStars=${factorMetadata.blue?.stars ?? "-"}`,
+                `redCardFound=${Boolean(factorMetadata.red)}`,
+                `redRawOcr=${JSON.stringify(factorMetadata.red?.rawOcrText ?? "")}`,
+                `redNormalized=${JSON.stringify(factorMetadata.red?.normalizedOcrText ?? "")}`,
+                `redCandidate=${factorMetadata.red?.candidate ?? "-"}`,
+                `redSimilarity=${factorMetadata.red?.similarity?.toFixed(3) ?? "-"}`,
+                `redConfidence=${factorMetadata.red?.confidence?.toFixed(1) ?? "-"}`,
+                `redCanonical=${factorMetadata.red?.name ?? "-"}`,
+                `redStars=${factorMetadata.red?.stars ?? "-"}`,
+                `greenCardFound=${Boolean(factorMetadata.green)}`,
+                `greenCanonical=${factorMetadata.green?.name ?? "-"}`,
+                `greenStars=${factorMetadata.green?.stars ?? "-"}`,
+                ""
+              );
 
               await runOcrForWhiteCards(
                 ocrWorker,

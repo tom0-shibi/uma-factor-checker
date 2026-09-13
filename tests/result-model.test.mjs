@@ -71,7 +71,12 @@ members.grandA1.analysisResults = [
     imageIndex: 0,
     analysis: {
       leftCards: [unrecognizedCard, duplicateLowerStars],
-      rightCards: []
+      rightCards: [],
+      factorMetadata: {
+        blue: { name: "スピード", stars: 3 },
+        red: { name: "マイル", stars: 2 },
+        green: { name: "継承固有", stars: 1 }
+      }
     }
   },
   {
@@ -89,6 +94,10 @@ assert.equal(model.memberSummary.find(item => item.memberId === "parentA").regis
 assert.equal(model.memberSummary.find(item => item.memberId === "grandA1").counts.S, 1);
 assert.equal(model.ranks.S[0].ownedCount, 1);
 assert.equal(model.ranks.S[0].totalStars, 3, "dedupe後は最大星数を使う");
+assert.equal(model.factorInfo.grandA1.blue.name, "スピード");
+assert.equal(model.factorInfo.grandA1.blue.stars, 3);
+assert.equal(model.factorInfo.grandA1.red.name, "マイル");
+assert.equal(model.factorInfo.parentA.blue, null);
 assert.equal(getReviewItems().length, 1, "空OCRかつfallback済みのみ表示する");
 
 const originalSnapshot = {

@@ -1,4 +1,4 @@
-const APP_BUILD = "20260912-multi-layout-07";
+const APP_BUILD = "20260913-factor-metadata-03";
 
 /* =========================================================
   アプリ内データ
