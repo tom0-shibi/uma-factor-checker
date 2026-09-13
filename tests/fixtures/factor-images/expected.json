@@ -4,21 +4,21 @@
     "factor-list-start-01.jpg": {
       "ready": true,
       "category": "supported",
-      "description": "\u901a\u5e38\u306e1\u4eba\u5206\u56e0\u5b50\u4e00\u89a7\u4e0a\u90e8\u3002\u5f8c\u7d9a\u306econtinuation/end\u3068\u540c\u4e00\u4eba\u7269\u3002",
+      "description": "通常の1人分因子一覧上部。後続のcontinuation/endと同一人物。",
       "expected": {
         "supported": true,
         "layout": "factor-list-start",
         "factorInfo": {
           "blue": {
-            "name": "\u6839\u6027",
+            "name": "根性",
             "stars": 3
           },
           "red": {
-            "name": "\u30de\u30a4\u30eb",
+            "name": "マイル",
             "stars": 2
           },
           "green": {
-            "name": "\u7d99\u627f\u56fa\u6709",
+            "name": "継承固有",
             "stars": 2
           }
         },
@@ -31,7 +31,7 @@
     "factor-list-continuation-01.jpg": {
       "ready": true,
       "category": "supported",
-      "description": "start-01\u3068\u540c\u4e00\u4eba\u7269\u306e\u56e0\u5b50\u4e00\u89a7\u9014\u4e2d\u3002",
+      "description": "start-01と同一人物の因子一覧途中。",
       "expected": {
         "supported": true,
         "layout": "factor-list-continuation",
@@ -45,7 +45,7 @@
     "factor-list-end-01.jpg": {
       "ready": true,
       "category": "supported",
-      "description": "start-01\u3068\u540c\u4e00\u4eba\u7269\u306e\u56e0\u5b50\u4e00\u89a7\u672b\u5c3e\u3002",
+      "description": "start-01と同一人物の因子一覧末尾。",
       "expected": {
         "supported": true,
         "layout": "factor-list-continuation",
@@ -59,21 +59,21 @@
     "factor-list-start-02.jpg": {
       "ready": true,
       "category": "supported",
-      "description": "\u56e0\u5b50\u958b\u59cb\u4f4d\u7f6e\u304c\u4f4e\u3044\u5225\u306e\u4e00\u89a7\u4e0a\u90e8\u3002",
+      "description": "因子開始位置が低い別の一覧上部。",
       "expected": {
         "supported": true,
         "layout": "factor-list-start",
         "factorInfo": {
           "blue": {
-            "name": "\u30b9\u30d4\u30fc\u30c9",
+            "name": "スピード",
             "stars": 2
           },
           "red": {
-            "name": "\u30c0\u30fc\u30c8",
+            "name": "ダート",
             "stars": 3
           },
           "green": {
-            "name": "\u7d99\u627f\u56fa\u6709",
+            "name": "継承固有",
             "stars": 2
           }
         },
@@ -100,7 +100,7 @@
     "composite-type-a-01.jpg": {
       "ready": true,
       "category": "unsupported",
-      "description": "\u8907\u6570\u4eba\u7269\u306e\u56e0\u5b50\u4e00\u89a7\u3092\u542b\u3080\u7e26\u9577\u8907\u5408\u753b\u50cf\u3002",
+      "description": "複数人物の因子一覧を含む縦長複合画像。",
       "expected": {
         "supported": false,
         "layout": "unknown",
@@ -111,7 +111,7 @@
     "unrelated-01.jpg": {
       "ready": true,
       "category": "unsupported",
-      "description": "\u56e0\u5b50\u4e00\u89a7\u3067\u306f\u306a\u3044\u7121\u95a2\u4fc2\u753b\u50cf\u3002",
+      "description": "因子一覧ではない無関係画像。",
       "expected": {
         "supported": false,
         "layout": "unknown",
