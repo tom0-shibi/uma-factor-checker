@@ -1,4 +1,8 @@
 import { ANALYSIS_CONFIG, STAR_CONFIG } from "../config.js";
+import {
+  classifyFactorLayout,
+  detectFactorSectionAnchorCandidates
+} from "./factor-anchor.js";
 
 /* =========================================================
   FileをImageへ読み込む処理
@@ -189,152 +193,6 @@ function getAverageColor(
   「所持因子」緑ヘッダー検出処理
   ========================================================= */
 
-function detectFactorHeader(
-  ctx,
-  width,
-  height
-) {
-  const startY =
-    Math.floor(
-      height * 0.12
-    );
-
-  const endY =
-    Math.floor(
-      height * 0.35
-    );
-
-  const startX =
-    Math.floor(
-      width * 0.14
-    );
-
-  const endX =
-    Math.floor(
-      width * 0.86
-    );
-
-  const stepX =
-    Math.max(
-      2,
-      Math.floor(
-        width / 300
-      )
-    );
-
-  const matchingRows = [];
-
-  for (
-    let y = startY;
-    y < endY;
-    y += 2
-  ) {
-    let greenCount = 0;
-    let total = 0;
-
-    for (
-      let x = startX;
-      x < endX;
-      x += stepX
-    ) {
-      const pixel =
-        ctx.getImageData(
-          x,
-          y,
-          1,
-          1
-        ).data;
-
-      const r = pixel[0];
-      const g = pixel[1];
-      const b = pixel[2];
-
-      const isGreen =
-        g > 120 &&
-        g > r + 25 &&
-        g > b + 35;
-
-      if (isGreen) {
-        greenCount++;
-      }
-
-      total++;
-    }
-
-    if (
-      greenCount /
-      total >
-      0.55
-    ) {
-      matchingRows.push(
-        y
-      );
-    }
-  }
-
-  if (
-    matchingRows.length === 0
-  ) {
-    return null;
-  }
-
-  const groups = [];
-  let current = [
-    matchingRows[0]
-  ];
-
-  for (
-    let i = 1;
-    i < matchingRows.length;
-    i++
-  ) {
-    if (
-      matchingRows[i] -
-      matchingRows[i - 1] <= 4
-    ) {
-      current.push(
-        matchingRows[i]
-      );
-    } else {
-      groups.push(
-        current
-      );
-
-      current = [
-        matchingRows[i]
-      ];
-    }
-  }
-
-  groups.push(
-    current
-  );
-
-  const validGroups =
-    groups.filter(
-      group =>
-        group.length >= 3
-    );
-
-  if (
-    validGroups.length === 0
-  ) {
-    return null;
-  }
-
-  const target =
-    validGroups[0];
-
-  return {
-    top:
-      target[0],
-    bottom:
-      target[
-        target.length - 1
-      ]
-  };
-}
-
 /* =========================================================
   指定Y座標の平均明るさ取得処理
   ========================================================= */
@@ -397,11 +255,11 @@ function detectCardsInColumn(
   height,
   columnName,
   factorAreaTop,
-  factorAreaBottom
+  factorAreaBottom,
+  columns = ANALYSIS_CONFIG.columns
 ) {
   const column =
-    ANALYSIS_CONFIG
-      .columns[columnName];
+    columns[columnName];
 
   const columnX =
     width *
@@ -675,6 +533,93 @@ function hasFactorIcon(
   );
 }
 
+function getFactorIconAlignmentScore(
+  ctx,
+  card
+) {
+  const scanWidth =
+    Math.max(
+      8,
+      Math.round(
+        card.width * 0.24
+      )
+    );
+
+  const scanHeight =
+    Math.max(
+      8,
+      Math.round(
+        card.height * 0.65
+      )
+    );
+
+  const data =
+    ctx.getImageData(
+      card.x,
+      Math.round(
+        card.y +
+        card.height * 0.12
+      ),
+      scanWidth,
+      scanHeight
+    ).data;
+
+  let weightedX = 0;
+  let iconPixels = 0;
+
+  for (
+    let index = 0;
+    index < data.length;
+    index += 4
+  ) {
+    const r = data[index];
+    const g = data[index + 1];
+    const b = data[index + 2];
+
+    const isBlueIcon =
+      b - r >= 3 &&
+      b - g >= 2 &&
+      b > 135 &&
+      r < 245;
+
+    const isGoldIcon =
+      r > 165 &&
+      g > 105 &&
+      r - b > 25 &&
+      g - b > 15;
+
+    if (
+      isBlueIcon ||
+      isGoldIcon
+    ) {
+      const pixelIndex =
+        index / 4;
+
+      weightedX +=
+        pixelIndex % scanWidth;
+
+      iconPixels++;
+    }
+  }
+
+  if (iconPixels === 0) {
+    return 0;
+  }
+
+  const centerRatio =
+    weightedX /
+    iconPixels /
+    card.width;
+
+  return Math.max(
+    0,
+    1 -
+    Math.abs(
+      centerRatio - 0.055
+    ) / 0.12
+  );
+}
+
 /* =========================================================
   カード本体が十分写っているか確認する処理
   ========================================================= */
@@ -855,7 +800,8 @@ function buildFactorRows(
   width,
   height,
   initialCards,
-  factorAreaBottom
+  factorAreaBottom,
+  columns = ANALYSIS_CONFIG.columns
 ) {
   if (
     initialCards.length === 0
@@ -961,8 +907,7 @@ function buildFactorRows(
       x:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.left
+          columns.left
             .xRatio
         ),
       y:
@@ -972,8 +917,7 @@ function buildFactorRows(
       width:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.left
+          columns.left
             .widthRatio
         ),
       height:
@@ -988,8 +932,7 @@ function buildFactorRows(
       x:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.right
+          columns.right
             .xRatio
         ),
       y:
@@ -999,8 +942,7 @@ function buildFactorRows(
       width:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.right
+          columns.right
             .widthRatio
         ),
       height:
@@ -1076,8 +1018,7 @@ function buildFactorRows(
       x:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.left
+          columns.left
             .xRatio
         ),
       y:
@@ -1085,8 +1026,7 @@ function buildFactorRows(
       width:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.left
+          columns.left
             .widthRatio
         ),
       height:
@@ -1102,8 +1042,7 @@ function buildFactorRows(
       x:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.right
+          columns.right
             .xRatio
         ),
       y:
@@ -1111,8 +1050,7 @@ function buildFactorRows(
       width:
         Math.round(
           width *
-          ANALYSIS_CONFIG
-            .columns.right
+          columns.right
             .widthRatio
         ),
       height:
@@ -1469,17 +1407,654 @@ function detectStarCount(
   因子一覧画像全体解析処理
   ========================================================= */
 
+function getFactorCardColumns(layoutType) {
+  if (layoutType !== "detail") {
+    return ANALYSIS_CONFIG.columns;
+  }
+
+  return {
+    left: {
+      xRatio: 0.16,
+      widthRatio: 0.385
+    },
+    right: {
+      xRatio: 0.56,
+      widthRatio: 0.385
+    }
+  };
+}
+
+function evaluateDetailColumnGeometry(
+  ctx,
+  width,
+  height,
+  columnName,
+  factorAreaTop,
+  factorAreaBottom,
+  geometry
+) {
+  const columns = {
+    [columnName]: geometry
+  };
+
+  const cards =
+    detectCardsInColumn(
+      ctx,
+      width,
+      height,
+      columnName,
+      factorAreaTop,
+      factorAreaBottom,
+      columns
+    );
+
+  const validCards =
+    cards.filter(
+      card =>
+        hasFactorIcon(
+          ctx,
+          card
+        ) &&
+        hasFullCardBody(
+          ctx,
+          card
+        )
+    );
+
+  const pitch =
+    calculateRowPitch(
+      validCards
+    );
+
+  const iconAlignment =
+    validCards
+      .slice(0, 4)
+      .reduce(
+        (sum, card) =>
+          sum +
+          getFactorIconAlignmentScore(
+            ctx,
+            card
+          ),
+        0
+      ) /
+    Math.max(
+      1,
+      Math.min(
+        validCards.length,
+        4
+      )
+    );
+
+  return {
+    geometry,
+    cards,
+    validCardCount:
+      validCards.length,
+    iconAlignment,
+    pitch,
+    score:
+      validCards.length * 10 +
+      (pitch ? 5 : 0) +
+      Math.min(cards.length, 20) * 0.1 +
+      iconAlignment * 5
+  };
+}
+
+function detectDetailCardColumns(
+  ctx,
+  width,
+  height,
+  factorAreaTop,
+  factorAreaBottom
+) {
+  const xCandidates = {
+    left: [
+      0.16,
+      0.14,
+      0.12,
+      0.10,
+      0.18,
+      0.20
+    ],
+    right: [
+      0.505,
+      0.52,
+      0.54,
+      0.56,
+      0.58,
+      0.48
+    ]
+  };
+
+  const widthCandidates = [
+    0.33,
+    0.35,
+    0.37,
+    0.385,
+    0.40
+  ];
+
+  const getColumnCandidates =
+    columnName =>
+      xCandidates[columnName]
+        .flatMap(
+          xRatio =>
+            widthCandidates.map(
+              widthRatio =>
+                evaluateDetailColumnGeometry(
+                  ctx,
+                  width,
+                  height,
+                  columnName,
+                  factorAreaTop,
+                  factorAreaBottom,
+                  {
+                    xRatio,
+                    widthRatio
+                  }
+                )
+            )
+        )
+        .sort(
+          (a, b) =>
+            b.score - a.score
+        )
+        .slice(0, 8);
+
+  const leftCandidates =
+    getColumnCandidates("left");
+
+  const rightCandidates =
+    getColumnCandidates("right");
+
+  const combinations =
+    leftCandidates.flatMap(
+      left =>
+        rightCandidates.map(
+          right => {
+            const columns = {
+              left: left.geometry,
+              right: right.geometry
+            };
+
+            const rowResult =
+              buildFactorRows(
+                ctx,
+                width,
+                height,
+                [
+                  ...left.cards,
+                  ...right.cards
+                ],
+                factorAreaBottom,
+                columns
+              );
+
+            const rows =
+              rowResult?.rows ?? [];
+
+            const pairedRows =
+              rows.filter(
+                row =>
+                  row.leftCard &&
+                  row.rightCard
+              ).length;
+
+            return {
+              left,
+              right,
+              columns,
+              pairedRows,
+              rowCount: rows.length,
+              rowResult,
+              score:
+                pairedRows * 20 +
+                rows.length * 2 +
+                Math.min(
+                  left.validCardCount,
+                  right.validCardCount
+                ) -
+                Math.abs(
+                  left.geometry.widthRatio -
+                  right.geometry.widthRatio
+                ) * 100 -
+                (
+                  Math.abs(
+                    left.geometry.widthRatio -
+                    (
+                      right.geometry.xRatio -
+                      left.geometry.xRatio -
+                      0.015
+                    )
+                  ) +
+                  Math.abs(
+                    right.geometry.widthRatio -
+                    (
+                      right.geometry.xRatio -
+                      left.geometry.xRatio -
+                      0.015
+                    )
+                  )
+                ) * 50
+            };
+          }
+        )
+    );
+
+  const best =
+    combinations.sort(
+      (a, b) =>
+        b.score - a.score
+    )[0];
+
+  return {
+    columns: best.columns,
+    diagnostics: {
+      leftScore: best.left.score,
+      leftValidCards:
+        best.left.validCardCount,
+      rightScore: best.right.score,
+      rightValidCards:
+        best.right.validCardCount,
+      pairedRows:
+        best.pairedRows,
+      rowCount:
+        best.rowCount
+    }
+  };
+}
+
+function evaluateFactorAnchorCandidate(
+  ctx,
+  width,
+  height,
+  anchor,
+  layoutType,
+  factorAreaBottom
+) {
+  const factorAreaTop =
+    Math.round(
+      anchor.bottom +
+      height * 0.008
+    );
+
+  const detailGeometry =
+    layoutType === "detail"
+      ? detectDetailCardColumns(
+          ctx,
+          width,
+          height,
+          factorAreaTop,
+          factorAreaBottom
+        )
+      : null;
+
+  const columns =
+    detailGeometry?.columns ??
+    getFactorCardColumns(
+      layoutType
+    );
+
+  const initialLeft =
+    detectCardsInColumn(
+      ctx,
+      width,
+      height,
+      "left",
+      factorAreaTop,
+      factorAreaBottom,
+      columns
+    );
+
+  const initialRight =
+    detectCardsInColumn(
+      ctx,
+      width,
+      height,
+      "right",
+      factorAreaTop,
+      factorAreaBottom,
+      columns
+    );
+
+  const rowResult =
+    buildFactorRows(
+      ctx,
+      width,
+      height,
+      [
+        ...initialLeft,
+        ...initialRight
+      ],
+      factorAreaBottom,
+      columns
+    );
+
+  const rows =
+    rowResult?.rows ?? [];
+
+  const pairedRows =
+    rows.filter(
+      row =>
+        row.leftCard &&
+        row.rightCard
+    ).length;
+
+  const leftRows =
+    rows.filter(
+      row => row.leftCard
+    ).length;
+
+  const rightRows =
+    rows.filter(
+      row => row.rightCard
+    ).length;
+
+  const accepted =
+    rows.length >= 2 &&
+    pairedRows >= 2 &&
+    Boolean(rowResult.pitch);
+
+  const score =
+    pairedRows * 5 +
+    rows.length * 2 +
+    Math.min(
+      initialLeft.length +
+      initialRight.length,
+      10
+    ) * 0.1;
+
+  return {
+    anchor,
+    layoutType,
+    columns,
+    factorAreaTop,
+    initialLeft,
+    initialRight,
+    rowResult,
+    pairedRows,
+    leftRows,
+    rightRows,
+    score,
+    accepted,
+    rejectReason:
+      accepted
+        ? null
+        : "no-factor-grid",
+    geometryDiagnostics:
+      detailGeometry?.diagnostics ??
+      null
+  };
+}
+
+function selectFactorAnchor(
+  ctx,
+  width,
+  height,
+  candidates,
+  factorAreaBottom
+) {
+  const evaluations =
+    candidates.flatMap(
+      (anchor, index) => {
+        const nextAnchor =
+          candidates[index + 1];
+
+        const candidateAreaBottom =
+          nextAnchor
+            ? Math.max(
+                anchor.bottom,
+                nextAnchor.top -
+                Math.round(height * 0.004)
+              )
+            : factorAreaBottom;
+
+        const layoutTypes =
+          classifyFactorLayout(anchor) === "detail"
+            ? [
+                "factor-list",
+                "detail"
+              ]
+            : [
+                "factor-list"
+              ];
+
+        return layoutTypes.map(
+          layoutType =>
+            evaluateFactorAnchorCandidate(
+              ctx,
+              width,
+              height,
+              anchor,
+              layoutType,
+              candidateAreaBottom
+            )
+        );
+      }
+    );
+
+  const bestByAnchor =
+    candidates.map(
+      anchor =>
+        evaluations
+          .filter(
+            evaluation =>
+              evaluation.anchor === anchor
+          )
+          .sort(
+            (a, b) =>
+              b.score - a.score
+          )[0]
+    );
+
+  const selected =
+    bestByAnchor
+      .filter(
+        evaluation =>
+          evaluation.accepted
+      )
+      .sort(
+        (a, b) =>
+          b.score - a.score
+      )[0] ?? null;
+
+  return {
+    selected,
+    candidates:
+      bestByAnchor.map(
+        evaluation => ({
+          y: evaluation.anchor.top,
+          score: evaluation.score,
+          layoutType: evaluation.layoutType,
+          pairedRows: evaluation.pairedRows,
+          leftRows: evaluation.leftRows,
+          rightRows: evaluation.rightRows,
+          accepted:
+            evaluation === selected,
+          rejectReason:
+            evaluation === selected
+              ? null
+              : evaluation.rejectReason ?? "lower-score"
+        })
+      )
+  };
+}
+
+function createColumnGeometry(
+  width,
+  columns,
+  rowResult,
+  selectedAnchor
+) {
+  return {
+    leftX:
+      Math.round(
+        width *
+        columns.left.xRatio
+      ),
+    rightX:
+      Math.round(
+        width *
+        columns.right.xRatio
+      ),
+    leftWidth:
+      Math.round(
+        width *
+        columns.left.widthRatio
+      ),
+    rightWidth:
+      Math.round(
+        width *
+        columns.right.widthRatio
+      ),
+    cardHeight:
+      rowResult?.cardHeight
+        ? Math.round(
+            rowResult.cardHeight
+          )
+        : null,
+    rowInterval:
+      rowResult?.pitch ?? null,
+    detailDiagnostics:
+      selectedAnchor
+        ?.geometryDiagnostics ??
+      null
+  };
+}
+
+function createDetectedRows(
+  rowResult
+) {
+  return (rowResult?.rows ?? []).map(
+    row => ({
+      row: row.row,
+      left: Boolean(row.leftCard),
+      right: Boolean(row.rightCard)
+    })
+  );
+}
+
+/* =========================================================
+  対応する1人分因子一覧の構造検証
+  ========================================================= */
+
+function validateSupportedFactorList({
+  factorAnchorFound,
+  layoutType,
+  rowResult,
+  columnGeometry,
+  leftCount,
+  rightCount
+}) {
+  if (!factorAnchorFound) {
+    return {
+      supported: false,
+      reason: "no-factor-anchor"
+    };
+  }
+
+  if (layoutType !== "factor-list") {
+    return {
+      supported: false,
+      reason: "unsupported-layout"
+    };
+  }
+
+  const rows =
+    rowResult?.rows ?? [];
+
+  const pairedRows =
+    rows.filter(
+      row =>
+        row.leftCard &&
+        row.rightCard
+    ).length;
+
+  if (
+    !rowResult?.pitch ||
+    rows.length < 5 ||
+    pairedRows < 4 ||
+    leftCount < 5 ||
+    rightCount < 5
+  ) {
+    return {
+      supported: false,
+      reason: "insufficient-factor-grid"
+    };
+  }
+
+  if (
+    !columnGeometry ||
+    !Number.isFinite(columnGeometry.leftX) ||
+    !Number.isFinite(columnGeometry.rightX) ||
+    !Number.isFinite(columnGeometry.leftWidth) ||
+    !Number.isFinite(columnGeometry.rightWidth) ||
+    !Number.isFinite(columnGeometry.cardHeight) ||
+    columnGeometry.leftWidth <= 0 ||
+    columnGeometry.rightWidth <= 0 ||
+    columnGeometry.cardHeight <= 0 ||
+    columnGeometry.leftX >= columnGeometry.rightX
+  ) {
+    return {
+      supported: false,
+      reason: "invalid-factor-geometry"
+    };
+  }
+
+  return {
+    supported: true,
+    reason: null
+  };
+}
+
 function analyzeFactorImage(
   ctx,
   width,
   height
 ) {
-  const header =
-    detectFactorHeader(
+  const factorAreaBottom =
+    Math.round(
+      height *
+      ANALYSIS_CONFIG
+        .factorArea
+        .bottomRatio
+    );
+
+  const anchorCandidates =
+    detectFactorSectionAnchorCandidates(
       ctx,
       width,
       height
     );
+
+  const anchorSelection =
+    selectFactorAnchor(
+      ctx,
+      width,
+      height,
+      anchorCandidates,
+      factorAreaBottom
+    );
+
+  const selectedAnchor =
+    anchorSelection.selected;
+
+  const header =
+    selectedAnchor?.anchor ?? null;
+
+  const layoutType =
+    selectedAnchor?.layoutType ??
+    "continuation";
+
+  const detectionMode =
+    header
+      ? "anchor-based"
+      : "legacy-continuation";
+
+  const columns =
+    selectedAnchor?.columns ??
+    ANALYSIS_CONFIG.columns;
 
   const factorAreaTop =
     header
@@ -1494,33 +2069,70 @@ function analyzeFactorImage(
             .fallbackTopRatio
         );
 
-  const factorAreaBottom =
-    Math.round(
-      height *
-      ANALYSIS_CONFIG
-        .factorArea
-        .bottomRatio
-    );
+  if (
+    layoutType === "detail"
+  ) {
+    return {
+      header,
+      layoutType,
+      anchorCandidates:
+        anchorSelection.candidates,
+      columnGeometry:
+        createColumnGeometry(
+          width,
+          columns,
+          selectedAnchor.rowResult,
+          selectedAnchor
+        ),
+      detectedRows:
+        createDetectedRows(
+          selectedAnchor.rowResult
+        ),
+      factorAnchorFound: true,
+      factorAnchorY: header.top,
+      detectionMode:
+        "unsupported-detail-layout",
+      factorSearchStartY:
+        factorAreaTop,
+      factorAreaTop,
+      factorAreaBottom,
+      pitch:
+        selectedAnchor.rowResult
+          ?.pitch ?? null,
+      leftCards: [],
+      rightCards: [],
+      supported: false,
+      unsupportedLayout: true,
+      unsupportedReason:
+        "unsupported-layout",
+      unsupportedMessage:
+        "この画像形式には現在対応していません。1人分のみ表示される因子一覧の画像を使用してください。"
+    };
+  }
 
   const initialLeft =
+    selectedAnchor?.initialLeft ??
     detectCardsInColumn(
-      ctx,
-      width,
-      height,
-      "left",
-      factorAreaTop,
-      factorAreaBottom
-    );
+        ctx,
+        width,
+        height,
+        "left",
+        factorAreaTop,
+        factorAreaBottom,
+        columns
+      );
 
   const initialRight =
+    selectedAnchor?.initialRight ??
     detectCardsInColumn(
-      ctx,
-      width,
-      height,
-      "right",
-      factorAreaTop,
-      factorAreaBottom
-    );
+        ctx,
+        width,
+        height,
+        "right",
+        factorAreaTop,
+        factorAreaBottom,
+        columns
+      );
 
   const initialCards = [
     ...initialLeft,
@@ -1528,12 +2140,27 @@ function analyzeFactorImage(
   ];
 
   const rowResult =
+    selectedAnchor?.rowResult ??
     buildFactorRows(
-      ctx,
+        ctx,
+        width,
+        height,
+        initialCards,
+        factorAreaBottom,
+        columns
+      );
+
+  const columnGeometry =
+    createColumnGeometry(
       width,
-      height,
-      initialCards,
-      factorAreaBottom
+      columns,
+      rowResult,
+      selectedAnchor
+    );
+
+  const detectedRows =
+    createDetectedRows(
+      rowResult
     );
 
   if (
@@ -1545,11 +2172,26 @@ function analyzeFactorImage(
   ) {
     return {
       header,
+      layoutType,
+      anchorCandidates:
+        anchorSelection.candidates,
+      columnGeometry,
+      detectedRows,
+      factorAnchorFound: Boolean(header),
+      factorAnchorY: header?.top ?? null,
+      detectionMode,
+      factorSearchStartY: factorAreaTop,
       factorAreaTop,
       factorAreaBottom,
       pitch: null,
       leftCards: [],
-      rightCards: []
+      rightCards: [],
+      supported: false,
+      unsupportedLayout: true,
+      unsupportedReason:
+        header
+          ? "insufficient-factor-grid"
+          : "no-factor-anchor"
     };
   }
 
@@ -1607,6 +2249,19 @@ function analyzeFactorImage(
     ...rightCards
   ];
 
+  const supportValidation =
+    validateSupportedFactorList({
+      factorAnchorFound:
+        Boolean(header),
+      layoutType,
+      rowResult,
+      columnGeometry,
+      leftCount:
+        leftCards.length,
+      rightCount:
+        rightCards.length
+    });
+
   allCards.forEach(
     card => {
       card.ocrText = "";
@@ -1632,12 +2287,27 @@ function analyzeFactorImage(
 
   return {
     header,
+    layoutType,
+    anchorCandidates:
+      anchorSelection.candidates,
+    columnGeometry,
+    detectedRows,
+    factorAnchorFound: Boolean(header),
+    factorAnchorY: header?.top ?? null,
+    detectionMode,
+    factorSearchStartY: factorAreaTop,
     factorAreaTop,
     factorAreaBottom,
     pitch:
       rowResult.pitch,
     leftCards,
-    rightCards
+    rightCards,
+    supported:
+      supportValidation.supported,
+    unsupportedLayout:
+      !supportValidation.supported,
+    unsupportedReason:
+      supportValidation.reason
   };
 }
 
@@ -1645,5 +2315,6 @@ function analyzeFactorImage(
 export {
   drawOriginalImage,
   getLuminance,
-  analyzeFactorImage
+  analyzeFactorImage,
+  validateSupportedFactorList
 };

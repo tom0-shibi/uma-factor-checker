@@ -4,14 +4,48 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Uma Factor Checker</title>
+    <script>
+      (() => {
+        const storageKey = "uma-factor-checker:theme:v1";
+        let preference = "system";
+        try {
+          preference = localStorage.getItem(storageKey) || "system";
+        } catch (error) {
+          console.warn("テーマ設定を読み込めませんでした。", error);
+        }
+        const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme = preference === "system"
+          ? (isDark ? "dark" : "light")
+          : preference;
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.themePreference = preference;
+      })();
+    </script>
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260911-result-summary-03"
+      href="./assets/css/tokens.css?v=20260912-multi-layout-07"
+    />
+    <link
+      rel="stylesheet"
+      href="./assets/css/style.css?v=20260912-multi-layout-07"
     />
   </head>
   <body>
     <header class="app-header">
-      <h1>Uma Factor Checker</h1>
+      <div class="app-header-inner">
+        <div>
+          <h1>Uma Factor Checker</h1>
+          <p>ウマ娘 因子OCR・スキル要件チェッカー</p>
+        </div>
+        <label class="theme-control" for="theme-select">
+          <span>表示</span>
+          <select id="theme-select" aria-label="表示テーマ">
+            <option value="system">システム</option>
+            <option value="light">ライト</option>
+            <option value="dark">ダーク</option>
+          </select>
+        </label>
+      </div>
     </header>
 
     <nav class="tabs">
@@ -24,10 +58,23 @@
 
     <main class="app-main">
       <section id="requirements" class="tab-content active">
-        <h2>スキル要件</h2>
-        <p class="description">
-          優先度ごとに、1行につき1スキルを入力してください。
-        </p>
+        <div class="section-heading">
+          <div>
+            <h2>スキル要件</h2>
+            <p class="description">
+              優先度ごとに、1行につき1スキルを入力してください。
+            </p>
+          </div>
+          <details class="inline-help">
+            <summary>？ 使い方</summary>
+            <div class="inline-help-content">
+              <p><strong>1. プリセットを選択</strong><br />まず試す場合は「技能試験高効率用」を選ぶとすぐ利用できます。</p>
+              <p><strong>2. スキル要件を調整</strong><br />各ランクを開き、必要なスキルを追加・削除します。</p>
+              <p><strong>3. 自分用として保存</strong><br />調整した内容は新しいプリセットとして保存できます。固定プリセットは上書き・削除されません。</p>
+              <p><strong>画像について</strong><br />各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。</p>
+            </div>
+          </details>
+        </div>
 
         <section class="preset-panel" aria-labelledby="preset-panel-title">
           <h3 id="preset-panel-title">プリセット</h3>
@@ -35,24 +82,30 @@
             <label for="preset-select">使用するプリセット</label>
             <select id="preset-select"></select>
           </div>
-          <div class="preset-name-row">
-            <label for="preset-name">新しいプリセット名</label>
-            <input
-              id="preset-name"
-              type="text"
-              maxlength="80"
-              placeholder="例: 202609 LOH マイル"
-            />
+          <button id="preset-create-toggle" type="button" class="ghost-button" aria-expanded="false" aria-controls="preset-create-panel">
+            ＋ 新しいプリセットを作る
+          </button>
+          <div id="preset-create-panel" class="preset-create-panel" hidden>
+            <div class="preset-name-row">
+              <label for="preset-name">新しいプリセット名</label>
+              <input
+                id="preset-name"
+                type="text"
+                maxlength="80"
+                placeholder="例: 202609 LOH マイル"
+              />
+            </div>
+            <div class="preset-create-actions">
+              <button id="preset-create-empty" type="button" class="secondary-button">
+                空から作る
+              </button>
+              <button id="preset-save-new" type="button" class="secondary-button">
+                現在の内容をコピーして作る
+              </button>
+            </div>
           </div>
           <div class="preset-actions">
             <div class="preset-action-group">
-              <button
-                id="preset-save-new"
-                type="button"
-                class="secondary-button"
-              >
-                新規保存
-              </button>
               <button
                 id="preset-overwrite"
                 type="button"
@@ -60,7 +113,7 @@
               >
                 上書き保存
               </button>
-              <button id="preset-delete" type="button" class="secondary-button">
+              <button id="preset-delete" type="button" class="danger-button">
                 削除
               </button>
               <button id="preset-export" type="button" class="secondary-button">
@@ -95,6 +148,16 @@
             role="status"
             aria-live="polite"
           ></p>
+        </section>
+
+        <section id="requirements-empty-state" class="empty-state" aria-labelledby="requirements-empty-title">
+          <div class="empty-state-icon" aria-hidden="true">✦</div>
+          <h3 id="requirements-empty-title">スキル要件を準備しましょう</h3>
+          <p>固定プリセットを使うか、空の状態から自分用の要件を作成できます。</p>
+          <div class="empty-state-actions">
+            <button id="empty-use-builtin" type="button" class="primary-button">技能試験高効率用を使う</button>
+            <button id="empty-create-own" type="button" class="secondary-button">自分で要件を作成する</button>
+          </div>
         </section>
 
         <div class="priority-grid">
@@ -170,13 +233,19 @@
           各枠には複数画像を登録できます。ファイル選択・ドラッグ＆ドロップ・クリップボード貼り付けに対応します。
         </p>
 
+        <p class="description image-format-note">
+          各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。
+        </p>
+
         <div class="paste-guide">
           <strong>クリップボードから貼り付け</strong>
           <p>
             貼り付けたい枠を選択して Ctrl+V / &#8984;+V してください。
             同じ枠には複数画像を続けて貼り付けできます。
           </p>
-          <p>現在の貼り付け先：<strong id="paste-target-label">親A</strong></p>
+          <p class="paste-target-status">
+            貼り付け先：<strong id="paste-target-label">親A</strong>
+          </p>
         </div>
 
         <div id="member-grid" class="member-grid family-grid">
@@ -328,7 +397,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260911-result-summary-03"
+      src="./assets/js/app.js?v=20260912-multi-layout-07"
     ></script>
   </body>
 </html>

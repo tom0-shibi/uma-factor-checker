@@ -12,6 +12,13 @@ import {
 } from "./result-model.js";
 
 const openReviewGroups = new Set();
+let unsupportedImages = [];
+let hasSupportedImages = false;
+
+function resetUnsupportedLayouts() {
+  unsupportedImages = [];
+  hasSupportedImages = false;
+}
 
 function applyReviewGroupOpenState(details, groupKey) {
   details.open = openReviewGroups.has(groupKey);
@@ -153,6 +160,15 @@ function renderAnalysisDebug(
   summary.innerHTML = `
     <span>左列：${analysis.leftCards.length}件</span>
     <span>右列：${analysis.rightCards.length}件</span>
+    <span>レイアウト：${analysis.layoutType}</span>
+    <span>アンカー候補：${analysis.anchorCandidates?.length ?? 0}件</span>
+    <span>因子アンカー：${analysis.factorAnchorFound ? "検出" : "未検出"}</span>
+    <span>アンカーY：${analysis.factorAnchorY ?? "-"}</span>
+    <span>検出方式：${analysis.detectionMode}</span>
+    <span>因子探索開始Y：${analysis.factorSearchStartY}</span>
+    <span>列X：${analysis.columnGeometry?.leftX ?? "-"} / ${analysis.columnGeometry?.rightX ?? "-"}</span>
+    <span>カード幅：${analysis.columnGeometry?.leftWidth ?? "-"} / ${analysis.columnGeometry?.rightWidth ?? "-"}</span>
+    <span>カード高さ：${analysis.columnGeometry?.cardHeight ?? "-"}</span>
     <span>所持因子開始Y：${analysis.factorAreaTop}</span>
     <span>行間隔：${analysis.pitch ?? "-"}</span>
   `;
@@ -478,6 +494,69 @@ function renderAnalysisDebug(
   );
 
   logLines.push(
+    `レイアウト：${analysis.layoutType}`
+  );
+
+  logLines.push(
+    `アンカー候補数：${analysis.anchorCandidates?.length ?? 0}`
+  );
+
+  (analysis.anchorCandidates ?? []).forEach(
+    candidate => {
+      const result =
+        candidate.accepted
+          ? "accepted"
+          : `rejected:${candidate.rejectReason}`;
+
+      logLines.push(
+        `アンカー候補：Y=${candidate.y} score=${candidate.score.toFixed(1)} layout=${candidate.layoutType} paired=${candidate.pairedRows} left=${candidate.leftRows} right=${candidate.rightRows} ${result}`
+      );
+    }
+  );
+
+  logLines.push(
+    `因子アンカー：${analysis.factorAnchorFound ? "検出" : "未検出"}`
+  );
+
+  logLines.push(
+    `アンカーY：${analysis.factorAnchorY ?? "-"}`
+  );
+
+  logLines.push(
+    `検出方式：${analysis.detectionMode}`
+  );
+
+  logLines.push(
+    `因子探索開始Y：${analysis.factorSearchStartY}`
+  );
+
+  logLines.push(
+    `列geometry：leftX=${analysis.columnGeometry?.leftX ?? "-"} rightX=${analysis.columnGeometry?.rightX ?? "-"} leftWidth=${analysis.columnGeometry?.leftWidth ?? "-"} rightWidth=${analysis.columnGeometry?.rightWidth ?? "-"} cardHeight=${analysis.columnGeometry?.cardHeight ?? "-"} rowInterval=${analysis.columnGeometry?.rowInterval ?? "-"}`
+  );
+
+  if (
+    analysis.layoutType === "detail" &&
+    analysis.columnGeometry
+      ?.detailDiagnostics
+  ) {
+    const diagnostics =
+      analysis.columnGeometry
+        .detailDiagnostics;
+
+    logLines.push(
+      `detail列評価：leftScore=${diagnostics.leftScore.toFixed(1)} leftValid=${diagnostics.leftValidCards} rightScore=${diagnostics.rightScore.toFixed(1)} rightValid=${diagnostics.rightValidCards}`
+    );
+
+    (analysis.detectedRows ?? []).forEach(
+      row => {
+        logLines.push(
+          `検出行：row${row.row} left=${row.left ? "yes" : "no"} right=${row.right ? "yes" : "no"}`
+        );
+      }
+    );
+  }
+
+  logLines.push(
     `所持因子開始Y：${analysis.factorAreaTop}`
   );
 
@@ -669,6 +748,195 @@ function renderAnalysisError(
   debugLogLines.push("");
 }
 
+function renderUnsupportedLayoutWarnings(
+  items,
+  hasAnalyzableImages,
+  writeDebugLog
+) {
+  if (items.length === 0) {
+    return;
+  }
+
+  const resultContainer =
+    ensureResultSummaryContainer();
+
+  resultContainer.querySelectorAll(
+    ".unsupported-layout-warning, .unsupported-layout-empty"
+  ).forEach(
+    element => element.remove()
+  );
+
+  if (!hasAnalyzableImages) {
+    resultContainer.innerHTML = "";
+
+    const heading =
+      document.createElement(
+        "h2"
+      );
+
+    heading.textContent =
+      "判定結果";
+
+    resultContainer.appendChild(
+      heading
+    );
+  }
+
+  const warning =
+    document.createElement(
+      "section"
+    );
+
+  warning.className =
+    "unsupported-layout-notice unsupported-layout-warning";
+
+  warning.setAttribute(
+    "role",
+    "status"
+  );
+
+  const warningTitle =
+    document.createElement(
+      "h3"
+    );
+
+  warningTitle.textContent =
+    "⚠ 解析対象外の画像があります";
+
+  const warningMessage =
+    document.createElement(
+      "p"
+    );
+
+  warningMessage.textContent =
+    "以下の画像は解析結果に含まれていません。";
+
+  const imageList =
+    document.createElement(
+      "ul"
+    );
+
+  items.forEach(
+    item => {
+      const listItem =
+        document.createElement(
+          "li"
+        );
+
+      listItem.textContent =
+        `${item.memberLabel} / 画像${item.imageIndex + 1}`;
+
+      imageList.appendChild(
+        listItem
+      );
+    }
+  );
+
+  const guidance =
+    document.createElement(
+      "p"
+    );
+
+  guidance.textContent =
+    "1人分のみ表示される「因子一覧」の画像を使用してください。";
+
+  warning.append(
+    warningTitle,
+    warningMessage,
+    imageList,
+    guidance
+  );
+
+  const resultHeading =
+    resultContainer.querySelector(
+      ":scope > h2"
+    );
+
+  if (resultHeading) {
+    resultHeading.insertAdjacentElement(
+      "afterend",
+      warning
+    );
+  } else {
+    resultContainer.prepend(
+      warning
+    );
+  }
+
+  if (!hasAnalyzableImages) {
+    const emptyNotice =
+      document.createElement(
+        "section"
+      );
+
+    emptyNotice.className =
+      "unsupported-layout-notice unsupported-layout-empty";
+
+    const emptyTitle =
+      document.createElement(
+        "h3"
+      );
+
+    emptyTitle.textContent =
+      "解析できる画像がありませんでした";
+
+    const emptyMessage =
+      document.createElement(
+        "p"
+      );
+
+    emptyMessage.textContent =
+      "対応している画像を登録して、もう一度解析してください。";
+
+    emptyNotice.append(
+      emptyTitle,
+      emptyMessage
+    );
+
+    warning.insertAdjacentElement(
+      "afterend",
+      emptyNotice
+    );
+  }
+
+  items.forEach(
+    item => {
+      if (writeDebugLog) {
+        debugLogLines.push(
+          `${item.memberLabel} / 画像${item.imageIndex + 1}`,
+          `BUILD：${APP_BUILD}`,
+          `非対応レイアウト：${item.reason}`,
+          `layout：${item.analysis.layoutType}`,
+          `anchor Y：${item.analysis.factorAnchorY}`,
+          "OCR：未実行",
+          ""
+        );
+      }
+    }
+  );
+}
+
+function renderUnsupportedLayouts(
+  items,
+  hasAnalyzableImages
+) {
+  unsupportedImages =
+    items.map(
+      item => ({
+        ...item
+      })
+    );
+
+  hasSupportedImages =
+    hasAnalyzableImages;
+
+  renderUnsupportedLayoutWarnings(
+    unsupportedImages,
+    hasSupportedImages,
+    true
+  );
+}
+
 /* =========================================================
   星数表示変換処理
   ========================================================= */
@@ -697,6 +965,12 @@ function formatStars(
       )
     )
   );
+}
+
+function getStarToneClass(stars) {
+  return Number(stars) > 0
+    ? "has-stars"
+    : "no-stars";
 }
 
 function appendResultTableColumns(table) {
@@ -730,12 +1004,12 @@ function renderMemberSummary(container, model) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>メンバー</th>
-        <th>S</th>
-        <th>A</th>
-        <th>B</th>
-        <th>C</th>
-        <th>合計</th>
+        <th>対象ウマ娘</th>
+        <th class="result-summary-rank result-summary-rank-s"><span class="result-summary-rank-badge">S</span></th>
+        <th class="result-summary-rank result-summary-rank-a"><span class="result-summary-rank-badge">A</span></th>
+        <th class="result-summary-rank result-summary-rank-b"><span class="result-summary-rank-badge">B</span></th>
+        <th class="result-summary-rank result-summary-rank-c"><span class="result-summary-rank-badge">C</span></th>
+        <th class="result-summary-total">判定件数</th>
       </tr>
     </thead>
   `;
@@ -750,9 +1024,18 @@ function renderMemberSummary(container, model) {
           item.total
         ]
       : [members[item.memberId].label, "-", "-", "-", "-", "-"];
-    values.forEach(value => {
+    values.forEach((value, index) => {
       const cell = document.createElement("td");
       cell.textContent = String(value);
+      if (index === 0) {
+        cell.classList.add("result-summary-member");
+      }
+      if (index > 0 && value === 0) {
+        cell.classList.add("is-zero");
+      }
+      if (index === values.length - 1) {
+        cell.classList.add("result-summary-total");
+      }
       row.appendChild(cell);
     });
     tbody.appendChild(row);
@@ -957,7 +1240,7 @@ function createReviewArticle(item, candidates) {
     item.original.ocrText || "認識できませんでした"
   )}`;
   const stars = document.createElement("p");
-  stars.innerHTML = `<strong>星:</strong> ${formatStars(card.stars)}`;
+  stars.innerHTML = `<strong>星:</strong> <span class="result-star-value ${getStarToneClass(card.stars)}">${formatStars(card.stars)}</span>`;
   recognition.append(ocr, stars);
   article.appendChild(recognition);
 
@@ -982,6 +1265,7 @@ function createReviewArticle(item, candidates) {
     return article;
   }
 
+  let quickArea = null;
   if (item.type === "review") {
     const candidateLabel = document.createElement("p");
     candidateLabel.className = "result-review-candidate-label";
@@ -993,7 +1277,7 @@ function createReviewArticle(item, candidates) {
     ].filter(([name], index, all) =>
       name && all.findIndex(([otherName]) => otherName === name) === index
     );
-    const quickArea = document.createElement("div");
+    quickArea = document.createElement("div");
     quickArea.className = "result-review-quick-choices";
     quickChoices.forEach(([name, similarity]) => {
       const button = document.createElement("button");
@@ -1003,9 +1287,15 @@ function createReviewArticle(item, candidates) {
       button.addEventListener("click", () => applyManualChoice(card, name));
       quickArea.appendChild(button);
     });
-    article.appendChild(quickArea);
   }
 
+  const actions = document.createElement("div");
+  actions.className = "result-review-actions";
+  const primaryActions = document.createElement("div");
+  primaryActions.className = "result-review-primary-actions";
+  if (quickArea) {
+    primaryActions.appendChild(quickArea);
+  }
   const controls = document.createElement("div");
   controls.className = "result-review-controls";
   const select = document.createElement("select");
@@ -1029,7 +1319,7 @@ function createReviewArticle(item, candidates) {
 
   const confirmButton = document.createElement("button");
   confirmButton.type = "button";
-  confirmButton.className = "primary-button compact-button";
+  confirmButton.className = "primary-button compact-button review-confirm-button";
   confirmButton.textContent = "確定";
   confirmButton.disabled = true;
   select.addEventListener("change", () => {
@@ -1046,7 +1336,7 @@ function createReviewArticle(item, candidates) {
   ignoreWrap.className = "result-review-ignore-wrap";
   const ignoreButton = document.createElement("button");
   ignoreButton.type = "button";
-  ignoreButton.className = "secondary-button compact-button";
+  ignoreButton.className = "secondary-button compact-button review-ignore-button";
   ignoreButton.textContent = "無視";
   ignoreButton.title = "該当するスキルがない場合や要件外因子はこちら";
   ignoreButton.addEventListener("click", () => {
@@ -1056,8 +1346,9 @@ function createReviewArticle(item, candidates) {
   const ignoreHelp = document.createElement("small");
   ignoreHelp.textContent = "該当するスキルがない場合";
   ignoreWrap.append(ignoreButton, ignoreHelp);
-  controls.appendChild(ignoreWrap);
-  article.appendChild(controls);
+  primaryActions.appendChild(controls);
+  actions.append(primaryActions, ignoreWrap);
+  article.appendChild(actions);
   return article;
 }
 
@@ -1067,6 +1358,7 @@ function createReviewMemberGroup(memberId, items, candidates) {
   applyReviewGroupOpenState(details, `member:${memberId}`);
   const summary = document.createElement("summary");
   const label = document.createElement("span");
+  label.className = "review-member-label";
   label.textContent = members[memberId].label;
   const count = document.createElement("span");
   count.className = "review-member-count";
@@ -1089,6 +1381,9 @@ function renderReviewItems(container) {
   const section = document.createElement("section");
   section.className = "result-review-section";
   const heading = document.createElement("h3");
+  heading.className = unresolvedItems.length > 0
+    ? "result-review-heading is-warning"
+    : "result-review-heading is-clear";
   heading.textContent = unresolvedItems.length > 0
     ? `要確認 ${unresolvedItems.length}件`
     : "✓ 要確認項目はありません";
@@ -1115,7 +1410,13 @@ function renderReviewItems(container) {
     resolvedGroup.className = "review-member-group review-resolved-group";
     applyReviewGroupOpenState(resolvedGroup, "resolved");
     const summary = document.createElement("summary");
-    summary.textContent = `対応済み（${resolvedItems.length}件）`;
+    const resolvedLabel = document.createElement("span");
+    resolvedLabel.className = "review-member-label";
+    resolvedLabel.textContent = "対応済み";
+    const resolvedCount = document.createElement("span");
+    resolvedCount.className = "review-member-count is-resolved";
+    resolvedCount.textContent = `${resolvedItems.length}件`;
+    summary.append(resolvedLabel, resolvedCount);
     resolvedGroup.appendChild(summary);
     const content = document.createElement("div");
     content.className = "review-member-content";
@@ -1260,6 +1561,12 @@ function renderOverallSkillSummary() {
       empty
     );
 
+    renderUnsupportedLayoutWarnings(
+      unsupportedImages,
+      hasSupportedImages,
+      false
+    );
+
     return;
   }
 
@@ -1348,6 +1655,10 @@ function renderOverallSkillSummary() {
         th.textContent =
           headerText;
 
+        if (headerText === "★合計") {
+          th.classList.add("result-star-heading");
+        }
+
         headerRow.appendChild(
           th
         );
@@ -1408,10 +1719,22 @@ function renderOverallSkillSummary() {
               td.className =
                 "factor-result-hit";
 
-              td.textContent =
+              const starValue =
+                document.createElement(
+                  "span"
+                );
+
+              starValue.className =
+                `result-star-value ${getStarToneClass(found.stars)}`;
+
+              starValue.textContent =
                 formatStars(
                   found.stars
                 );
+
+              td.appendChild(
+                starValue
+              );
 
               td.title =
                 `${
@@ -1451,9 +1774,15 @@ function renderOverallSkillSummary() {
         if (model.registeredMemberCount <= 2) {
           countBadge.classList.add("is-insufficient");
           countBadge.textContent = "判定対象不足";
-        } else if (skillResult.ownedCount < 3) {
+          tr.classList.add("is-insufficient-row");
+        } else if (
+          skillResult.ownedCount > 0 &&
+          skillResult.ownedCount < 3
+        ) {
           countBadge.classList.add("is-warning");
-          countBadge.textContent = "3面未満";
+          countBadge.textContent = `${skillResult.ownedCount}面`;
+        } else if (skillResult.ownedCount === 0) {
+          ownedCountCell.classList.add("is-zero");
         }
         if (countBadge.textContent) {
           ownedCountCell.appendChild(countBadge);
@@ -1467,6 +1796,9 @@ function renderOverallSkillSummary() {
           document.createElement(
             "td"
           );
+
+        totalStarsCell.className =
+          `result-star-total ${getStarToneClass(skillResult.totalStars)}`;
 
         totalStarsCell.textContent =
           String(
@@ -1499,6 +1831,12 @@ function renderOverallSkillSummary() {
       section
     );
   }
+
+  renderUnsupportedLayoutWarnings(
+    unsupportedImages,
+    hasSupportedImages,
+    false
+  );
 }
 
 /* =========================================================
@@ -1688,7 +2026,9 @@ document.addEventListener(
 export {
   renderAnalysisDebug,
   renderAnalysisError,
+  renderUnsupportedLayouts,
   renderOverallSkillSummary,
   appendSummaryToDebugLog,
-  resetReviewAccordionState
+  resetReviewAccordionState,
+  resetUnsupportedLayouts
 };

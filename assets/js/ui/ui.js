@@ -44,7 +44,8 @@ function ensureDynamicStyles() {
       box-sizing: border-box;
       padding: 28px;
       border-radius: 18px;
-      background: #ffffff;
+      background: var(--color-surface-raised);
+      color: var(--color-text);
       box-shadow:
         0 24px 70px
         rgba(0, 0, 0, 0.25);
@@ -54,8 +55,8 @@ function ensureDynamicStyles() {
       width: 42px;
       height: 42px;
       margin: 0 auto 18px;
-      border: 5px solid #e4e7eb;
-      border-top-color: #6f63d9;
+      border: 5px solid var(--color-border);
+      border-top-color: var(--color-primary);
       border-radius: 50%;
       animation:
         analysis-progress-spin
@@ -86,7 +87,7 @@ function ensureDynamicStyles() {
       min-height: 1.5em;
       margin: 0 0 18px;
       text-align: center;
-      color: #666666;
+      color: var(--color-text-muted);
       font-size: 0.92rem;
     }
 
@@ -95,7 +96,7 @@ function ensureDynamicStyles() {
       height: 13px;
       overflow: hidden;
       border-radius: 999px;
-      background: #e8e8ee;
+      background: var(--color-border);
     }
 
     .analysis-progress-bar {
@@ -105,8 +106,8 @@ function ensureDynamicStyles() {
       background:
         linear-gradient(
           90deg,
-          #7167df,
-          #9d66d9
+          var(--color-primary),
+          var(--color-focus)
         );
       transition:
         width 0.18s ease;
@@ -115,7 +116,7 @@ function ensureDynamicStyles() {
     .analysis-progress-percent {
       margin-top: 8px;
       text-align: right;
-      color: #555555;
+      color: var(--color-text-muted);
       font-size: 0.85rem;
     }
 
@@ -129,7 +130,7 @@ function ensureDynamicStyles() {
 
     .factor-result-note {
       margin: 0 0 18px;
-      color: #666666;
+      color: var(--color-text-muted);
       font-size: 0.9rem;
     }
 
@@ -150,19 +151,19 @@ function ensureDynamicStyles() {
       width: 100%;
       min-width: 900px;
       border-collapse: collapse;
-      background: #ffffff;
+      background: var(--color-surface);
     }
 
     .factor-result-table th,
     .factor-result-table td {
       padding: 9px 10px;
-      border: 1px solid #dddddd;
+      border: 1px solid var(--color-border);
       text-align: center;
       white-space: nowrap;
     }
 
     .factor-result-table th {
-      background: #f4f4f7;
+      background: var(--color-surface-soft);
     }
 
     .factor-result-table td.skill-name-cell {
@@ -172,9 +173,9 @@ function ensureDynamicStyles() {
 
     .factor-result-empty {
       padding: 14px;
-      border: 1px dashed #cccccc;
+      border: 1px dashed var(--color-border-strong);
       border-radius: 10px;
-      color: #777777;
+      color: var(--color-text-muted);
     }
 
     .factor-result-hit {
@@ -182,7 +183,7 @@ function ensureDynamicStyles() {
     }
 
     .factor-result-missing {
-      color: #aaaaaa;
+      color: var(--color-text-muted);
     }
 
     .factor-result-count {
@@ -568,6 +569,54 @@ const tabContents =
   document.querySelectorAll(
     ".tab-content"
   );
+
+function scrollToResultsTop() {
+  const resultsSection =
+    document.getElementById(
+      "results"
+    );
+
+  if (!resultsSection) {
+    return;
+  }
+
+  requestAnimationFrame(
+    () => {
+      resultsSection.scrollIntoView({
+        behavior: "auto",
+        block: "start"
+      });
+    }
+  );
+}
+
+function initializePageScrollPosition() {
+  if (
+    "scrollRestoration" in
+    window.history
+  ) {
+    window.history.scrollRestoration =
+      "manual";
+  }
+
+  window.addEventListener(
+    "load",
+    () => {
+      requestAnimationFrame(
+        () => {
+          window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: "auto"
+          });
+        }
+      );
+    },
+    {
+      once: true
+    }
+  );
+}
 
 tabButtons.forEach(button => {
   button.addEventListener(
@@ -1274,4 +1323,4 @@ document.addEventListener(
 );
 
 
-export { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, setPasteTarget, updateImageSummary, markRequirementsDirty, clearRequirementApplyStatus };
+export { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary, markRequirementsDirty, clearRequirementApplyStatus };

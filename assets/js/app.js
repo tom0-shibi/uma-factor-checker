@@ -1,14 +1,17 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
 import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js";
 import { createOcrWorker, runOcrForWhiteCards } from "./ocr/ocr.js";
-import { renderAnalysisDebug, renderAnalysisError, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState } from "./result/results.js";
-import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, setPasteTarget, updateImageSummary } from "./ui/ui.js";
+import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js";
+import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js";
 import { initializePresetManager } from "./preset/preset-manager.js";
+import { initializeTheme } from "./ui/theme.js";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
 );
 
+initializeTheme();
+initializePageScrollPosition();
 initializePresetManager();
 
 /* =========================================================
@@ -97,6 +100,8 @@ if (analyzeImagesButton) {
 
       resetReviewAccordionState();
 
+      resetUnsupportedLayouts();
+
       resetAnalysisResults();
 
       const copyButton =
@@ -155,6 +160,8 @@ if (analyzeImagesButton) {
 
       let ocrWorker = null;
       let globalImageNumber = 0;
+      let analyzedImageCount = 0;
+      const unsupportedLayouts = [];
 
       try {
         ocrWorker =
@@ -259,6 +266,62 @@ if (analyzeImagesButton) {
                   height
                 );
 
+              const detectedLeftCount =
+                analysis.detectedRows.filter(
+                  row => row.left
+                ).length;
+
+              const detectedRightCount =
+                analysis.detectedRows.filter(
+                  row => row.right
+                ).length;
+
+              debugLogLines.push(
+                "image classification:",
+                `member=${memberId}`,
+                `imageIndex=${i + 1}`,
+                `supported=${analysis.supported === true}`,
+                `layout=${analysis.layoutType}`,
+                `reason=${analysis.unsupportedReason ?? "-"}`,
+                `left=${detectedLeftCount}`,
+                `right=${detectedRightCount}`,
+                `anchorY=${analysis.factorAnchorY ?? "-"}`,
+                `addedToUnsupportedImages=${analysis.supported !== true}`,
+                ""
+              );
+
+              if (
+                analysis.supported !== true
+              ) {
+                member
+                  .analysisResults
+                  .push({
+                    imageId:
+                      imageData.id,
+                    imageIndex:
+                      i,
+                    analysis
+                  });
+
+                unsupportedLayouts.push({
+                  memberId,
+                  memberLabel:
+                    member.label,
+                  imageIndex: i,
+                  reason:
+                    analysis
+                      .unsupportedReason,
+                  analysis
+                });
+
+                updateAnalysisProgressDisplay(
+                  `${member.label} / 画像${i + 1}`,
+                  `非対応の画像形式です。OCRを実行せず次の画像へ進みます。`
+                );
+
+                continue;
+              }
+
               await runOcrForWhiteCards(
                 ocrWorker,
                 canvas,
@@ -276,6 +339,8 @@ if (analyzeImagesButton) {
                     i,
                   analysis
                 });
+
+              analyzedImageCount++;
 
               renderAnalysisDebug(
                 member.label,
@@ -331,7 +396,23 @@ if (analyzeImagesButton) {
         }
       }
 
-      renderOverallSkillSummary();
+      if (
+        analyzedImageCount > 0 ||
+        unsupportedLayouts.length === 0
+      ) {
+        renderOverallSkillSummary();
+      }
+
+      renderUnsupportedLayouts(
+        unsupportedLayouts,
+        analyzedImageCount > 0
+      );
+
+      debugLogLines.push(
+        `supportedImageCount=${analyzedImageCount}`,
+        `unsupportedImageCount=${unsupportedLayouts.length}`,
+        ""
+      );
 
       appendSummaryToDebugLog();
 
@@ -358,6 +439,8 @@ if (analyzeImagesButton) {
       }
 
       hideAnalysisProgress();
+
+      scrollToResultsTop();
 
       analyzeImagesButton.disabled =
         false;

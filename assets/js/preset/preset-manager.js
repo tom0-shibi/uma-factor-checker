@@ -26,6 +26,7 @@ const BUILTIN_PRESETS = [SKILL_EXAM_HIGH_EFFICIENCY_PRESET];
 let userPresets = [];
 let selectedPresetId = "";
 let deletePendingId = "";
+let manualCreationStarted = false;
 
 function getAllPresets() {
   return [...BUILTIN_PRESETS, ...userPresets];
@@ -54,6 +55,24 @@ function readTextareaSkills() {
   }));
 }
 
+function createEmptySkills() {
+  return Object.fromEntries(RANKS.map(rank => [rank, []]));
+}
+
+function hasWorkingRequirements() {
+  return Object.values(readTextareaSkills()).some(skills => skills.length > 0);
+}
+
+function updateRequirementEmptyState() {
+  const emptyState = document.getElementById("requirements-empty-state");
+  if (!emptyState) {
+    return;
+  }
+  emptyState.hidden = Boolean(
+    selectedPresetId || hasWorkingRequirements() || manualCreationStarted
+  );
+}
+
 function updateLabels() {
   RANKS.forEach(rank => {
     const label = document.querySelector(
@@ -66,6 +85,7 @@ function updateLabels() {
 }
 
 function applyPreset(preset) {
+  manualCreationStarted = false;
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
       `input-${rank.toLowerCase()}`
@@ -77,6 +97,7 @@ function applyPreset(preset) {
   updateLabels();
   markRequirementsDirty();
   closeRequirementAccordions();
+  updateRequirementEmptyState();
 }
 
 function closeRequirementAccordions() {
@@ -90,6 +111,7 @@ function closeRequirementAccordions() {
 function clearWorkingRequirements() {
   selectedPresetId = "";
   deletePendingId = "";
+  manualCreationStarted = false;
   saveSelectedPresetId("");
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
@@ -110,6 +132,7 @@ function clearWorkingRequirements() {
   }
   closeRequirementAccordions();
   renderPresetOptions();
+  updateRequirementEmptyState();
 }
 
 function setStatus(message, isError = false) {
@@ -134,6 +157,31 @@ function createUniqueName(name) {
     suffix++;
   }
   return `${name} (${suffix})`;
+}
+
+function saveNewPreset(skills) {
+  const nameInput = document.getElementById("preset-name");
+  const name = nameInput?.value.trim();
+  if (!name) {
+    setStatus("新しいプリセット名を入力してください。", true);
+    nameInput?.focus();
+    return;
+  }
+  const preset = {
+    id: createUserPresetId(),
+    name: createUniqueName(name),
+    readonly: false,
+    labels: null,
+    skills
+  };
+  userPresets.push(preset);
+  saveUserPresets(userPresets);
+  selectPreset(preset.id);
+  nameInput.value = "";
+  document.getElementById("preset-create-panel").hidden = true;
+  const toggle = document.getElementById("preset-create-toggle");
+  toggle?.setAttribute("aria-expanded", "false");
+  setStatus(`${preset.name}を保存しました。`);
 }
 
 function renderPresetOptions() {
@@ -195,33 +243,57 @@ function initializePresetManager() {
   renderPresetOptions();
   clearWorkingRequirements();
 
+  RANKS.forEach(rank => {
+    document.getElementById(`input-${rank.toLowerCase()}`)?.addEventListener(
+      "input",
+      updateRequirementEmptyState
+    );
+  });
+
+  document.getElementById("empty-use-builtin")?.addEventListener(
+    "click",
+    () => selectPreset(SKILL_EXAM_HIGH_EFFICIENCY_PRESET.id)
+  );
+  document.getElementById("empty-create-own")?.addEventListener(
+    "click",
+    () => {
+      manualCreationStarted = true;
+      updateRequirementEmptyState();
+      const firstAccordion = document.querySelector(
+        '.requirement-accordion[data-rank="S"]'
+      );
+      if (firstAccordion) {
+        firstAccordion.open = true;
+      }
+      document.getElementById("input-s")?.focus();
+    }
+  );
+  document.getElementById("preset-create-toggle")?.addEventListener(
+    "click",
+    event => {
+      const panel = document.getElementById("preset-create-panel");
+      if (!panel) {
+        return;
+      }
+      panel.hidden = !panel.hidden;
+      event.currentTarget.setAttribute("aria-expanded", String(!panel.hidden));
+      if (!panel.hidden) {
+        document.getElementById("preset-name")?.focus();
+      }
+    }
+  );
+  document.getElementById("preset-create-empty")?.addEventListener(
+    "click",
+    () => saveNewPreset(createEmptySkills())
+  );
+
   document.getElementById("preset-select")?.addEventListener(
     "change",
     event => selectPreset(event.target.value)
   );
   document.getElementById("preset-save-new")?.addEventListener(
     "click",
-    () => {
-      const nameInput = document.getElementById("preset-name");
-      const name = nameInput?.value.trim();
-      if (!name) {
-        setStatus("新しいプリセット名を入力してください。", true);
-        nameInput?.focus();
-        return;
-      }
-      const preset = {
-        id: createUserPresetId(),
-        name: createUniqueName(name),
-        readonly: false,
-        labels: null,
-        skills: readTextareaSkills()
-      };
-      userPresets.push(preset);
-      saveUserPresets(userPresets);
-      selectPreset(preset.id);
-      nameInput.value = "";
-      setStatus(`${preset.name}を保存しました。`);
-    }
+    () => saveNewPreset(readTextareaSkills())
   );
   document.getElementById("preset-overwrite")?.addEventListener(
     "click",
