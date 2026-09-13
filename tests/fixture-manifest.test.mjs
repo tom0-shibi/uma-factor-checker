@@ -27,7 +27,6 @@ const actualNames = (
 
 assert.deepEqual(actualNames, expectedNames);
 
-let skipped = 0;
 for (const [name, fixture] of Object.entries(manifest.fixtures)) {
   assert.ok(["supported", "unsupported"].includes(fixture.category));
   assert.equal(typeof fixture.description, "string");
@@ -40,21 +39,15 @@ for (const [name, fixture] of Object.entries(manifest.fixtures)) {
     name
   );
   const signature = await readFile(filePath);
-  assert.deepEqual(
-    [...signature.subarray(0, 8)],
-    [137, 80, 78, 71, 13, 10, 26, 10],
-    `${name} must be a PNG`
+  const isPng = signature.subarray(0, 8).equals(
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
   );
-
-  if (!fixture.ready) {
-    skipped++;
-    continue;
-  }
-
-  throw new Error(
-    `${name} is ready, but pixel analysis is not connected to this manifest test yet.`
+  const isJpeg = signature.subarray(0, 3).equals(
+    Buffer.from([255, 216, 255])
   );
+  assert.ok(isPng || isJpeg, `${name} must be a PNG or JPEG image`);
+  assert.equal(fixture.ready, true, `${name} must use a real fixture`);
 }
 
-assert.equal(skipped, expectedNames.length);
-console.log(`fixture manifest tests: OK (${skipped} placeholders skipped)`);
+assert.equal(expectedNames.length, 6);
+console.log("fixture manifest tests: OK (6 real images)");

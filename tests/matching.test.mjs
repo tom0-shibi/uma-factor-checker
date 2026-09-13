@@ -21,7 +21,7 @@ import {
   isStrongShortSkillFallbackResult
 } from "../assets/js/matching/fallback-policy.js";
 
-assert.equal(APP_BUILD, "20260912-multi-layout-07");
+assert.equal(APP_BUILD, "20260913-factor-metadata-02");
 assert.deepEqual(SKILL_MATCH_CONFIG, {
   thresholds: {
     1: 1.00,

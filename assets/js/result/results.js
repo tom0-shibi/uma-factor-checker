@@ -1168,8 +1168,10 @@ function renderFactorInfo(container, model) {
           document.createElement("p");
         row.className =
           `factor-metadata-row factor-metadata-${type}`;
+        const factorName =
+          value.name ?? "名称未確定";
         row.textContent =
-          `${label}　${value.name} ${formatStars(value.stars)}`;
+          `${label}　${factorName} ${formatStars(value.stars)}`;
         article.appendChild(row);
       });
 

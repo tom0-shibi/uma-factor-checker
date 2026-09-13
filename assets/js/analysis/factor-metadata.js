@@ -110,25 +110,35 @@ function createFactorMetadata({
 
   return {
     blue:
-      hasValidStars(blueCard) &&
-      blueMatch?.canonicalName
+      hasValidStars(blueCard)
       ? {
-          name: blueMatch.canonicalName,
+          name: blueMatch?.canonicalName ?? null,
           stars: blueCard.stars,
-          ocrText: blueRecognition.ocrText,
-          confidence: blueRecognition.ocrConfidence,
-          status: blueMatch.status
+          rawOcrText: blueRecognition?.ocrRawText ?? "",
+          ocrText: blueRecognition?.ocrText ?? "",
+          normalizedOcrText: normalizeSkillText(
+            blueRecognition?.ocrText ?? ""
+          ),
+          confidence: blueRecognition?.ocrConfidence ?? 0,
+          candidate: blueMatch?.match?.candidate ?? null,
+          similarity: blueMatch?.match?.similarity ?? 0,
+          status: blueMatch?.status ?? "unresolved"
         }
       : null,
     red:
-      hasValidStars(redCard) &&
-      redMatch?.canonicalName
+      hasValidStars(redCard)
       ? {
-          name: redMatch.canonicalName,
+          name: redMatch?.canonicalName ?? null,
           stars: redCard.stars,
-          ocrText: redRecognition.ocrText,
-          confidence: redRecognition.ocrConfidence,
-          status: redMatch.status
+          rawOcrText: redRecognition?.ocrRawText ?? "",
+          ocrText: redRecognition?.ocrText ?? "",
+          normalizedOcrText: normalizeSkillText(
+            redRecognition?.ocrText ?? ""
+          ),
+          confidence: redRecognition?.ocrConfidence ?? 0,
+          candidate: redMatch?.match?.candidate ?? null,
+          similarity: redMatch?.match?.similarity ?? 0,
+          status: redMatch?.status ?? "unresolved"
         }
       : null,
     green: hasValidStars(greenCard)

@@ -21,6 +21,8 @@ import {
   evaluateStrongShortSkillFallbackResult
 } from "../matching/fallback-policy.js";
 import {
+  BLUE_FACTOR_NAMES,
+  RED_FACTOR_NAMES,
   createFactorMetadata
 } from "../analysis/factor-metadata.js";
 
@@ -1127,6 +1129,118 @@ async function recognizeSkillName(
 }
 
 /* =========================================================
+  青・赤因子名専用OCR
+  色付きカードは白文字のため、白因子用の茶色文字検出を使わない。
+  通常の白因子OCR設定・前処理には影響させない。
+  ========================================================= */
+
+function createColoredFactorNameCanvas(
+  sourceCanvas,
+  card,
+  variant
+) {
+  const crop = {
+    x: Math.round(card.x + card.width * 0.10),
+    y: Math.round(card.y + card.height * 0.02),
+    width: Math.round(card.width * 0.62),
+    height: Math.round(card.height * 0.62)
+  };
+  const scale = 4;
+  const canvas = document.createElement("canvas");
+  canvas.width = crop.width * scale;
+  canvas.height = crop.height * scale;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(
+    sourceCanvas,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  if (variant === "raw-color") {
+    return canvas;
+  }
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let index = 0; index < data.length; index += 4) {
+    const r = data[index];
+    const g = data[index + 1];
+    const b = data[index + 2];
+    const maximum = Math.max(r, g, b);
+    const minimum = Math.min(r, g, b);
+    const isWhiteText =
+      maximum >= 170 &&
+      maximum - minimum <= 58;
+    const value = isWhiteText ? 0 : 255;
+    data[index] = value;
+    data[index + 1] = value;
+    data[index + 2] = value;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+async function recognizeColoredFactorName(
+  worker,
+  sourceCanvas,
+  card,
+  candidates
+) {
+  const variants = [
+    "white-text-mask",
+    "raw-color"
+  ];
+  let bestRecognition = null;
+
+  for (const variant of variants) {
+    const ocrCanvas = createColoredFactorNameCanvas(
+      sourceCanvas,
+      card,
+      variant
+    );
+    const result = await worker.recognize(ocrCanvas);
+    const rawText = result.data.text || "";
+    const recognition = {
+      ocrText: normalizeOcrText(rawText),
+      ocrRawText: rawText,
+      ocrConfidence: result.data.confidence ?? 0,
+      ocrCanvas,
+      ocrVariant: variant
+    };
+    const match = findBestSkillMatch(recognition.ocrText, candidates);
+    recognition.factorCandidate = match.candidate;
+    recognition.factorSimilarity = match.similarity;
+
+    if (
+      !bestRecognition ||
+      recognition.factorSimilarity > bestRecognition.factorSimilarity ||
+      (
+        recognition.factorSimilarity === bestRecognition.factorSimilarity &&
+        recognition.ocrConfidence > bestRecognition.ocrConfidence
+      )
+    ) {
+      bestRecognition = recognition;
+    }
+
+    if (recognition.factorSimilarity === 1) {
+      break;
+    }
+  }
+
+  return bestRecognition;
+}
+
+/* =========================================================
   青・赤・緑因子情報取得処理
   白因子の要件照合とは分離し、緑因子の名称OCRは行わない。
   ========================================================= */
@@ -1157,18 +1271,20 @@ async function runOcrForFactorMetadata(
     ) ?? null;
 
   const blueRecognition = blueCard
-    ? await recognizeSkillName(
+    ? await recognizeColoredFactorName(
         worker,
         sourceCanvas,
-        blueCard
+        blueCard,
+        BLUE_FACTOR_NAMES
       )
     : null;
 
   const redRecognition = redCard
-    ? await recognizeSkillName(
+    ? await recognizeColoredFactorName(
         worker,
         sourceCanvas,
-        redCard
+        redCard,
+        RED_FACTOR_NAMES
       )
     : null;
 

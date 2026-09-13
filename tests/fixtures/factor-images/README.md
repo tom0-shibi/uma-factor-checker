@@ -10,28 +10,26 @@
 - `factor-list-continuation`: 同一人物の因子一覧途中・末尾。青・赤・緑因子や上部anchorが存在しなくても正常です。
 - `composite-type-a`: 親・祖など複数人物を含む正式非対応画像です。
 - `unrelated`: 因子一覧ではない画像です。
-- `weak-factor-like`: 因子カードに似た要素はあるものの、factor gridとして証拠が不足する画像です。
 
 ## `ready`の意味
 
 - `ready: false`: placeholderです。Fixture runnerは画像解析を実行せずskipします。
 - `ready: true`: 実画像と正解データが準備済みです。Fixture runnerで解析結果との比較対象にできます。
 
-現時点のPNGはすべてplaceholderであり、OCRや画像解析の成否を評価する画像ではありません。
+現在はsupported 4枚、unsupported 2枚の実画像6枚をPNG形式で登録済みです。
 
 ## 重要ルール
 
 - 青・赤・緑因子が存在しないことだけを理由に、`factor-list-continuation`をunsupportedにしてはいけません。
 - supported判定と`factorInfo`取得は別々に評価します。
-- `weak-factor-like`を通すためにcontinuation判定を緩めてはいけません。
 - 実画像は原則としてリサイズ、圧縮、トリミング、結合、画質補正を行いません。
 
-## 実画像への差し替え方法
+## 登録済みFixture
 
-1. `supported/`または`unsupported/`内のplaceholder PNGを、同じファイル名の実スクリーンショットで上書きします。
-2. `expected.json`の該当項目へ、カード数や因子情報など確認済みの正解値を記入します。
-3. 該当項目の`ready`を`true`へ変更します。
-4. Fixtureテストを実行し、ファイル名、manifest、期待値を確認します。
+- `factor-list-start-01`、`factor-list-continuation-01`、`factor-list-end-01`は同一人物のスクロール前・途中・末尾です。
+- `factor-list-start-02`は別のsupported startパターンです。
+- `composite-type-a-01`、`unrelated-01`はunsupportedです。
+- ブラウザ画素解析は`tests/fixture-runner.html`で実行できます。
 
 ## `factorInfo`の記入例
 
@@ -48,4 +46,3 @@
 ## 段階的な拡張
 
 Phase 1では`supported`、`layout`、カード数、青・赤・緑因子名、星数を対象にします。将来のPhase 2では、`expected`へ白因子の読み取り結果、`canonicalName`、星数、`confirmed / review / unresolved`などを追加できます。
-

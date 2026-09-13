@@ -53,6 +53,27 @@ assert.deepEqual(metadata.green, {
   status: "confirmed"
 });
 
+const unresolvedNames = createFactorMetadata({
+  blueCard: { stars: 3 },
+  blueRecognition: {
+    ocrText: "不明",
+    ocrRawText: "不明\n",
+    ocrConfidence: 12
+  },
+  redCard: { stars: 2 },
+  redRecognition: {
+    ocrText: "",
+    ocrRawText: "",
+    ocrConfidence: 0
+  }
+});
+
+assert.equal(unresolvedNames.blue.name, null);
+assert.equal(unresolvedNames.blue.stars, 3);
+assert.equal(unresolvedNames.blue.status, "unresolved");
+assert.equal(unresolvedNames.red.name, null);
+assert.equal(unresolvedNames.red.stars, 2);
+
 for (const stars of [1, 2, 3]) {
   assert.equal(
     createFactorMetadata({

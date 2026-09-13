@@ -2,64 +2,91 @@
   "version": 1,
   "fixtures": {
     "factor-list-start-01.png": {
-      "ready": false,
+      "ready": true,
       "category": "supported",
-      "description": "通常の1人分因子一覧上部。青赤緑と白因子を含む実画像へ差し替える。",
+      "description": "\u901a\u5e38\u306e1\u4eba\u5206\u56e0\u5b50\u4e00\u89a7\u4e0a\u90e8\u3002\u5f8c\u7d9a\u306econtinuation/end\u3068\u540c\u4e00\u4eba\u7269\u3002",
       "expected": {
         "supported": true,
         "layout": "factor-list-start",
-        "factorInfo": null,
-        "cards": null
-      }
-    },
-    "factor-list-start-02.png": {
-      "ready": false,
-      "category": "supported",
-      "description": "因子開始位置が低い形式。旧Type C相当の実画像へ差し替える。",
-      "expected": {
-        "supported": true,
-        "layout": "factor-list-start",
-        "factorInfo": null,
-        "cards": null
+        "factorInfo": {
+          "blue": {
+            "name": "\u6839\u6027",
+            "stars": 3
+          },
+          "red": {
+            "name": "\u30de\u30a4\u30eb",
+            "stars": 2
+          },
+          "green": {
+            "name": "\u7d99\u627f\u56fa\u6709",
+            "stars": 2
+          }
+        },
+        "cards": {
+          "leftCount": 13,
+          "rightCount": 13
+        }
       }
     },
     "factor-list-continuation-01.png": {
-      "ready": false,
+      "ready": true,
       "category": "supported",
-      "description": "青赤緑を含まない、白因子が十分に並ぶ因子一覧途中画像へ差し替える。",
+      "description": "start-01\u3068\u540c\u4e00\u4eba\u7269\u306e\u56e0\u5b50\u4e00\u89a7\u9014\u4e2d\u3002",
       "expected": {
         "supported": true,
         "layout": "factor-list-continuation",
         "factorInfo": null,
-        "cards": null
+        "cards": {
+          "leftCount": 13,
+          "rightCount": 13
+        }
       }
     },
-    "factor-list-continuation-02.png": {
-      "ready": false,
+    "factor-list-end-01.png": {
+      "ready": true,
       "category": "supported",
-      "description": "別位置の因子一覧途中画像。startとの複数画像テストにも使用する。",
+      "description": "start-01\u3068\u540c\u4e00\u4eba\u7269\u306e\u56e0\u5b50\u4e00\u89a7\u672b\u5c3e\u3002",
       "expected": {
         "supported": true,
         "layout": "factor-list-continuation",
         "factorInfo": null,
-        "cards": null
+        "cards": {
+          "leftCount": 13,
+          "rightCount": 13
+        }
       }
     },
-    "factor-list-continuation-03.png": {
-      "ready": false,
+    "factor-list-start-02.png": {
+      "ready": true,
       "category": "supported",
-      "description": "行数が比較的少ない因子一覧末尾付近の実画像へ差し替える。",
+      "description": "\u56e0\u5b50\u958b\u59cb\u4f4d\u7f6e\u304c\u4f4e\u3044\u5225\u306e\u4e00\u89a7\u4e0a\u90e8\u3002",
       "expected": {
         "supported": true,
-        "layout": "factor-list-continuation",
-        "factorInfo": null,
-        "cards": null
+        "layout": "factor-list-start",
+        "factorInfo": {
+          "blue": {
+            "name": "\u30b9\u30d4\u30fc\u30c9",
+            "stars": 2
+          },
+          "red": {
+            "name": "\u30c0\u30fc\u30c8",
+            "stars": 3
+          },
+          "green": {
+            "name": "\u7d99\u627f\u56fa\u6709",
+            "stars": 2
+          }
+        },
+        "cards": {
+          "leftCount": 12,
+          "rightCount": 12
+        }
       }
     },
     "composite-type-a-01.png": {
-      "ready": false,
+      "ready": true,
       "category": "unsupported",
-      "description": "親と祖など複数人物の因子一覧を含む縦長複合画像へ差し替える。",
+      "description": "\u8907\u6570\u4eba\u7269\u306e\u56e0\u5b50\u4e00\u89a7\u3092\u542b\u3080\u7e26\u9577\u8907\u5408\u753b\u50cf\u3002",
       "expected": {
         "supported": false,
         "layout": "unknown",
@@ -68,20 +95,9 @@
       }
     },
     "unrelated-01.png": {
-      "ready": false,
+      "ready": true,
       "category": "unsupported",
-      "description": "因子一覧ではない無関係画像へ差し替える。",
-      "expected": {
-        "supported": false,
-        "layout": "unknown",
-        "factorInfo": null,
-        "cards": null
-      }
-    },
-    "weak-factor-like-01.png": {
-      "ready": false,
-      "category": "unsupported",
-      "description": "因子カード風要素はあるがfactor gridの証拠が不足する画像へ差し替える。",
+      "description": "\u56e0\u5b50\u4e00\u89a7\u3067\u306f\u306a\u3044\u7121\u95a2\u4fc2\u753b\u50cf\u3002",
       "expected": {
         "supported": false,
         "layout": "unknown",
@@ -91,4 +107,3 @@
     }
   }
 }
-

@@ -233,9 +233,10 @@ function formatDiscordSummary(model, memberLabels, presetName) {
           ["緑", info.green]
         ]
           .filter(([, value]) => value)
-          .map(([label, value]) =>
-            `${label}: ${value.name}${formatStars(value.stars)}`
-          );
+          .map(([label, value]) => {
+            const factorName = value.name ?? "名称未確定";
+            return `${label}: ${factorName}${formatStars(value.stars)}`;
+          });
 
         return `* ${ownerLabels[memberId] || memberLabels[memberId]}｜${values.join(" / ")}`;
       })
