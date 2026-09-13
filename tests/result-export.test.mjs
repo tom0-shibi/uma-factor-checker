@@ -100,9 +100,70 @@ const discord = formatDiscordSummary(
   "検証用"
 );
 assert.match(discord, /\* プリセット：検証用/);
-assert.doesNotMatch(discord, /親A-祖2：S/);
-assert.match(discord, /\* \*\*左回り○：2\/5面\*\*/);
-assert.match(discord, /親A ★★ \/ 親A-祖1 ★/);
+assert.match(discord, /\* A系｜親 `S2 A0 B0 C0` \/ 祖1 `S0 A0 B0 C0`/);
+assert.match(discord, /\* B系｜親 `S0 A0 B0 C0`/);
+assert.doesNotMatch(discord, /A系[^\n]*祖2/);
+assert.match(discord, /\* \*\*左回り○\*\* `2\/5`｜親A ★★ \/ A祖1 ★/);
+assert.doesNotMatch(discord, /\* \*\*風切り\*\*/);
+assert.equal(
+  discord.split("\n").filter(line => line.startsWith("* A系｜")).length,
+  1
+);
+assert.equal(
+  discord.split("\n").filter(line => line.startsWith("* B系｜")).length,
+  1
+);
+
+const sixMemberDiscord = formatDiscordSummary(
+  {
+    ...model,
+    memberSummary: model.memberSummary.map(item => ({
+      ...item,
+      registered: true
+    })),
+    registeredMemberIds: Object.keys(memberLabels),
+    registeredMemberCount: 6
+  },
+  memberLabels,
+  "検証用"
+);
+assert.equal(
+  sixMemberDiscord
+    .split("\n")
+    .filter(line => /\* [AB]系｜/.test(line))
+    .length,
+  2
+);
+
+const parentAOnlyModel = {
+  ...model,
+  memberSummary: model.memberSummary.map(item => ({
+    ...item,
+    registered: item.memberId === "parentA"
+  })),
+  registeredMemberIds: ["parentA"],
+  registeredMemberCount: 1,
+  ranks: {
+    ...model.ranks,
+    S: [{
+      ...model.ranks.S[0],
+      memberValues: {
+        ...model.ranks.S[0].memberValues,
+        parentAGrand1: null
+      },
+      ownedCount: 1,
+      totalStars: 2
+    }]
+  }
+};
+const parentAOnlyDiscord = formatDiscordSummary(
+  parentAOnlyModel,
+  memberLabels,
+  "検証用"
+);
+assert.match(parentAOnlyDiscord, /\* A系｜親 `S2 A0 B0 C0`/);
+assert.doesNotMatch(parentAOnlyDiscord, /\* B系｜/);
+assert.match(parentAOnlyDiscord, /\* \*\*左回り○\*\* `1\/1`｜親A ★★/);
 assert.equal(getDiscordLengthWarning("a".repeat(2000)), "");
 assert.equal(
   getDiscordLengthWarning("a".repeat(2001)),

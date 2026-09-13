@@ -129,39 +129,87 @@ function formatStars(stars) {
 }
 
 function formatDiscordSummary(model, memberLabels, presetName) {
+  const familyDefinitions = [
+    {
+      label: "A系",
+      members: [
+        ["parentA", "親"],
+        ["parentAGrand1", "祖1"],
+        ["parentAGrand2", "祖2"]
+      ]
+    },
+    {
+      label: "B系",
+      members: [
+        ["parentB", "親"],
+        ["parentBGrand1", "祖1"],
+        ["parentBGrand2", "祖2"]
+      ]
+    }
+  ];
+
+  const ownerLabels = {
+    parentA: "親A",
+    parentAGrand1: "A祖1",
+    parentAGrand2: "A祖2",
+    parentB: "親B",
+    parentBGrand1: "B祖1",
+    parentBGrand2: "B祖2"
+  };
+
+  const summaryByMember =
+    new Map(
+      model.memberSummary.map(
+        item => [item.memberId, item]
+      )
+    );
+
   const lines = [
     "## 【因子チェック結果】",
     `* プリセット：${presetName || "カスタム設定"}`,
     "",
-    "## ■ 判定サマリー"
+    "### ■ 判定サマリー"
   ];
 
-  model.memberSummary
-    .filter(item => item.registered)
-    .forEach(item => {
+  familyDefinitions.forEach(family => {
+    const registered = family.members
+      .map(([memberId, shortLabel]) => ({
+        item: summaryByMember.get(memberId),
+        shortLabel
+      }))
+      .filter(entry => entry.item?.registered);
+
+    if (registered.length > 0) {
       lines.push(
-        `* ${memberLabels[item.memberId]}：${RANKS.map(rank => `${rank} ${item.counts[rank]}`).join(" / ")}`
+        `* ${family.label}｜${registered.map(entry =>
+          `${entry.shortLabel} \`${RANKS.map(rank => `${rank}${entry.item.counts[rank]}`).join(" ")}\``
+        ).join(" / ")}`
       );
-    });
+    }
+  });
 
-  lines.push("", "## ■ Sスキル");
+  lines.push(
+    "",
+    "### ■ Sスキル（面数｜所持先）"
+  );
 
-  if (model.ranks.S.length === 0) {
-    lines.push("* Sスキルは登録されていません");
+  const ownedSkills =
+    model.ranks.S.filter(
+      skill => skill.ownedCount > 0
+    );
+
+  if (ownedSkills.length === 0) {
+    lines.push("* 所持しているSスキルはありません");
   } else {
-    model.ranks.S.forEach(skill => {
-      lines.push(
-        `* **${skill.skillName}：${skill.ownedCount}/${model.registeredMemberCount}面**`
-      );
-
+    ownedSkills.forEach(skill => {
       const owners = model.registeredMemberIds
         .filter(memberId => skill.memberValues[memberId])
         .map(memberId =>
-          `${memberLabels[memberId]} ${formatStars(skill.memberValues[memberId].stars)}`
+          `${ownerLabels[memberId] || memberLabels[memberId]} ${formatStars(skill.memberValues[memberId].stars)}`
         );
 
       lines.push(
-        `  └ ${owners.length > 0 ? owners.join(" / ") : "所持なし"}`
+        `* **${skill.skillName}** \`${skill.ownedCount}/${model.registeredMemberCount}\`｜${owners.join(" / ")}`
       );
     });
   }
