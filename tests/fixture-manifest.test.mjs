@@ -20,7 +20,7 @@ const actualNames = (
   await Promise.all(
     ["supported", "unsupported"].map(async category =>
       (await readdir(path.join(fixtureRoot, category)))
-        .filter(name => name.endsWith(".png"))
+        .filter(name => /\.(?:png|jpe?g)$/i.test(name))
     )
   )
 ).flat().sort();
@@ -31,7 +31,9 @@ for (const [name, fixture] of Object.entries(manifest.fixtures)) {
   assert.ok(["supported", "unsupported"].includes(fixture.category));
   assert.equal(typeof fixture.description, "string");
   assert.equal(typeof fixture.expected.supported, "boolean");
-  assert.equal(typeof fixture.expected.layout, "string");
+  if ("layout" in fixture.expected) {
+    assert.equal(typeof fixture.expected.layout, "string");
+  }
 
   const filePath = path.join(
     fixtureRoot,
@@ -49,5 +51,5 @@ for (const [name, fixture] of Object.entries(manifest.fixtures)) {
   assert.equal(fixture.ready, true, `${name} must use a real fixture`);
 }
 
-assert.equal(expectedNames.length, 6);
-console.log("fixture manifest tests: OK (6 real images)");
+assert.equal(expectedNames.length, 7);
+console.log("fixture manifest tests: OK (7 real images)");

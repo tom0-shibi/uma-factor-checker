@@ -26,10 +26,20 @@ const RED_FACTOR_NAMES = [
 
 const FACTOR_METADATA_MATCH_CONFIG = {
   minimumSimilarity: 0.75,
-  minimumMargin: 0.20
+  minimumMargin: 0.20,
+  containedCandidate: {
+    minimumCandidateLength: 2,
+    maximumExtraCharacters: 1,
+    minimumSimilarity: 2 / 3,
+    minimumConfidence: 40
+  }
 };
 
-function matchFactorMetadataName(ocrText, candidates) {
+function matchFactorMetadataName(
+  ocrText,
+  candidates,
+  options = {}
+) {
   const normalizedOcr = normalizeSkillText(ocrText);
 
   if (!normalizedOcr) {
@@ -65,11 +75,35 @@ function matchFactorMetadataName(ocrText, candidates) {
     candidates
   );
 
-  const confirmed =
+  const normalizedCandidate = normalizeSkillText(
+    match.candidate ?? ""
+  );
+  const extraCharacterCount =
+    normalizedOcr.length - normalizedCandidate.length;
+  const containedConfig =
+    FACTOR_METADATA_MATCH_CONFIG.containedCandidate;
+  const isContainedCandidate =
+    normalizedCandidate.length >=
+      containedConfig.minimumCandidateLength &&
+    normalizedOcr.includes(normalizedCandidate) &&
+    extraCharacterCount >= 0 &&
+    extraCharacterCount <=
+      containedConfig.maximumExtraCharacters &&
     match.similarity >=
-      FACTOR_METADATA_MATCH_CONFIG.minimumSimilarity &&
+      containedConfig.minimumSimilarity &&
     match.similarityMargin >=
-      FACTOR_METADATA_MATCH_CONFIG.minimumMargin;
+      FACTOR_METADATA_MATCH_CONFIG.minimumMargin &&
+    (options.confidence ?? 0) >=
+      containedConfig.minimumConfidence;
+
+  const confirmed =
+    (
+      match.similarity >=
+        FACTOR_METADATA_MATCH_CONFIG.minimumSimilarity &&
+      match.similarityMargin >=
+        FACTOR_METADATA_MATCH_CONFIG.minimumMargin
+    ) ||
+    isContainedCandidate;
 
   return {
     status: confirmed
@@ -90,16 +124,24 @@ function createFactorMetadata({
   greenCard = null
 }) {
   const blueMatch = blueRecognition
-    ? matchFactorMetadataName(
+      ? matchFactorMetadataName(
         blueRecognition.ocrText,
-        BLUE_FACTOR_NAMES
+        BLUE_FACTOR_NAMES,
+        {
+          confidence:
+            blueRecognition.ocrConfidence
+        }
       )
     : null;
 
   const redMatch = redRecognition
-    ? matchFactorMetadataName(
+      ? matchFactorMetadataName(
         redRecognition.ocrText,
-        RED_FACTOR_NAMES
+        RED_FACTOR_NAMES,
+        {
+          confidence:
+            redRecognition.ocrConfidence
+        }
       )
     : null;
 

@@ -63,22 +63,24 @@ function validateResult(result, fixture) {
   };
 
   compare("supported", result.supported, expected.supported);
-  compare("layout", result.layout, expected.layout);
+  if ("layout" in expected) {
+    compare("layout", result.layout, expected.layout);
+  }
   if (expected.cards) {
     compare("leftCount", result.leftCount, expected.cards.leftCount);
     compare("rightCount", result.rightCount, expected.cards.rightCount);
   }
   if (expected.factorInfo) {
-    for (const type of ["blue", "red", "green"]) {
+    for (const [type, factorInfo] of Object.entries(expected.factorInfo)) {
       compare(
         `${type}.name`,
         result.factorMetadata?.[type]?.name ?? null,
-        expected.factorInfo[type].name
+        factorInfo.name
       );
       compare(
         `${type}.stars`,
         result.factorMetadata?.[type]?.stars ?? null,
-        expected.factorInfo[type].stars
+        factorInfo.stars
       );
     }
   }
@@ -143,9 +145,9 @@ async function run() {
 
     if (new URLSearchParams(location.search).has("full")) {
       const sequence = [
-        "factor-list-start-01.png",
-        "factor-list-continuation-01.png",
-        "factor-list-end-01.png"
+        "factor-list-start-01.jpg",
+        "factor-list-continuation-01.jpg",
+        "factor-list-end-01.jpg"
       ];
       requirements.S = [...TEMPORARY_SKILL_NAME_MASTER];
       members.parentA.images = sequence.map((name, index) => ({

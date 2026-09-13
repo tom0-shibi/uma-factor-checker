@@ -29,6 +29,46 @@ assert.equal(
   null
 );
 
+for (const ocrText of ["人追込", "追込人"]) {
+  const result = matchFactorMetadataName(
+    ocrText,
+    RED_FACTOR_NAMES,
+    { confidence: 45 }
+  );
+  assert.equal(result.status, "confirmed", ocrText);
+  assert.equal(result.canonicalName, "追込", ocrText);
+}
+
+assert.equal(
+  matchFactorMetadataName(
+    "人追込",
+    RED_FACTOR_NAMES,
+    { confidence: 39 }
+  ).canonicalName,
+  null,
+  "低confidenceでは包含一致を採用しない"
+);
+
+assert.equal(
+  matchFactorMetadataName(
+    "人人追込",
+    RED_FACTOR_NAMES,
+    { confidence: 90 }
+  ).canonicalName,
+  null,
+  "余分な文字が2文字以上なら採用しない"
+);
+
+assert.equal(
+  matchFactorMetadataName(
+    "人芝",
+    RED_FACTOR_NAMES,
+    { confidence: 90 }
+  ).canonicalName,
+  null,
+  "1文字候補へ包含一致を適用しない"
+);
+
 const metadata = createFactorMetadata({
   blueCard: { stars: 3 },
   blueRecognition: {

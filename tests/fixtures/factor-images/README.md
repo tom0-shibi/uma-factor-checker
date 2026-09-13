@@ -16,7 +16,7 @@
 - `ready: false`: placeholderです。Fixture runnerは画像解析を実行せずskipします。
 - `ready: true`: 実画像と正解データが準備済みです。Fixture runnerで解析結果との比較対象にできます。
 
-現在はsupported 4枚、unsupported 2枚の実画像6枚をPNG形式で登録済みです。
+現在はsupported 5枚、unsupported 2枚の実画像7枚を登録済みです。FixtureはJPGとPNGの混在を許可し、ユーザーが配置したファイルを変換せず、そのまま使用します。
 
 ## 重要ルール
 
@@ -28,6 +28,7 @@
 
 - `factor-list-start-01`、`factor-list-continuation-01`、`factor-list-end-01`は同一人物のスクロール前・途中・末尾です。
 - `factor-list-start-02`は別のsupported startパターンです。
+- `factor-metadata-red-chase-01.png`は赤因子「追込」のOCR誤読回帰ケースです。
 - `composite-type-a-01`、`unrelated-01`はunsupportedです。
 - ブラウザ画素解析は`tests/fixture-runner.html`で実行できます。
 
