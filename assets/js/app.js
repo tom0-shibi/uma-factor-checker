@@ -355,6 +355,11 @@ if (analyzeImagesButton) {
                 `greenCardFound=${Boolean(factorMetadata.green)}`,
                 `greenCanonical=${factorMetadata.green?.name ?? "-"}`,
                 `greenStars=${factorMetadata.green?.stars ?? "-"}`,
+                "",
+                "【因子情報】",
+                `青：${factorMetadata.blue?.name ?? "名称未確定"} ${"★".repeat(factorMetadata.blue?.stars ?? 0) || "-"}`,
+                `赤：${factorMetadata.red?.name ?? "名称未確定"} ${"★".repeat(factorMetadata.red?.stars ?? 0) || "-"}`,
+                `緑：${factorMetadata.green?.name ?? "-"} ${"★".repeat(factorMetadata.green?.stars ?? 0) || "-"}`,
                 ""
               );
 

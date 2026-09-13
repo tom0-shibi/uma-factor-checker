@@ -17,6 +17,12 @@ import {
   aggregateMemberSkills,
   buildMemberFactorInfo
 } from "../assets/js/result/result-model.js";
+import {
+  stitchMemberImages
+} from "../assets/js/export/image-stitcher.js";
+import {
+  createFactorGroupImage
+} from "../assets/js/export/factor-image-export.js";
 
 async function drawFixture(category, name) {
   const image = document.createElement("img");
@@ -28,6 +34,13 @@ async function drawFixture(category, name) {
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   ctx.drawImage(image, 0, 0);
   return { canvas, ctx, width: canvas.width, height: canvas.height };
+}
+
+async function loadFixtureFile(category, name) {
+  const response = await fetch(
+    `./fixtures/factor-images/${category}/${name}?v=stitch-fixtures-01`
+  );
+  return new File([await response.arrayBuffer()], name);
 }
 
 function summarizeAnalysis(name, analysis) {
@@ -200,6 +213,88 @@ async function run() {
         factorInfo: buildMemberFactorInfo().parentA
       };
     }
+
+    if (new URLSearchParams(location.search).has("stitch")) {
+      const sequence = [
+        "factor-list-start-01.jpg",
+        "factor-list-continuation-01.jpg",
+        "factor-list-end-01.jpg"
+      ];
+      const imageItems = await Promise.all(
+        sequence.map(async (name, index) => ({
+          id: `stitch-${index + 1}`,
+          file: await loadFixtureFile("supported", name)
+        }))
+      );
+      const analysisResults = sequence.map((name, index) => ({
+        imageId: imageItems[index].id,
+        imageIndex: index,
+        analysis: analyses.get(name)
+      }));
+      const stitched = await stitchMemberImages(
+        imageItems,
+        analysisResults
+      );
+      window.stitchResult = {
+        width: stitched.canvas.width,
+        height: stitched.canvas.height,
+        sourceImageCount: stitched.sourceImageCount,
+        boundaries: stitched.boundaries,
+        warning: stitched.warning
+      };
+      window.stitchPreview = stitched.canvas.toDataURL("image/png");
+
+      if (new URLSearchParams(location.search).has("group")) {
+        const singleImageFixtures = [
+          ["grandA1", "factor-list-start-02.jpg"],
+          ["grandA2", "factor-metadata-red-chase-01.png"]
+        ];
+        members.parentA.images = imageItems;
+        members.parentA.analysisResults = analysisResults;
+        for (const [memberId, name] of singleImageFixtures) {
+          const imageItem = {
+            id: `group-${memberId}`,
+            file: await loadFixtureFile("supported", name)
+          };
+          members[memberId].images = [imageItem];
+          members[memberId].analysisResults = [{
+            imageId: imageItem.id,
+            imageIndex: 0,
+            analysis: analyses.get(name)
+          }];
+        }
+        const group = await createFactorGroupImage("parentA");
+        window.groupResult = {
+          width: group.canvas.width,
+          height: group.canvas.height,
+          columns: group.columns.map(column => column.memberId),
+          warning: group.warning
+        };
+        const groupPreview = document.createElement("img");
+        groupPreview.id = "group-preview";
+        groupPreview.alt = "親Aグループ生成結果";
+        groupPreview.src = group.canvas.toDataURL("image/png");
+        groupPreview.style.display = "block";
+        groupPreview.style.width = "100%";
+        groupPreview.style.marginTop = "16px";
+        document.body.appendChild(groupPreview);
+
+        const sampleDownload = document.createElement("a");
+        sampleDownload.href = groupPreview.src;
+        sampleDownload.download = "factor-image-export-sample.png";
+        sampleDownload.textContent = "生成サンプルを保存";
+        document.body.appendChild(sampleDownload);
+      }
+
+      const preview = document.createElement("img");
+      preview.id = "stitch-preview";
+      preview.alt = "結合結果プレビュー";
+      preview.src = window.stitchPreview;
+      preview.style.display = "block";
+      preview.style.width = "515px";
+      preview.style.marginTop = "16px";
+      document.body.appendChild(preview);
+    }
   } finally {
     await worker.terminate();
   }
@@ -219,6 +314,8 @@ async function run() {
     JSON.stringify({
       passed: window.fixturePassed,
       fullSequence: window.fullSequenceResult ?? null,
+      stitch: window.stitchResult ?? null,
+      group: window.groupResult ?? null,
       results
     }, null, 2);
 }
