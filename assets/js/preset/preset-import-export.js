@@ -31,8 +31,8 @@ function parsePresetImport(text) {
   return data.presets;
 }
 
-function exportUserPresets(presets) {
-  const data = {
+function createPresetExportData(presets) {
+  return {
     format: PRESET_EXPORT_FORMAT,
     version: PRESET_EXPORT_VERSION,
     presets: presets.map(preset => ({
@@ -40,6 +40,10 @@ function exportUserPresets(presets) {
       skills: preset.skills
     }))
   };
+}
+
+function exportUserPresets(presets) {
+  const data = createPresetExportData(presets);
   const blob = new Blob(
     [JSON.stringify(data, null, 2)],
     { type: "application/json" }
@@ -47,7 +51,7 @@ function exportUserPresets(presets) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "uma-factor-checker-presets.json";
+  link.download = "uma-factor-checker-preset.json";
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -60,4 +64,9 @@ function createTsv(skills) {
   return lines.join("\n");
 }
 
-export { parsePresetImport, exportUserPresets, createTsv };
+export {
+  parsePresetImport,
+  createPresetExportData,
+  exportUserPresets,
+  createTsv
+};

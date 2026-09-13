@@ -473,7 +473,7 @@ function showAnalysisProgress(
   );
 
   updateAnalysisProgressDisplay(
-    "OCRを準備しています...",
+    "画像解析を準備しています...",
     `全体 0 / ${totalImages}画像`
   );
 }

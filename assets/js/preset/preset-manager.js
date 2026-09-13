@@ -42,6 +42,10 @@ function getRequirementRankLabel(rank) {
   return getSelectedPreset()?.labels?.[rank] || DEFAULT_LABELS[rank];
 }
 
+function getSelectedPresetName() {
+  return getSelectedPreset()?.name || "カスタム設定";
+}
+
 function readTextareaSkills() {
   return Object.fromEntries(RANKS.map(rank => {
     const value = document.getElementById(
@@ -210,6 +214,8 @@ function renderPresetOptions() {
   deleteButton.textContent = "削除";
   document.getElementById("preset-reset").disabled =
     getSelectedPreset()?.readonly === true;
+  document.getElementById("preset-export").disabled =
+    readonly;
 }
 
 function selectPreset(presetId) {
@@ -333,8 +339,13 @@ function initializePresetManager() {
   document.getElementById("preset-export")?.addEventListener(
     "click",
     () => {
-      exportUserPresets(userPresets);
-      setStatus("ユーザープリセットをエクスポートしました。");
+      const preset = getSelectedPreset();
+      if (!preset || preset.readonly) {
+        setStatus("カスタムプリセットを選択してください。", true);
+        return;
+      }
+      exportUserPresets([preset]);
+      setStatus(`${preset.name}をエクスポートしました。`);
     }
   );
   document.getElementById("preset-import")?.addEventListener(
@@ -393,4 +404,8 @@ function initializePresetManager() {
   );
 }
 
-export { initializePresetManager, getRequirementRankLabel };
+export {
+  initializePresetManager,
+  getRequirementRankLabel,
+  getSelectedPresetName
+};

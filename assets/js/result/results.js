@@ -1,6 +1,9 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
 import { ensureResultSummaryContainer } from "../ui/ui.js";
-import { getRequirementRankLabel } from "../preset/preset-manager.js";
+import {
+  getRequirementRankLabel,
+  getSelectedPresetName
+} from "../preset/preset-manager.js";
 import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js";
 import {
   RANKS,
@@ -10,6 +13,12 @@ import {
   ignoreRecognition,
   clearManualCorrection
 } from "./result-model.js";
+import {
+  buildSpreadsheetExportData,
+  formatSpreadsheetTsv,
+  formatDiscordSummary,
+  getDiscordLengthWarning
+} from "./result-export.js";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -973,6 +982,132 @@ function getStarToneClass(stars) {
     : "no-stars";
 }
 
+function renderResultShareActions(container, model) {
+  const section =
+    document.createElement("section");
+
+  section.className =
+    "result-share-actions";
+
+  const heading =
+    document.createElement("h3");
+
+  heading.textContent =
+    "結果を共有";
+
+  const actions =
+    document.createElement("div");
+
+  actions.className =
+    "result-share-buttons";
+
+  const status =
+    document.createElement("p");
+
+  status.className =
+    "result-share-status";
+
+  status.setAttribute(
+    "aria-live",
+    "polite"
+  );
+
+  const memberLabels =
+    Object.fromEntries(
+      MEMBER_ORDER.map(memberId => [
+        memberId,
+        members[memberId].label
+      ])
+    );
+
+  const copyText = async (
+    text,
+    successMessage,
+    warningMessage = ""
+  ) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      status.classList.remove("is-error");
+      status.textContent = warningMessage
+        ? `${successMessage} ${warningMessage}`
+        : successMessage;
+    } catch (error) {
+      console.error("共有データをコピーできませんでした", error);
+      status.classList.add("is-error");
+      status.textContent =
+        "コピーできませんでした。ブラウザの権限を確認してください。";
+    }
+  };
+
+  const spreadsheetButton =
+    document.createElement("button");
+
+  spreadsheetButton.type = "button";
+  spreadsheetButton.className =
+    "secondary-button";
+  spreadsheetButton.textContent =
+    "スプレッドシート用にコピー";
+
+  spreadsheetButton.addEventListener(
+    "click",
+    () => {
+      const data =
+        buildSpreadsheetExportData(
+          model,
+          memberLabels
+        );
+
+      return copyText(
+        formatSpreadsheetTsv(data),
+        "スプレッドシート用データをコピーしました。"
+      );
+    }
+  );
+
+  const discordButton =
+    document.createElement("button");
+
+  discordButton.type = "button";
+  discordButton.className =
+    "secondary-button";
+  discordButton.textContent =
+    "Discord用サマリーをコピー";
+
+  discordButton.addEventListener(
+    "click",
+    () => {
+      const text =
+        formatDiscordSummary(
+          model,
+          memberLabels,
+          getSelectedPresetName()
+        );
+
+      const warning =
+        getDiscordLengthWarning(text);
+
+      return copyText(
+        text,
+        "Discord用サマリーをコピーしました。",
+        warning
+      );
+    }
+  );
+
+  actions.append(
+    spreadsheetButton,
+    discordButton
+  );
+
+  section.append(
+    heading,
+    actions,
+    status
+  );
+
+  container.appendChild(section);
+}
+
 function appendResultTableColumns(table) {
   const colgroup = document.createElement("colgroup");
   const columnClasses = [
@@ -1072,7 +1207,7 @@ function renderLegacyReviewItems(container) {
   if (items.length === 0) {
     const empty = document.createElement("p");
     empty.className = "result-review-empty";
-    empty.textContent = "確認が必要なOCR結果はありません。";
+    empty.textContent = "確認が必要な読み取り結果はありません。";
     section.appendChild(empty);
     container.appendChild(section);
     return;
@@ -1095,8 +1230,8 @@ function renderLegacyReviewItems(container) {
     const details = document.createElement("p");
     details.className = "result-review-details";
     details.textContent = item.original.ocrText
-      ? `OCR: ${item.original.ocrText} / ${formatStars(card.stars)}`
-      : `OCR: 取得できませんでした / ${formatStars(card.stars)}`;
+      ? `読み取り結果: ${item.original.ocrText} / ${formatStars(card.stars)}`
+      : `読み取り結果: 取得できませんでした / ${formatStars(card.stars)}`;
     article.appendChild(details);
 
     if (card.manualCorrection) {
@@ -1236,7 +1371,7 @@ function createReviewArticle(item, candidates) {
   const recognition = document.createElement("div");
   recognition.className = "result-review-recognition";
   const ocr = document.createElement("p");
-  ocr.innerHTML = `<strong>OCR:</strong> ${escapeHtml(
+  ocr.innerHTML = `<strong>読み取り結果:</strong> ${escapeHtml(
     item.original.ocrText || "認識できませんでした"
   )}`;
   const stars = document.createElement("p");
@@ -1392,7 +1527,7 @@ function renderReviewItems(container) {
   const guide = document.createElement("p");
   guide.className = "result-review-guide";
   guide.textContent =
-    "OCR結果が不確かな項目です。カード画像を確認して正しいスキルを選択してください。候補に正解がない場合や、要件に関係のない因子・レース因子・シナリオ因子は「無視」を選択してください。";
+    "画像からスキル名を確定できなかった項目です。候補から選択するか、別のスキルを指定してください。要件に関係のない因子・レース因子・シナリオ因子は「無視」を選択してください。";
   section.appendChild(guide);
 
   const candidates = getCanonicalSkillCandidates();
@@ -1521,10 +1656,15 @@ function renderOverallSkillSummary() {
     "factor-result-note";
 
   note.textContent =
-    "OCR・fallback・手動訂正で確定した要件スキルを集計しています。同じ人物の複数画像に同じスキルが写っている場合は1件として扱い、最も高い★数を採用します。";
+    "画像解析と手動訂正で確定した要件スキルを集計しています。同じ人物の複数画像に同じスキルが写っている場合は1件として扱い、最も高い★数を採用します。";
 
   container.appendChild(
     note
+  );
+
+  renderResultShareActions(
+    container,
+    model
   );
 
   renderMemberSummary(container, model);
@@ -1743,7 +1883,7 @@ function renderOverallSkillSummary() {
                     : found.matchStatus === "exact"
                       ? "完全一致"
                       : "類似一致"
-                } / OCR: ${found.ocrText || "未認識"}`;
+                } / 読み取り結果: ${found.ocrText || "未認識"}`;
             } else {
               td.className =
                 "factor-result-missing";
