@@ -50,13 +50,24 @@ const model = {
   ),
   registeredMemberCount: 5,
   ranks: {
-    S: [{
-      rank: "S",
-      skillName: "左回り○",
-      memberValues,
-      ownedCount: 2,
-      totalStars: 3
-    }],
+    S: [
+      {
+        rank: "S",
+        skillName: "左回り○",
+        memberValues,
+        ownedCount: 2,
+        totalStars: 3
+      },
+      {
+        rank: "S",
+        skillName: "シンパシー",
+        memberValues: Object.fromEntries(
+          Object.keys(memberLabels).map(id => [id, null])
+        ),
+        ownedCount: 0,
+        totalStars: 0
+      }
+    ],
     A: [{
       rank: "A",
       skillName: "風切り",
@@ -100,11 +111,15 @@ const discord = formatDiscordSummary(
   "検証用"
 );
 assert.match(discord, /\* プリセット：検証用/);
-assert.match(discord, /\* A系｜親 `S2 A0 B0 C0` \/ 祖1 `S0 A0 B0 C0`/);
-assert.match(discord, /\* B系｜親 `S0 A0 B0 C0`/);
+assert.match(discord, /\* A系｜親 `S: 2 \/ A: 0 \/ B: 0 \/ C: 0` \/ 祖1 `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
+assert.match(discord, /\* B系｜親 `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
 assert.doesNotMatch(discord, /A系[^\n]*祖2/);
 assert.match(discord, /\* \*\*左回り○\*\* `2\/5`｜親A ★★ \/ A祖1 ★/);
-assert.doesNotMatch(discord, /\* \*\*風切り\*\*/);
+assert.match(discord, /\* \*\*シンパシー\*\* `0\/5`/);
+assert.ok(
+  discord.indexOf("**左回り○**") <
+  discord.indexOf("**シンパシー**")
+);
 assert.equal(
   discord.split("\n").filter(line => line.startsWith("* A系｜")).length,
   1
@@ -161,13 +176,13 @@ const parentAOnlyDiscord = formatDiscordSummary(
   memberLabels,
   "検証用"
 );
-assert.match(parentAOnlyDiscord, /\* A系｜親 `S2 A0 B0 C0`/);
+assert.match(parentAOnlyDiscord, /\* A系｜親 `S: 2 \/ A: 0 \/ B: 0 \/ C: 0`/);
 assert.doesNotMatch(parentAOnlyDiscord, /\* B系｜/);
 assert.match(parentAOnlyDiscord, /\* \*\*左回り○\*\* `1\/1`｜親A ★★/);
 assert.equal(getDiscordLengthWarning("a".repeat(2000)), "");
 assert.equal(
   getDiscordLengthWarning("a".repeat(2001)),
-  "Discordの1メッセージ上限を超えています。"
+  "Discordの1メッセージ上限（2000文字）を超えています。Sスキル数を減らすか、内容を分けて投稿してください。"
 );
 
 const presetA = {

@@ -123,7 +123,8 @@ assert.deepEqual(
   ),
   {
     supported: true,
-    reason: null
+    reason: "anchor-and-stable-factor-grid",
+    classificationLayout: "factor-list-start"
   }
 );
 
@@ -133,7 +134,8 @@ assert.deepEqual(
   ),
   {
     supported: true,
-    reason: null
+    reason: "anchor-and-stable-factor-grid",
+    classificationLayout: "factor-list-start"
   }
 );
 
@@ -148,6 +150,42 @@ assert.deepEqual(
   {
     supported: false,
     reason: "unsupported-layout"
+  }
+);
+
+assert.deepEqual(
+  validateSupportedFactorList(
+    createValidationInput({
+      factorAnchorFound: false,
+      layoutType: "continuation"
+    })
+  ),
+  {
+    supported: true,
+    reason: "stable-factor-grid",
+    classificationLayout: "factor-list-continuation"
+  }
+);
+
+assert.deepEqual(
+  validateSupportedFactorList(
+    createValidationInput({
+      factorAnchorFound: false,
+      layoutType: "continuation",
+      rowResult: {
+        pitch: 63,
+        rows: [
+          { leftCard: {}, rightCard: {} },
+          { leftCard: {}, rightCard: {} }
+        ]
+      },
+      leftCount: 2,
+      rightCount: 2
+    })
+  ),
+  {
+    supported: false,
+    reason: "no-factor-anchor"
   }
 );
 

@@ -281,10 +281,11 @@ if (analyzeImagesButton) {
                 `member=${memberId}`,
                 `imageIndex=${i + 1}`,
                 `supported=${analysis.supported === true}`,
-                `layout=${analysis.layoutType}`,
-                `reason=${analysis.unsupportedReason ?? "-"}`,
+                `layout=${analysis.classificationLayout ?? analysis.layoutType}`,
+                `reason=${analysis.supportReason ?? analysis.unsupportedReason ?? "-"}`,
                 `left=${detectedLeftCount}`,
                 `right=${detectedRightCount}`,
+                `anchorFound=${analysis.factorAnchorFound}`,
                 `anchorY=${analysis.factorAnchorY ?? "-"}`,
                 `addedToUnsupportedImages=${analysis.supported !== true}`,
                 ""

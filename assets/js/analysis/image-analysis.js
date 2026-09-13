@@ -1947,14 +1947,10 @@ function validateSupportedFactorList({
   leftCount,
   rightCount
 }) {
-  if (!factorAnchorFound) {
-    return {
-      supported: false,
-      reason: "no-factor-anchor"
-    };
-  }
-
-  if (layoutType !== "factor-list") {
+  if (
+    layoutType !== "factor-list" &&
+    layoutType !== "continuation"
+  ) {
     return {
       supported: false,
       reason: "unsupported-layout"
@@ -1972,15 +1968,12 @@ function validateSupportedFactorList({
     ).length;
 
   if (
-    !rowResult?.pitch ||
-    rows.length < 5 ||
-    pairedRows < 4 ||
-    leftCount < 5 ||
-    rightCount < 5
+    !factorAnchorFound &&
+    rows.length === 0
   ) {
     return {
       supported: false,
-      reason: "insufficient-factor-grid"
+      reason: "no-factor-anchor"
     };
   }
 
@@ -2002,9 +1995,62 @@ function validateSupportedFactorList({
     };
   }
 
+  const pitchToHeightRatio =
+    rowResult?.pitch /
+    columnGeometry.cardHeight;
+
+  if (
+    !rowResult?.pitch ||
+    !Number.isFinite(pitchToHeightRatio) ||
+    pitchToHeightRatio < 0.85 ||
+    pitchToHeightRatio > 1.55
+  ) {
+    return {
+      supported: false,
+      reason: "insufficient-factor-grid"
+    };
+  }
+
+  if (factorAnchorFound) {
+    if (
+      layoutType !== "factor-list" ||
+      rows.length < 5 ||
+      pairedRows < 4 ||
+      leftCount < 5 ||
+      rightCount < 5
+    ) {
+      return {
+        supported: false,
+        reason: "insufficient-factor-grid"
+      };
+    }
+
+    return {
+      supported: true,
+      reason: "anchor-and-stable-factor-grid",
+      classificationLayout:
+        "factor-list-start"
+    };
+  }
+
+  if (
+    layoutType !== "continuation" ||
+    rows.length < 6 ||
+    pairedRows < 5 ||
+    leftCount < 6 ||
+    rightCount < 6
+  ) {
+    return {
+      supported: false,
+      reason: "no-factor-anchor"
+    };
+  }
+
   return {
     supported: true,
-    reason: null
+    reason: "stable-factor-grid",
+    classificationLayout:
+      "factor-list-continuation"
   };
 }
 
@@ -2102,6 +2148,8 @@ function analyzeFactorImage(
       leftCards: [],
       rightCards: [],
       supported: false,
+      classificationLayout:
+        "unknown",
       unsupportedLayout: true,
       unsupportedReason:
         "unsupported-layout",
@@ -2187,6 +2235,8 @@ function analyzeFactorImage(
       leftCards: [],
       rightCards: [],
       supported: false,
+      classificationLayout:
+        "unknown",
       unsupportedLayout: true,
       unsupportedReason:
         header
@@ -2304,10 +2354,20 @@ function analyzeFactorImage(
     rightCards,
     supported:
       supportValidation.supported,
+    classificationLayout:
+      supportValidation
+        .classificationLayout ??
+      "unknown",
+    supportReason:
+      supportValidation.supported
+        ? supportValidation.reason
+        : null,
     unsupportedLayout:
       !supportValidation.supported,
     unsupportedReason:
-      supportValidation.reason
+      supportValidation.supported
+        ? null
+        : supportValidation.reason
   };
 }
 

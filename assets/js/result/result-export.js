@@ -182,7 +182,7 @@ function formatDiscordSummary(model, memberLabels, presetName) {
     if (registered.length > 0) {
       lines.push(
         `* ${family.label}｜${registered.map(entry =>
-          `${entry.shortLabel} \`${RANKS.map(rank => `${rank}${entry.item.counts[rank]}`).join(" ")}\``
+          `${entry.shortLabel} \`${RANKS.map(rank => `${rank}: ${entry.item.counts[rank]}`).join(" / ")}\``
         ).join(" / ")}`
       );
     }
@@ -193,23 +193,22 @@ function formatDiscordSummary(model, memberLabels, presetName) {
     "### ■ Sスキル（面数｜所持先）"
   );
 
-  const ownedSkills =
-    model.ranks.S.filter(
-      skill => skill.ownedCount > 0
-    );
-
-  if (ownedSkills.length === 0) {
-    lines.push("* 所持しているSスキルはありません");
+  if (model.ranks.S.length === 0) {
+    lines.push("* Sスキルは登録されていません");
   } else {
-    ownedSkills.forEach(skill => {
+    model.ranks.S.forEach(skill => {
       const owners = model.registeredMemberIds
         .filter(memberId => skill.memberValues[memberId])
         .map(memberId =>
           `${ownerLabels[memberId] || memberLabels[memberId]} ${formatStars(skill.memberValues[memberId].stars)}`
         );
 
+      const ownerText = owners.length > 0
+        ? `｜${owners.join(" / ")}`
+        : "";
+
       lines.push(
-        `* **${skill.skillName}** \`${skill.ownedCount}/${model.registeredMemberCount}\`｜${owners.join(" / ")}`
+        `* **${skill.skillName}** \`${skill.ownedCount}/${model.registeredMemberCount}\`${ownerText}`
       );
     });
   }
@@ -219,7 +218,7 @@ function formatDiscordSummary(model, memberLabels, presetName) {
 
 function getDiscordLengthWarning(text) {
   return text.length > 2000
-    ? "Discordの1メッセージ上限を超えています。"
+    ? "Discordの1メッセージ上限（2000文字）を超えています。Sスキル数を減らすか、内容を分けて投稿してください。"
     : "";
 }
 
