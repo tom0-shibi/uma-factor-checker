@@ -46,6 +46,10 @@ function getSelectedPresetName() {
   return getSelectedPreset()?.name || "カスタム設定";
 }
 
+function getSelectedPresetNameOrEmpty() {
+  return getSelectedPreset()?.name || "";
+}
+
 function readTextareaSkills() {
   return Object.fromEntries(RANKS.map(rank => {
     const value = document.getElementById(
@@ -407,5 +411,6 @@ function initializePresetManager() {
 export {
   initializePresetManager,
   getRequirementRankLabel,
-  getSelectedPresetName
+  getSelectedPresetName,
+  getSelectedPresetNameOrEmpty
 };

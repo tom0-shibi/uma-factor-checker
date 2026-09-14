@@ -2,7 +2,8 @@ import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from ".
 import { ensureResultSummaryContainer } from "../ui/ui.js";
 import {
   getRequirementRankLabel,
-  getSelectedPresetName
+  getSelectedPresetName,
+  getSelectedPresetNameOrEmpty
 } from "../preset/preset-manager.js";
 import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js";
 import {
@@ -22,6 +23,11 @@ import {
 import {
   appendFactorImageExportButtons
 } from "../export/factor-image-export.js";
+import {
+  formatXShareText,
+  countXShareCharacters,
+  getXShareLengthWarning
+} from "../export/x-share.js";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -1097,9 +1103,28 @@ function renderResultShareActions(container, model) {
     }
   );
 
+  const xText = formatXShareText(
+    model,
+    getSelectedPresetNameOrEmpty()
+  );
+  const xWarning = getXShareLengthWarning(xText);
+  const xButton = document.createElement("button");
+  xButton.type = "button";
+  xButton.className = "secondary-button";
+  xButton.textContent = "X用テキストをコピー";
+  xButton.addEventListener(
+    "click",
+    () => copyText(
+      xText,
+      "X用テキストをコピーしました。",
+      xWarning
+    )
+  );
+
   actions.append(
     spreadsheetButton,
-    discordButton
+    discordButton,
+    xButton
   );
 
   appendFactorImageExportButtons(
@@ -1107,9 +1132,32 @@ function renderResultShareActions(container, model) {
     status
   );
 
+  const xPreview = document.createElement("details");
+  xPreview.className = "x-share-preview";
+  const xPreviewSummary = document.createElement("summary");
+  xPreviewSummary.textContent = "X投稿プレビュー";
+  const xPreviewText = document.createElement("pre");
+  xPreviewText.textContent = xText;
+  const xCharacterCount = document.createElement("p");
+  xCharacterCount.className = "x-share-character-count";
+  xCharacterCount.textContent =
+    `概算文字数: ${countXShareCharacters(xText)}`;
+  xPreview.append(
+    xPreviewSummary,
+    xPreviewText,
+    xCharacterCount
+  );
+  if (xWarning) {
+    const warning = document.createElement("p");
+    warning.className = "x-share-warning";
+    warning.textContent = xWarning;
+    xPreview.appendChild(warning);
+  }
+
   section.append(
     heading,
     actions,
+    xPreview,
     status
   );
 

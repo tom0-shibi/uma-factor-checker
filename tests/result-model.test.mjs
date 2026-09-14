@@ -12,6 +12,9 @@ import {
   buildOverallSkillSummary,
   getReviewItems
 } from "../assets/js/result/result-model.js";
+import {
+  formatXShareText
+} from "../assets/js/export/x-share.js";
 
 function createCard(overrides = {}) {
   return {
@@ -124,6 +127,14 @@ assert.deepEqual(
 model = buildOverallSkillSummary();
 assert.equal(model.ranks.A[0].ownedCount, 1);
 assert.equal(model.ranks.A[0].totalStars, 2);
+requirements.S = ["連綿", "溌剌"];
+model = buildOverallSkillSummary();
+assert.match(
+  formatXShareText(model),
+  /溌剌 1\/1/,
+  "手動訂正後のeffective recognitionをX共有へ反映する"
+);
+requirements.S = ["連綿"];
 
 requirements.A = [];
 effective = getEffectiveRecognition(unrecognizedCard);
