@@ -1,12 +1,11 @@
 import {
   SHARE_SKILL_GROUPS
-} from "./share-skill-groups.js?v=20260915-share-skills-01";
+} from "./share-skill-groups.js?v=20260915-share-skills-03";
 
 const MAX_SHARE_SKILLS = 10;
 const RANKS = ["S", "A", "B", "C"];
 
 let shareSkills = [];
-let initialized = false;
 
 function normalizeName(name) {
   return String(name ?? "").trim();
@@ -49,17 +48,12 @@ function createUniqueShareSkills(names) {
   return [...unique.values()];
 }
 
-function initializeShareSkills(skillNames) {
-  if (!initialized) {
-    shareSkills = createUniqueShareSkills(skillNames);
-    initialized = true;
-  }
+function initializeShareSkills() {
   return getShareSkills();
 }
 
 function replaceShareSkillsFromS(skillNames) {
   shareSkills = createUniqueShareSkills(skillNames);
-  initialized = true;
   return getShareSkills();
 }
 
@@ -82,20 +76,17 @@ function addShareSkill(name) {
     return { added: false, reason: "maximum-share-skills" };
   }
   shareSkills.push(item);
-  initialized = true;
   return { added: true, reason: null };
 }
 
 function removeShareSkill(id) {
   const previousLength = shareSkills.length;
   shareSkills = shareSkills.filter(item => item.id !== id);
-  initialized = true;
   return shareSkills.length !== previousLength;
 }
 
 function clearShareSkills() {
   shareSkills = [];
-  initialized = true;
 }
 
 function getRequirementSkillCandidates(requirementMap) {

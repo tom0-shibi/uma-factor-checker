@@ -14,7 +14,7 @@ import {
   setManualCorrection,
   ignoreRecognition,
   clearManualCorrection
-} from "./result-model.js";
+} from "./result-model.js?v=20260915-share-skills-03";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -28,7 +28,7 @@ import {
   formatXShareText,
   countXShareCharacters,
   getXShareLengthWarning
-} from "../export/x-share.js?v=20260915-share-skills-01";
+} from "../export/x-share.js?v=20260915-share-skills-03";
 import {
   MAX_SHARE_SKILLS,
   initializeShareSkills,
@@ -40,7 +40,7 @@ import {
   getRequirementSkillCandidates,
   buildShareSkillSummaries,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260915-share-skills-01";
+} from "../export/share-skills.js?v=20260915-share-skills-03";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -1005,7 +1005,7 @@ function getStarToneClass(stars) {
 }
 
 function renderShareSkillSettings() {
-  initializeShareSkills(requirements.S);
+  initializeShareSkills();
   const selectedSkills = getShareSkills();
   const selectedIds = new Set(
     selectedSkills.map(skill => skill.id)
@@ -1162,7 +1162,7 @@ function renderResultShareActions(container, model) {
       ])
     );
 
-  initializeShareSkills(requirements.S);
+  initializeShareSkills();
   const selectedShareSkills = getShareSkills();
   const shareSkillSummaries = buildShareSkillSummaries(
     model,

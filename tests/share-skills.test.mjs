@@ -14,6 +14,7 @@ import {
 } from "../assets/js/export/share-skills.js";
 
 const sSkills = ["右回り○", "シンパシー", "品行方正", "連綿"];
+assert.deepEqual(initializeShareSkills(), [], "初期表示は空にする");
 clearShareSkills();
 replaceShareSkillsFromS(sSkills);
 assert.equal(getShareSkills().length, 4);
@@ -114,7 +115,7 @@ assert.equal(
 );
 
 replaceShareSkillsFromS(["初期S"]);
-initializeShareSkills(["変更後S"]);
+initializeShareSkills();
 assert.deepEqual(
   getShareSkills().map(item => item.canonicalName),
   ["初期S"],

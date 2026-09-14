@@ -125,29 +125,19 @@ function formatSpreadsheetTsv(data) {
 }
 
 function formatStars(stars) {
-  return "★".repeat(Math.max(0, Number(stars) || 0));
+  const count = Math.min(3, Math.max(0, Number(stars) || 0));
+  return count > 0
+    ? `${"★".repeat(count)}${"☆".repeat(3 - count)}`
+    : "";
+}
+
+function formatRankCountSummary(counts) {
+  return RANKS.map(
+    rank => `${rank}: \`${counts[rank]}\``
+  ).join(" / ");
 }
 
 function formatDiscordSummary(model, memberLabels, presetName) {
-  const familyDefinitions = [
-    {
-      label: "親A",
-      members: [
-        ["parentA", null],
-        ["grandA1", "祖1"],
-        ["grandA2", "祖2"]
-      ]
-    },
-    {
-      label: "親B",
-      members: [
-        ["parentB", null],
-        ["grandB1", "祖1"],
-        ["grandB2", "祖2"]
-      ]
-    }
-  ];
-
   const ownerLabels = {
     parentA: "親A",
     grandA1: "A祖1",
@@ -170,25 +160,29 @@ function formatDiscordSummary(model, memberLabels, presetName) {
     "",
     "### ■ 判定サマリー"
   ];
-
-  familyDefinitions.forEach(family => {
-    const registered = family.members
-      .map(([memberId, shortLabel]) => ({
-        item: summaryByMember.get(memberId),
-        shortLabel
-      }))
-      .filter(entry => entry.item?.registered);
-
-    if (registered.length > 0) {
-      lines.push(
-        `* ${registered.map(entry => {
-          const prefix = entry.shortLabel
-            ? entry.shortLabel
-            : family.label;
-          return `${prefix} \`${RANKS.map(rank => `${rank}: ${entry.item.counts[rank]}`).join(" / ")}\``;
-        }).join("｜")}`
-      );
-    }
+  const registeredSummaries = model.registeredMemberIds
+    .map(memberId => summaryByMember.get(memberId))
+    .filter(Boolean);
+  const totalCounts = Object.fromEntries(
+    RANKS.map(rank => [
+      rank,
+      registeredSummaries.reduce(
+        (total, item) => total + item.counts[rank],
+        0
+      )
+    ])
+  );
+  const totalJudgments = RANKS.reduce(
+    (total, rank) => total + totalCounts[rank],
+    0
+  );
+  lines.push(
+    `* **合計**｜${formatRankCountSummary(totalCounts)}｜判定件数: \`${totalJudgments}\``
+  );
+  registeredSummaries.forEach(item => {
+    lines.push(
+      `* ${ownerLabels[item.memberId] || memberLabels[item.memberId]}｜${formatRankCountSummary(item.counts)}`
+    );
   });
 
   lines.push(
@@ -235,7 +229,10 @@ function formatDiscordSummary(model, memberLabels, presetName) {
           .filter(([, value]) => value)
           .map(([label, value]) => {
             const factorName = value.name ?? "名称未確定";
-            return `${label}: ${factorName}${formatStars(value.stars)}`;
+            return [
+              `${label}: ${factorName}`,
+              formatStars(value.stars)
+            ].filter(Boolean).join(" ");
           });
 
         return `* ${ownerLabels[memberId] || memberLabels[memberId]}｜${values.join(" / ")}`;
@@ -262,6 +259,7 @@ function getDiscordLengthWarning(text) {
 export {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
+  formatStars,
   formatDiscordSummary,
   getDiscordLengthWarning,
   getSkillJudgment
