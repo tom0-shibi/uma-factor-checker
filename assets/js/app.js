@@ -1,7 +1,7 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
 import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js";
 import { createOcrWorker, runOcrForFactorMetadata, runOcrForWhiteCards } from "./ocr/ocr.js";
-import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js";
+import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260915-share-skills-03";
 import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js";
 import { initializePresetManager } from "./preset/preset-manager.js";
 import { initializeTheme } from "./ui/theme.js";

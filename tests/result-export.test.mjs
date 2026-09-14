@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
+  formatStars,
   formatDiscordSummary,
   getDiscordLengthWarning,
   getSkillJudgment
@@ -123,22 +124,24 @@ const discord = formatDiscordSummary(
   "検証用"
 );
 assert.match(discord, /\* プリセット：検証用/);
-assert.match(discord, /\* 親A `S: 2 \/ A: 0 \/ B: 0 \/ C: 0`｜祖1 `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
-assert.match(discord, /\* 親B `S: 0 \/ A: 0 \/ B: 0 \/ C: 0`/);
-assert.doesNotMatch(discord, /親A[^\n]*祖2/);
+assert.match(discord, /\* \*\*合計\*\*｜S: `2` \/ A: `0` \/ B: `0` \/ C: `0`｜判定件数: `2`/);
+assert.match(discord, /\* 親A｜S: `2` \/ A: `0` \/ B: `0` \/ C: `0`/);
+assert.match(discord, /\* A祖1｜S: `0` \/ A: `0` \/ B: `0` \/ C: `0`/);
+assert.match(discord, /\* 親B｜S: `0` \/ A: `0` \/ B: `0` \/ C: `0`/);
+assert.doesNotMatch(discord, /\* A祖2｜/);
 assert.doesNotMatch(discord, /A系|B系/);
-assert.match(discord, /\* \*\*左回り○\*\* `2\/5`｜親A ★★ \/ A祖1 ★/);
+assert.match(discord, /\* \*\*左回り○\*\* `2\/5`｜親A ★★☆ \/ A祖1 ★☆☆/);
 assert.match(discord, /\* \*\*シンパシー\*\* `0\/5`/);
 assert.ok(
   discord.indexOf("**左回り○**") <
   discord.indexOf("**シンパシー**")
 );
 assert.equal(
-  discord.split("\n").filter(line => line.startsWith("* 親A ")).length,
+  discord.split("\n").filter(line => line.startsWith("* 親A｜S:")).length,
   1
 );
 assert.equal(
-  discord.split("\n").filter(line => line.startsWith("* 親B ")).length,
+  discord.split("\n").filter(line => line.startsWith("* 親B｜S:")).length,
   1
 );
 
@@ -158,9 +161,9 @@ const sixMemberDiscord = formatDiscordSummary(
 assert.equal(
   sixMemberDiscord
     .split("\n")
-    .filter(line => /\* 親[AB] /.test(line))
+    .filter(line => /^\* (親[AB]|[AB]祖[12])｜S:/.test(line))
     .length,
-  2
+  6
 );
 
 const parentAOnlyModel = {
@@ -189,12 +192,16 @@ const parentAOnlyDiscord = formatDiscordSummary(
   memberLabels,
   "検証用"
 );
-assert.match(parentAOnlyDiscord, /\* 親A `S: 2 \/ A: 0 \/ B: 0 \/ C: 0`/);
-assert.doesNotMatch(parentAOnlyDiscord, /\* 親B /);
-assert.match(parentAOnlyDiscord, /\* \*\*左回り○\*\* `1\/1`｜親A ★★/);
+assert.match(parentAOnlyDiscord, /\* 親A｜S: `2` \/ A: `0` \/ B: `0` \/ C: `0`/);
+assert.doesNotMatch(parentAOnlyDiscord, /\* 親B｜/);
+assert.match(parentAOnlyDiscord, /\* \*\*左回り○\*\* `1\/1`｜親A ★★☆/);
 assert.match(discord, /### ■ 因子情報/);
-assert.match(discord, /\* 親A｜青: スピード★★★ \/ 赤: マイル★★ \/ 緑: 継承固有★★/);
-assert.match(discord, /\* A祖1｜青: パワー★★/);
+assert.match(discord, /\* 親A｜青: スピード ★★★ \/ 赤: マイル ★★☆ \/ 緑: 継承固有 ★★☆/);
+assert.match(discord, /\* A祖1｜青: パワー ★★☆/);
+assert.equal(formatStars(1), "★☆☆");
+assert.equal(formatStars(2), "★★☆");
+assert.equal(formatStars(3), "★★★");
+assert.equal(formatStars(0), "");
 assert.equal(getDiscordLengthWarning("a".repeat(2000)), "");
 assert.equal(
   getDiscordLengthWarning("a".repeat(2001)),
