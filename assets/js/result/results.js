@@ -9,6 +9,7 @@ import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js";
 import {
   RANKS,
   buildOverallSkillSummary as buildResultModel,
+  buildConfirmedCanonicalNamesByMember,
   getReviewItems,
   setManualCorrection,
   ignoreRecognition,
@@ -27,7 +28,19 @@ import {
   formatXShareText,
   countXShareCharacters,
   getXShareLengthWarning
-} from "../export/x-share.js";
+} from "../export/x-share.js?v=20260915-share-skills-01";
+import {
+  MAX_SHARE_SKILLS,
+  initializeShareSkills,
+  replaceShareSkillsFromS,
+  getShareSkills,
+  addShareSkill,
+  removeShareSkill,
+  clearShareSkills,
+  getRequirementSkillCandidates,
+  buildShareSkillSummaries,
+  getShareSkillLimitWarning
+} from "../export/share-skills.js?v=20260915-share-skills-01";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -991,6 +1004,126 @@ function getStarToneClass(stars) {
     : "no-stars";
 }
 
+function renderShareSkillSettings() {
+  initializeShareSkills(requirements.S);
+  const selectedSkills = getShareSkills();
+  const selectedIds = new Set(
+    selectedSkills.map(skill => skill.id)
+  );
+  const availableSkills = getRequirementSkillCandidates(
+    requirements
+  ).filter(skill => !selectedIds.has(skill.id));
+  const section = document.createElement("div");
+  section.className = "share-skill-settings";
+
+  const heading = document.createElement("h4");
+  heading.textContent = "共有スキル";
+  const controls = document.createElement("div");
+  controls.className = "share-skill-controls";
+  const loadSButton = document.createElement("button");
+  loadSButton.type = "button";
+  loadSButton.className = "secondary-button compact-button";
+  loadSButton.textContent = "Sスキルを読み込む";
+  loadSButton.addEventListener("click", () => {
+    replaceShareSkillsFromS(requirements.S);
+    renderOverallSkillSummary();
+  });
+  const clearButton = document.createElement("button");
+  clearButton.type = "button";
+  clearButton.className = "secondary-button compact-button";
+  clearButton.textContent = "すべて削除";
+  clearButton.disabled = selectedSkills.length === 0;
+  clearButton.addEventListener("click", () => {
+    clearShareSkills();
+    renderOverallSkillSummary();
+  });
+  controls.append(loadSButton, clearButton);
+
+  const list = document.createElement("ul");
+  list.className = "share-skill-list";
+  selectedSkills.forEach(skill => {
+    const item = document.createElement("li");
+    const name = document.createElement("span");
+    name.textContent = skill.canonicalName;
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "share-skill-remove";
+    removeButton.setAttribute(
+      "aria-label",
+      `${skill.canonicalName}を共有から削除`
+    );
+    removeButton.textContent = "×";
+    removeButton.addEventListener("click", () => {
+      removeShareSkill(skill.id);
+      renderOverallSkillSummary();
+    });
+    item.append(name, removeButton);
+    list.appendChild(item);
+  });
+
+  const empty = document.createElement("p");
+  empty.className = "share-skill-empty";
+  empty.textContent = "共有スキルは選択されていません。";
+  empty.hidden = selectedSkills.length > 0;
+
+  const count = document.createElement("p");
+  count.className = "share-skill-count";
+  count.textContent =
+    `${selectedSkills.length} / ${MAX_SHARE_SKILLS}`;
+  const limitWarning = getShareSkillLimitWarning(
+    selectedSkills
+  );
+  if (limitWarning) {
+    count.classList.add("is-warning");
+  }
+
+  const addRow = document.createElement("div");
+  addRow.className = "share-skill-add-row";
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", "共有スキルを追加");
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "スキルを選択してください";
+  select.appendChild(placeholder);
+  availableSkills.forEach(skill => {
+    const option = document.createElement("option");
+    option.value = skill.canonicalName;
+    option.textContent = skill.canonicalName;
+    select.appendChild(option);
+  });
+  const addButton = document.createElement("button");
+  addButton.type = "button";
+  addButton.className = "secondary-button compact-button";
+  addButton.textContent = "スキルを追加";
+  addButton.disabled =
+    selectedSkills.length >= MAX_SHARE_SKILLS ||
+    availableSkills.length === 0;
+  addButton.addEventListener("click", () => {
+    if (!select.value) {
+      return;
+    }
+    addShareSkill(select.value);
+    renderOverallSkillSummary();
+  });
+  addRow.append(select, addButton);
+
+  section.append(
+    heading,
+    controls,
+    list,
+    empty,
+    count,
+    addRow
+  );
+  if (limitWarning) {
+    const warning = document.createElement("p");
+    warning.className = "share-skill-warning";
+    warning.textContent = limitWarning;
+    section.appendChild(warning);
+  }
+  return section;
+}
+
 function renderResultShareActions(container, model) {
   const section =
     document.createElement("section");
@@ -1028,6 +1161,14 @@ function renderResultShareActions(container, model) {
         members[memberId].label
       ])
     );
+
+  initializeShareSkills(requirements.S);
+  const selectedShareSkills = getShareSkills();
+  const shareSkillSummaries = buildShareSkillSummaries(
+    model,
+    selectedShareSkills,
+    buildConfirmedCanonicalNamesByMember()
+  );
 
   const copyText = async (
     text,
@@ -1105,9 +1246,13 @@ function renderResultShareActions(container, model) {
 
   const xText = formatXShareText(
     model,
-    getSelectedPresetNameOrEmpty()
+    getSelectedPresetNameOrEmpty(),
+    shareSkillSummaries
   );
-  const xWarning = getXShareLengthWarning(xText);
+  const xWarning = [
+    getShareSkillLimitWarning(selectedShareSkills),
+    getXShareLengthWarning(xText)
+  ].filter(Boolean).join(" ");
   const xButton = document.createElement("button");
   xButton.type = "button";
   xButton.className = "secondary-button";
@@ -1156,6 +1301,7 @@ function renderResultShareActions(container, model) {
 
   section.append(
     heading,
+    renderShareSkillSettings(),
     actions,
     xPreview,
     status

@@ -49,19 +49,37 @@ function createModel(registeredMemberIds) {
   };
 }
 
+function getSShareSummaries(model) {
+  return model.ranks.S.map(skill => ({
+    canonicalName: skill.skillName,
+    ownedCount: skill.ownedCount
+  }));
+}
+
+const oneMemberModel = createModel(["parentA"]);
 const oneMemberText = formatXShareText(
-  createModel(["parentA"]),
-  "202610_エリ女追込用"
+  oneMemberModel,
+  "202610_エリ女追込用",
+  getSShareSummaries(oneMemberModel)
 );
 assert.match(oneMemberText, /^【因子チェック結果】\n202610_エリ女追込用/);
 assert.match(oneMemberText, /秋ウマ娘○ 1\/1/);
 assert.match(oneMemberText, /シンパシー 0\/1/);
 assert.match(oneMemberText, /親A 根性3 \/ マイル2 \/ 固有2/);
 assert.doesNotMatch(oneMemberText, /出力しないA/);
+assert.doesNotMatch(oneMemberText, /■ S|優先度|最優先/);
 
+const noShareSkillsText = formatXShareText(oneMemberModel, "", []);
+assert.doesNotMatch(noShareSkillsText, /秋ウマ娘○|シンパシー|■ S/);
+assert.match(noShareSkillsText, /■ 因子/);
+
+const threeMemberModel = createModel(
+  ["parentA", "grandA1", "grandA2"]
+);
 const threeMemberText = formatXShareText(
-  createModel(["parentA", "grandA1", "grandA2"]),
-  ""
+  threeMemberModel,
+  "",
+  getSShareSummaries(threeMemberModel)
 );
 assert.doesNotMatch(threeMemberText, /202610_/);
 assert.match(threeMemberText, /秋ウマ娘○ 2\/3/);
@@ -69,9 +87,11 @@ assert.match(threeMemberText, /シンパシー 0\/3/);
 assert.match(threeMemberText, /A祖1 スピード2 \/ 固有1/);
 assert.doesNotMatch(threeMemberText, /A祖2 /);
 
+const sixMemberModel = createModel(MEMBER_IDS);
 const sixMemberText = formatXShareText(
-  createModel(MEMBER_IDS),
-  "全員検証"
+  sixMemberModel,
+  "全員検証",
+  getSShareSummaries(sixMemberModel)
 );
 assert.match(sixMemberText, /秋ウマ娘○ 2\/6/);
 assert.match(sixMemberText, /シンパシー 0\/6/);
@@ -92,7 +112,11 @@ manySkillsModel.ranks.S = Array.from({ length: 50 }, (_, index) => ({
   skillName: `検証スキル${index + 1}`,
   ownedCount: 0
 }));
-const manySkillsText = formatXShareText(manySkillsModel);
+const manySkillsText = formatXShareText(
+  manySkillsModel,
+  "",
+  getSShareSummaries(manySkillsModel)
+);
 assert.equal(
   manySkillsText.split("\n").filter(line => line.startsWith("検証スキル")).length,
   50

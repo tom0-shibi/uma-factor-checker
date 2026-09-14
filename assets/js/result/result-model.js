@@ -206,6 +206,32 @@ function buildMemberFactorInfo() {
   );
 }
 
+function buildConfirmedCanonicalNamesByMember() {
+  return Object.fromEntries(
+    MEMBER_ORDER.map(memberId => {
+      const names = new Set();
+      members[memberId].analysisResults.forEach(imageResult => {
+        [
+          ...imageResult.analysis.leftCards,
+          ...imageResult.analysis.rightCards
+        ].forEach(card => {
+          if (card.factorType !== "white") {
+            return;
+          }
+          const effective = getEffectiveRecognition(card);
+          if (
+            effective.status === "confirmed" &&
+            effective.canonicalName
+          ) {
+            names.add(effective.canonicalName);
+          }
+        });
+      });
+      return [memberId, names];
+    })
+  );
+}
+
 function buildOverallSkillSummary() {
   const memberSkillMaps = Object.fromEntries(
     MEMBER_ORDER.map(memberId => [
@@ -304,6 +330,7 @@ export {
   clearManualCorrection,
   aggregateMemberSkills,
   buildMemberFactorInfo,
+  buildConfirmedCanonicalNamesByMember,
   buildOverallSkillSummary,
   getReviewItems
 };

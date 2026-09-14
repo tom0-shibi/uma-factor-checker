@@ -39,20 +39,22 @@ function buildXFactorLines(model) {
     .filter(Boolean);
 }
 
-function formatXShareText(model, presetName = "") {
+function formatXShareText(
+  model,
+  presetName = "",
+  skillSummaries = []
+) {
   const lines = ["【因子チェック結果】"];
   const normalizedPresetName = String(presetName ?? "").trim();
   if (normalizedPresetName) {
     lines.push(normalizedPresetName);
   }
 
-  lines.push("", "■ S");
-  if (model.ranks.S.length === 0) {
-    lines.push("Sスキルは登録されていません");
-  } else {
-    model.ranks.S.forEach(skill => {
+  if (skillSummaries.length > 0) {
+    lines.push("");
+    skillSummaries.forEach(skill => {
       lines.push(
-        `${skill.skillName} ${skill.ownedCount}/${model.registeredMemberCount}`
+        `${skill.canonicalName} ${skill.ownedCount}/${model.registeredMemberCount}`
       );
     });
   }

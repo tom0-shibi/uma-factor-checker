@@ -10,11 +10,16 @@ import {
   ignoreRecognition,
   clearManualCorrection,
   buildOverallSkillSummary,
+  buildConfirmedCanonicalNamesByMember,
   getReviewItems
 } from "../assets/js/result/result-model.js";
 import {
   formatXShareText
 } from "../assets/js/export/x-share.js";
+import {
+  createShareSkill,
+  buildShareSkillSummaries
+} from "../assets/js/export/share-skills.js";
 
 function createCard(overrides = {}) {
   return {
@@ -130,7 +135,14 @@ assert.equal(model.ranks.A[0].totalStars, 2);
 requirements.S = ["連綿", "溌剌"];
 model = buildOverallSkillSummary();
 assert.match(
-  formatXShareText(model),
+  formatXShareText(
+    model,
+    "",
+    buildShareSkillSummaries(
+      model,
+      [createShareSkill("溌剌")]
+    )
+  ),
   /溌剌 1\/1/,
   "手動訂正後のeffective recognitionをX共有へ反映する"
 );
@@ -140,6 +152,16 @@ requirements.A = [];
 effective = getEffectiveRecognition(unrecognizedCard);
 assert.equal(effective.canonicalName, "溌剌");
 assert.equal(effective.requirementRank, null, "要件再適用時はrankだけ再評価する");
+model = buildOverallSkillSummary();
+assert.equal(
+  buildShareSkillSummaries(
+    model,
+    [createShareSkill("溌剌")],
+    buildConfirmedCanonicalNamesByMember()
+  )[0].ownedCount,
+  1,
+  "要件rankが外れても手動訂正後の正式名称を共有集計へ反映する"
+);
 
 requirements.A = ["溌剌"];
 ignoreRecognition(unrecognizedCard);
