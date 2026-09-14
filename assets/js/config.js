@@ -1,4 +1,4 @@
-const APP_BUILD = "20260913-factor-metadata-03";
+const APP_BUILD = "20260914-factor-image-export-01";
 
 /* =========================================================
   アプリ内データ

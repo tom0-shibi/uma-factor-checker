@@ -19,6 +19,9 @@ import {
   formatDiscordSummary,
   getDiscordLengthWarning
 } from "./result-export.js";
+import {
+  appendFactorImageExportButtons
+} from "../export/factor-image-export.js";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -1097,6 +1100,11 @@ function renderResultShareActions(container, model) {
   actions.append(
     spreadsheetButton,
     discordButton
+  );
+
+  appendFactorImageExportButtons(
+    actions,
+    status
   );
 
   section.append(
