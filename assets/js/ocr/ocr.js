@@ -3,7 +3,7 @@ import {
   analysisProgress
 } from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
-import { updateAnalysisProgressDisplay } from "../ui/ui.js";
+import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260915-representative-check-02";
 import {
   getRequirementRank,
   normalizeOcrText,

@@ -880,7 +880,7 @@ const dropZones =
 
 const memberPanels =
   document.querySelectorAll(
-    ".member-panel"
+    ".member-panel[data-member]"
   );
 
 /* =========================================================
@@ -1279,6 +1279,14 @@ memberPanels.forEach(panel => {
 document.addEventListener(
   "paste",
   event => {
+    if (
+      document.getElementById(
+        "skill-check-workspace"
+      )?.hidden
+    ) {
+      return;
+    }
+
     const items =
       event.clipboardData?.items;
 

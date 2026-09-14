@@ -1,34 +1,24 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260915-representative-check-02";
 import {
   getRequirementRankLabel,
-  getSelectedPresetName,
-  getSelectedPresetNameOrEmpty
+  getSelectedPresetName
 } from "../preset/preset-manager.js";
 import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js";
 import {
   RANKS,
   buildOverallSkillSummary as buildResultModel,
-  buildConfirmedCanonicalNamesByMember,
   getReviewItems,
   setManualCorrection,
   ignoreRecognition,
   clearManualCorrection
-} from "./result-model.js?v=20260915-share-skills-03";
+} from "./result-model.js?v=20260915-representative-check-02";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
   formatDiscordSummary,
   getDiscordLengthWarning
 } from "./result-export.js";
-import {
-  appendFactorImageExportButtons
-} from "../export/factor-image-export.js";
-import {
-  formatXShareText,
-  countXShareCharacters,
-  getXShareLengthWarning
-} from "../export/x-share.js?v=20260915-share-skills-03";
 import {
   MAX_SHARE_SKILLS,
   initializeShareSkills,
@@ -38,9 +28,8 @@ import {
   removeShareSkill,
   clearShareSkills,
   getRequirementSkillCandidates,
-  buildShareSkillSummaries,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260915-share-skills-03";
+} from "../export/share-skills.js?v=20260915-representative-check-02";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -1163,12 +1152,6 @@ function renderResultShareActions(container, model) {
     );
 
   initializeShareSkills();
-  const selectedShareSkills = getShareSkills();
-  const shareSkillSummaries = buildShareSkillSummaries(
-    model,
-    selectedShareSkills,
-    buildConfirmedCanonicalNamesByMember()
-  );
 
   const copyText = async (
     text,
@@ -1244,66 +1227,15 @@ function renderResultShareActions(container, model) {
     }
   );
 
-  const xText = formatXShareText(
-    model,
-    getSelectedPresetNameOrEmpty(),
-    shareSkillSummaries
-  );
-  const xWarning = [
-    getShareSkillLimitWarning(selectedShareSkills),
-    getXShareLengthWarning(xText)
-  ].filter(Boolean).join(" ");
-  const xButton = document.createElement("button");
-  xButton.type = "button";
-  xButton.className = "secondary-button";
-  xButton.textContent = "X用テキストをコピー";
-  xButton.addEventListener(
-    "click",
-    () => copyText(
-      xText,
-      "X用テキストをコピーしました。",
-      xWarning
-    )
-  );
-
   actions.append(
     spreadsheetButton,
-    discordButton,
-    xButton
+    discordButton
   );
-
-  appendFactorImageExportButtons(
-    actions,
-    status
-  );
-
-  const xPreview = document.createElement("details");
-  xPreview.className = "x-share-preview";
-  const xPreviewSummary = document.createElement("summary");
-  xPreviewSummary.textContent = "X投稿プレビュー";
-  const xPreviewText = document.createElement("pre");
-  xPreviewText.textContent = xText;
-  const xCharacterCount = document.createElement("p");
-  xCharacterCount.className = "x-share-character-count";
-  xCharacterCount.textContent =
-    `概算文字数: ${countXShareCharacters(xText)}`;
-  xPreview.append(
-    xPreviewSummary,
-    xPreviewText,
-    xCharacterCount
-  );
-  if (xWarning) {
-    const warning = document.createElement("p");
-    warning.className = "x-share-warning";
-    warning.textContent = xWarning;
-    xPreview.appendChild(warning);
-  }
 
   section.append(
     heading,
     renderShareSkillSettings(),
     actions,
-    xPreview,
     status
   );
 
