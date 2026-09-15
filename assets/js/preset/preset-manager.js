@@ -12,7 +12,7 @@ import {
 import {
   markRequirementsDirty,
   clearRequirementApplyStatus
-} from "../ui/ui.js";
+} from "../ui/ui.js?v=20260915-representative-check-03";
 
 const RANKS = ["S", "A", "B", "C"];
 const DEFAULT_LABELS = {
