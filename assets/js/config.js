@@ -1,4 +1,4 @@
-const APP_BUILD = "20260915-representative-check-02";
+const APP_BUILD = "20260915-representative-check-03";
 
 /* =========================================================
   アプリ内データ

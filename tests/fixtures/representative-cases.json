@@ -1,0 +1,47 @@
+{
+  "note": "Representative-check fixtures reuse the existing real factor images without format conversion.",
+  "cases": [
+    {
+      "id": "target-only",
+      "members": {
+        "target": ["factor-images/supported/factor-list-start-01.jpg"]
+      },
+      "expectedExportPattern": "target-only"
+    },
+    {
+      "id": "target-continuation",
+      "members": {
+        "target": [
+          "factor-images/supported/factor-list-start-01.jpg",
+          "factor-images/supported/factor-list-continuation-01.jpg",
+          "factor-images/supported/factor-list-end-01.jpg"
+        ]
+      },
+      "expectedExportPattern": "target-only"
+    },
+    {
+      "id": "full-family",
+      "members": {
+        "target": ["factor-images/supported/factor-list-start-01.jpg"],
+        "parentA": ["factor-images/supported/factor-list-start-02.jpg"],
+        "parentB": ["factor-images/supported/factor-metadata-red-chase-01.png"]
+      },
+      "expectedExportPattern": "full-family"
+    },
+    {
+      "id": "two-members-not-exportable",
+      "members": {
+        "target": ["factor-images/supported/factor-list-start-01.jpg"],
+        "parentA": ["factor-images/supported/factor-list-start-02.jpg"]
+      },
+      "expectedExportPattern": null
+    },
+    {
+      "id": "composite-remains-unsupported",
+      "members": {
+        "target": ["factor-images/unsupported/composite-type-a-01.jpg"]
+      },
+      "expectedSupported": false
+    }
+  ]
+}

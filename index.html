@@ -23,11 +23,11 @@
     </script>
     <link
       rel="stylesheet"
-      href="./assets/css/tokens.css?v=20260915-representative-check-02"
+      href="./assets/css/tokens.css?v=20260915-representative-check-03"
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260915-representative-check-02"
+      href="./assets/css/style.css?v=20260915-representative-check-03"
     />
   </head>
   <body>
@@ -48,26 +48,8 @@
       </div>
     </header>
 
-    <nav class="mode-switch" aria-label="チェック機能">
-      <button class="mode-switch-button active" data-mode="skill-check">
-        スキル要件チェック
-      </button>
-      <button class="mode-switch-button" data-mode="representative-check">
-        代表ウマ娘チェック
-      </button>
-    </nav>
-
-    <div id="skill-check-workspace">
-    <nav class="tabs">
-      <button class="tab-button active" data-tab="requirements">
-        スキル要件
-      </button>
-      <button class="tab-button" data-tab="images">画像登録</button>
-      <button class="tab-button" data-tab="results">判定結果</button>
-    </nav>
-
-    <main class="app-main">
-      <section id="requirements" class="tab-content active">
+    <main class="app-main common-requirements">
+      <section id="requirements">
         <div class="section-heading">
           <div>
             <h2>スキル要件</h2>
@@ -240,8 +222,27 @@
           ></span>
         </div>
       </section>
+    </main>
 
-      <section id="images" class="tab-content">
+    <nav class="mode-switch" aria-label="チェック方法">
+      <span class="mode-switch-label">チェック方法</span>
+      <button class="mode-switch-button active" data-mode="skill-check">
+        スキル要件チェック
+      </button>
+      <button class="mode-switch-button" data-mode="representative-check">
+        代表ウマ娘チェック
+      </button>
+    </nav>
+
+    <div id="skill-check-workspace">
+    <nav class="tabs">
+      <button class="tab-button active" data-tab="images">画像登録</button>
+      <button class="tab-button" data-tab="results">判定結果</button>
+    </nav>
+
+    <main class="app-main">
+
+      <section id="images" class="tab-content active">
         <h2>画像登録</h2>
 
         <p class="description">
@@ -378,6 +379,7 @@
         <div class="image-summary">
           登録画像：<strong id="total-image-count">0</strong> 枚
         </div>
+        <p class="registered-face-count">今回の判定対象: <strong id="skill-registered-face-count">0面</strong></p>
 
         <label class="debug-mode-toggle">
           <input id="debug-mode-toggle" type="checkbox" />
@@ -388,6 +390,7 @@
           <button id="analyze-images" class="primary-button" disabled>
             画像を解析
           </button>
+          <p id="skill-analysis-disabled-reason" class="disabled-reason">ⓘ 解析する因子一覧画像を1つ以上登録してください。</p>
         </div>
       </section>
 
@@ -458,15 +461,16 @@
 
         <div class="representative-analysis-actions">
           <p>登録画像：<strong id="representative-image-count">0</strong>枚</p>
-          <button id="analyze-representative-images" type="button" class="primary-button" disabled>代表画像を解析</button>
+          <p>今回の判定対象: <strong id="representative-registered-face-count">0面</strong></p>
+          <button id="analyze-representative-images" type="button" class="primary-button" disabled>画像を解析</button>
           <span id="representative-analysis-status" role="status" aria-live="polite"></span>
+          <p id="representative-analysis-disabled-reason" class="disabled-reason">ⓘ 解析する因子一覧画像を1つ以上登録してください。</p>
         </div>
+
+        <section id="representative-results" class="representative-results" aria-live="polite"></section>
 
         <section class="representative-share-panel">
           <h3>共有設定</h3>
-          <label>プリセット名
-            <input id="representative-title" type="text" maxlength="80" placeholder="例: 202609チャンミ因子" />
-          </label>
           <label>トレーナーID
             <input id="representative-trainer-id" type="text" inputmode="numeric" maxlength="12" placeholder="************" autocomplete="off" />
           </label>
@@ -476,6 +480,7 @@
             <button id="create-representative-image" type="button" class="secondary-button" disabled>代表ウマ娘画像を生成</button>
             <button id="copy-representative-x" type="button" class="secondary-button">X用テキストをコピー</button>
           </div>
+          <p id="representative-image-guidance" class="disabled-reason">ⓘ 代表画像は「本体のみ」または「本体・親A・親B」の構成で生成できます。</p>
           <details class="x-share-preview" open>
             <summary>X投稿プレビュー</summary>
             <pre id="representative-x-preview"></pre>
@@ -490,7 +495,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260915-representative-check-02"
+      src="./assets/js/app.js?v=20260915-representative-check-03"
     ></script>
   </body>
 </html>

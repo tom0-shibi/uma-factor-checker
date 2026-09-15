@@ -132,6 +132,13 @@
   background: var(--color-page);
 }
 
+.mode-switch-label {
+  align-self: center;
+  margin-right: 8px;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
 .mode-switch-button {
   min-width: min(260px, 46vw);
   padding: 11px 18px;
@@ -229,6 +236,65 @@
   border: 1px solid var(--color-border);
   border-radius: 14px;
   background: var(--color-surface);
+}
+
+.registered-face-count,
+.disabled-reason {
+  color: var(--color-text-muted);
+}
+
+.disabled-reason {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.58;
+  filter: saturate(0.55);
+  cursor: not-allowed;
+}
+
+.representative-results:empty {
+  display: none;
+}
+
+.representative-results {
+  margin-top: 22px;
+}
+
+.representative-result-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.representative-result-table th,
+.representative-result-table td {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.representative-result-table th:first-child,
+.representative-result-table td:first-child {
+  text-align: left;
+}
+
+.representative-review-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.representative-review-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
 }
 
 .representative-analysis-actions {

@@ -1,5 +1,5 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260915-representative-check-02";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260915-representative-check-03";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
@@ -12,7 +12,7 @@ import {
   setManualCorrection,
   ignoreRecognition,
   clearManualCorrection
-} from "./result-model.js?v=20260915-representative-check-02";
+} from "./result-model.js?v=20260915-representative-check-03";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -29,7 +29,7 @@ import {
   clearShareSkills,
   getRequirementSkillCandidates,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260915-representative-check-02";
+} from "../export/share-skills.js?v=20260915-representative-check-03";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];

@@ -5,7 +5,18 @@ import {
   runOcrForFactorMetadata,
   runOcrForWhiteCards
 } from "../ocr/ocr.js";
-import { getEffectiveRecognition } from "../result/result-model.js?v=20260915-representative-check-02";
+import {
+  clearManualCorrection,
+  getEffectiveRecognition,
+  getOriginalRecognition,
+  ignoreRecognition,
+  setManualCorrection
+} from "../result/result-model.js?v=20260915-representative-check-03";
+import {
+  getRequirementRank,
+  normalizeSkillText
+} from "../matching/matching.js";
+import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js";
 import { getSelectedPresetNameOrEmpty } from "../preset/preset-manager.js";
 import {
   MAX_SHARE_SKILLS,
@@ -16,11 +27,12 @@ import {
   getShareSkills,
   removeShareSkill,
   replaceShareSkillsFromS
-} from "../export/share-skills.js?v=20260915-representative-check-02";
+} from "../export/share-skills.js?v=20260915-representative-check-03";
 import {
   REPRESENTATIVE_MEMBER_ORDER,
   representativeMembers,
-  resetRepresentativeAnalysis
+  resetRepresentativeAnalysis,
+  getRepresentativeImageExportPattern
 } from "./representative-state.js";
 import {
   TRAINER_ID_STORAGE_KEY,
@@ -181,11 +193,207 @@ function getRepresentativeXText() {
     buildCanonicalNamesByMember()
   );
   return formatRepresentativeXText({
-    title: document.getElementById("representative-title")?.value ?? "",
+    title: getSelectedPresetNameOrEmpty(),
     trainerId: document.getElementById("representative-trainer-id")?.value ?? "",
     showTrainerId: document.getElementById("representative-show-trainer-id")?.checked,
     skillSummaries
   });
+}
+
+function formatResultStars(stars) {
+  const count = Math.min(3, Math.max(0, Number(stars) || 0));
+  return count > 0
+    ? `${"★".repeat(count)}${"☆".repeat(3 - count)}`
+    : "-";
+}
+
+function aggregateRepresentativeMemberSkills(memberId) {
+  const skillMap = new Map();
+  representativeMembers[memberId].analysisResults.forEach(imageResult => {
+    [
+      ...(imageResult.analysis?.leftCards ?? []),
+      ...(imageResult.analysis?.rightCards ?? [])
+    ].forEach(card => {
+      if (card.factorType !== "white") {
+        return;
+      }
+      const recognition = getEffectiveRecognition(card);
+      if (
+        recognition.status !== "confirmed" ||
+        !recognition.canonicalName
+      ) {
+        return;
+      }
+      const rank = getRequirementRank(recognition.canonicalName);
+      if (!rank) {
+        return;
+      }
+      const key = normalizeSkillText(recognition.canonicalName);
+      const existing = skillMap.get(key);
+      if (!existing || card.stars > existing.stars) {
+        skillMap.set(key, {
+          canonicalName: recognition.canonicalName,
+          rank,
+          stars: card.stars
+        });
+      }
+    });
+  });
+  return skillMap;
+}
+
+function getRepresentativeReviewItems() {
+  const items = [];
+  REPRESENTATIVE_MEMBER_ORDER.forEach(memberId => {
+    representativeMembers[memberId].analysisResults.forEach(imageResult => {
+      [
+        ...(imageResult.analysis?.leftCards ?? []),
+        ...(imageResult.analysis?.rightCards ?? [])
+      ].forEach(card => {
+        if (card.factorType !== "white") {
+          return;
+        }
+        const original = getOriginalRecognition(card);
+        if (
+          original.status === "review" ||
+          original.status === "unresolved" ||
+          card.manualCorrection
+        ) {
+          items.push({ memberId, imageResult, card, original });
+        }
+      });
+    });
+  });
+  return items;
+}
+
+function renderRepresentativeReviewItems(container) {
+  const items = getRepresentativeReviewItems();
+  if (items.length === 0) {
+    return;
+  }
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  heading.textContent = "要確認・手動訂正";
+  const note = document.createElement("p");
+  note.className = "description";
+  note.textContent = "訂正後はOCRを再実行せず、現在の判定対象で再集計します。";
+  const list = document.createElement("ul");
+  list.className = "representative-review-list";
+  const candidates = getCanonicalSkillCandidates();
+  items.forEach(item => {
+    const row = document.createElement("li");
+    const label = document.createElement("span");
+    label.textContent = `${representativeMembers[item.memberId].label} / ${item.original.ocrText || "読み取りなし"}`;
+    const select = document.createElement("select");
+    select.appendChild(new Option("正式名称を選択", ""));
+    candidates.forEach(candidate => {
+      select.appendChild(new Option(candidate, candidate));
+    });
+    if (item.card.manualCorrection?.canonicalName) {
+      select.value = item.card.manualCorrection.canonicalName;
+    }
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.className = "secondary-button compact-button";
+    confirm.textContent = "確定";
+    confirm.addEventListener("click", () => {
+      if (select.value) {
+        setManualCorrection(item.card, select.value);
+        renderRepresentativeOutput();
+      }
+    });
+    const ignore = document.createElement("button");
+    ignore.type = "button";
+    ignore.className = "secondary-button compact-button";
+    ignore.textContent = "対象外";
+    ignore.addEventListener("click", () => {
+      ignoreRecognition(item.card);
+      renderRepresentativeOutput();
+    });
+    row.append(label, select, confirm, ignore);
+    if (item.card.manualCorrection) {
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "secondary-button compact-button";
+      clear.textContent = "訂正を解除";
+      clear.addEventListener("click", () => {
+        clearManualCorrection(item.card);
+        renderRepresentativeOutput();
+      });
+      row.appendChild(clear);
+    }
+    list.appendChild(row);
+  });
+  section.append(heading, note, list);
+  container.appendChild(section);
+}
+
+function renderRepresentativeResults() {
+  const container = document.getElementById("representative-results");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+  const registeredIds = getRegisteredRepresentativeMemberIds();
+  if (!hasRepresentativeResults()) {
+    return;
+  }
+  const title = document.createElement("h2");
+  title.textContent = "代表ウマ娘 判定結果";
+  const target = document.createElement("p");
+  target.textContent = `今回の判定対象: ${registeredIds.length}面`;
+  container.append(title, target);
+  const memberSkillMaps = Object.fromEntries(
+    registeredIds.map(memberId => [
+      memberId,
+      aggregateRepresentativeMemberSkills(memberId)
+    ])
+  );
+  ["S", "A", "B", "C"].forEach(rank => {
+    if ((requirements[rank] ?? []).length === 0) {
+      return;
+    }
+    const section = document.createElement("section");
+    const heading = document.createElement("h3");
+    heading.textContent = rank;
+    const table = document.createElement("table");
+    table.className = "representative-result-table";
+    const header = document.createElement("tr");
+    ["スキル", ...registeredIds.map(id => representativeMembers[id].label), "面数"]
+      .forEach(text => {
+        const th = document.createElement("th");
+        th.textContent = text;
+        header.appendChild(th);
+      });
+    const thead = document.createElement("thead");
+    thead.appendChild(header);
+    const tbody = document.createElement("tbody");
+    requirements[rank].forEach(skillName => {
+      const row = document.createElement("tr");
+      const name = document.createElement("td");
+      name.textContent = skillName;
+      row.appendChild(name);
+      let ownedCount = 0;
+      registeredIds.forEach(memberId => {
+        const found = memberSkillMaps[memberId].get(normalizeSkillText(skillName));
+        const cell = document.createElement("td");
+        cell.textContent = found ? formatResultStars(found.stars) : "-";
+        if (found) {
+          ownedCount++;
+        }
+        row.appendChild(cell);
+      });
+      const count = document.createElement("td");
+      count.textContent = `${ownedCount}面`;
+      row.appendChild(count);
+      tbody.appendChild(row);
+    });
+    table.append(thead, tbody);
+    section.append(heading, table);
+    container.appendChild(section);
+  });
+  renderRepresentativeReviewItems(container);
 }
 
 function renderRepresentativeShareSkills() {
@@ -274,13 +482,35 @@ function renderRepresentativeShareSkills() {
 
 function renderRepresentativeOutput() {
   renderRepresentativeShareSkills();
+  renderRepresentativeResults();
   const preview = document.getElementById("representative-x-preview");
   if (preview) {
     preview.textContent = getRepresentativeXText();
   }
   const createImageButton = document.getElementById("create-representative-image");
+  const registeredIds = getRegisteredRepresentativeMemberIds();
+  const exportPattern = getRepresentativeImageExportPattern(registeredIds);
+  const allRegisteredSupported = registeredIds.length > 0 && registeredIds.every(
+    memberId => representativeMembers[memberId].analysisResults.some(
+      result => result.analysis?.supported === true
+    )
+  );
   if (createImageButton) {
-    createImageButton.disabled = !hasRepresentativeResults();
+    createImageButton.disabled = !exportPattern || !allRegisteredSupported;
+  }
+  const guidance = document.getElementById("representative-image-guidance");
+  if (guidance) {
+    if (!exportPattern) {
+      guidance.hidden = false;
+      guidance.textContent = registeredIds.includes("target")
+        ? "ⓘ 代表画像は「本体のみ」または「本体・親A・親B」の構成で生成できます。"
+        : "ⓘ 代表画像を生成する場合は本体を登録してください。単体共有は本体枠を使用してください。";
+    } else if (!allRegisteredSupported) {
+      guidance.hidden = false;
+      guidance.textContent = "ⓘ 登録画像を解析すると代表画像を生成できます。";
+    } else {
+      guidance.hidden = true;
+    }
   }
 }
 
@@ -293,6 +523,15 @@ function updateRepresentativeState() {
   const analyze = document.getElementById("analyze-representative-images");
   if (analyze) {
     analyze.disabled = count === 0;
+  }
+  const registeredCount = getRegisteredRepresentativeMemberIds().length;
+  const faceCount = document.getElementById("representative-registered-face-count");
+  if (faceCount) {
+    faceCount.textContent = `${registeredCount}面`;
+  }
+  const disabledReason = document.getElementById("representative-analysis-disabled-reason");
+  if (disabledReason) {
+    disabledReason.hidden = count > 0;
   }
   renderRepresentativeOutput();
 }
@@ -340,14 +579,12 @@ async function analyzeRepresentativeImages() {
 function loadRepresentativePreferences() {
   const trainerId = document.getElementById("representative-trainer-id");
   const visible = document.getElementById("representative-show-trainer-id");
-  const title = document.getElementById("representative-title");
   try {
     trainerId.value = sanitizeTrainerId(localStorage.getItem(TRAINER_ID_STORAGE_KEY));
     visible.checked = localStorage.getItem(TRAINER_ID_VISIBLE_STORAGE_KEY) === "true";
   } catch (error) {
     console.warn("トレーナーID設定を読み込めませんでした。", error);
   }
-  title.value = getSelectedPresetNameOrEmpty();
 }
 
 function initializeModeSwitch() {
@@ -360,10 +597,6 @@ function initializeModeSwitch() {
       document.getElementById("skill-check-workspace").hidden = representativeMode;
       document.getElementById("representative-check-workspace").hidden = !representativeMode;
       if (representativeMode) {
-        const title = document.getElementById("representative-title");
-        if (title && !title.value) {
-          title.value = getSelectedPresetNameOrEmpty();
-        }
         renderRepresentativeOutput();
       }
     });
@@ -373,6 +606,7 @@ function initializeModeSwitch() {
 function initializeRepresentativeCheck() {
   initializeModeSwitch();
   loadRepresentativePreferences();
+  document.addEventListener("requirements-applied", renderRepresentativeOutput);
   document.querySelectorAll(".representative-image-input").forEach(input => {
     input.addEventListener("change", () => {
       addRepresentativeImages(input.dataset.representativeMember, input.files);
@@ -424,8 +658,6 @@ function initializeRepresentativeCheck() {
     "click",
     analyzeRepresentativeImages
   );
-  const title = document.getElementById("representative-title");
-  title?.addEventListener("input", renderRepresentativeOutput);
   const trainerId = document.getElementById("representative-trainer-id");
   trainerId?.addEventListener("input", () => {
     trainerId.value = sanitizeTrainerId(trainerId.value);

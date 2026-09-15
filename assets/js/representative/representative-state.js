@@ -13,8 +13,26 @@ function resetRepresentativeAnalysis(memberId = null) {
   });
 }
 
+function getRepresentativeImageExportPattern(registeredMemberIds) {
+  const registered = new Set(registeredMemberIds);
+  if (
+    registered.size === 1 &&
+    registered.has("target")
+  ) {
+    return "target-only";
+  }
+  if (
+    registered.size === 3 &&
+    REPRESENTATIVE_MEMBER_ORDER.every(memberId => registered.has(memberId))
+  ) {
+    return "full-family";
+  }
+  return null;
+}
+
 export {
   REPRESENTATIVE_MEMBER_ORDER,
   representativeMembers,
-  resetRepresentativeAnalysis
+  resetRepresentativeAnalysis,
+  getRepresentativeImageExportPattern
 };
