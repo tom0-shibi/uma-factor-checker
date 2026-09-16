@@ -21,7 +21,7 @@ import {
   isStrongShortSkillFallbackResult
 } from "../assets/js/matching/fallback-policy.js";
 
-assert.equal(APP_BUILD, "20260915-representative-check-03");
+assert.equal(APP_BUILD, "20260916-ocr-regression-01");
 assert.deepEqual(SKILL_MATCH_CONFIG, {
   thresholds: {
     1: 1.00,

@@ -3,7 +3,7 @@ import {
   analysisProgress
 } from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
-import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260915-representative-check-03";
+import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260916-ocr-regression-01";
 import {
   getRequirementRank,
   normalizeOcrText,
@@ -31,6 +31,57 @@ const SHORT_SKILL_FALLBACK_CONFIG = {
   minimumLength: 2,
   binaryThresholds: [165, 195, 220]
 };
+
+const ocrPerformanceMetrics = {
+  normalOcrCalls: 0,
+  normalOcrMs: 0,
+  fallbackTargetCards: 0,
+  fallbackOcrCalls: 0,
+  fallbackOcrMs: 0,
+  fallbackAdoptions: 0,
+  fallbackAdoptionFailures: 0,
+  fallbackCallsByCard: []
+};
+
+function resetOcrPerformanceMetrics() {
+  ocrPerformanceMetrics.normalOcrCalls = 0;
+  ocrPerformanceMetrics.normalOcrMs = 0;
+  ocrPerformanceMetrics.fallbackTargetCards = 0;
+  ocrPerformanceMetrics.fallbackOcrCalls = 0;
+  ocrPerformanceMetrics.fallbackOcrMs = 0;
+  ocrPerformanceMetrics.fallbackAdoptions = 0;
+  ocrPerformanceMetrics.fallbackAdoptionFailures = 0;
+  ocrPerformanceMetrics.fallbackCallsByCard = [];
+}
+
+function getOcrPerformanceMetrics() {
+  const calls = ocrPerformanceMetrics.fallbackCallsByCard;
+  return {
+    ...ocrPerformanceMetrics,
+    fallbackCallsByCard: [...calls],
+    averageFallbackCallsPerCard: calls.length
+      ? calls.reduce((total, count) => total + count, 0) / calls.length
+      : 0,
+    maximumFallbackCallsPerCard: calls.length ? Math.max(...calls) : 0,
+    totalOcrCalls:
+      ocrPerformanceMetrics.normalOcrCalls +
+      ocrPerformanceMetrics.fallbackOcrCalls
+  };
+}
+
+async function recognizeWithMetrics(worker, canvas, kind) {
+  const startedAt = performance.now();
+  const result = await worker.recognize(canvas);
+  const elapsed = performance.now() - startedAt;
+  if (kind === "fallback") {
+    ocrPerformanceMetrics.fallbackOcrCalls++;
+    ocrPerformanceMetrics.fallbackOcrMs += elapsed;
+  } else {
+    ocrPerformanceMetrics.normalOcrCalls++;
+    ocrPerformanceMetrics.normalOcrMs += elapsed;
+  }
+  return result;
+}
 
 /* =========================================================
   OCR対象となるスキル文字色判定処理
@@ -359,6 +410,8 @@ function createOcrCanvas(
     canvas.width,
     canvas.height
   );
+
+  canvas.ocrCrop = { ...textBounds };
 
   return canvas;
 }
@@ -913,10 +966,11 @@ async function recognizeShortSkillFallback(
         activePsm = variant.psm;
       }
 
-      const result =
-        await worker.recognize(
-          fallbackCanvas
-        );
+      const result = await recognizeWithMetrics(
+        worker,
+        fallbackCanvas,
+        "fallback"
+      );
 
       const rawText =
         result.data.text || "";
@@ -993,6 +1047,13 @@ async function recognizeShortSkillFallback(
           matchResult,
           assessment
         };
+
+        if (
+          assessment.matchStatus === "exact" &&
+          (result.data.confidence ?? 0) >= 80
+        ) {
+          break;
+        }
       }
     }
   } finally {
@@ -1105,10 +1166,11 @@ async function recognizeSkillName(
     };
   }
 
-  const result =
-    await worker.recognize(
-      ocrCanvas
-    );
+  const result = await recognizeWithMetrics(
+    worker,
+    ocrCanvas,
+    "normal"
+  );
 
   const rawText =
     result.data.text ||
@@ -1124,7 +1186,8 @@ async function recognizeSkillName(
     ocrConfidence:
       result.data
         .confidence ?? 0,
-    ocrCanvas
+    ocrCanvas,
+    ocrCrop: ocrCanvas.ocrCrop ?? null
   };
 }
 
@@ -1208,7 +1271,7 @@ async function recognizeColoredFactorName(
       card,
       variant
     );
-    const result = await worker.recognize(ocrCanvas);
+    const result = await recognizeWithMetrics(worker, ocrCanvas, "normal");
     const rawText = result.data.text || "";
     const recognition = {
       ocrText: normalizeOcrText(rawText),
@@ -1428,6 +1491,8 @@ async function runOcrForWhiteCards(
     card.ocrConfidence =
       result.ocrConfidence;
 
+    card.ocrCrop = result.ocrCrop;
+
     card.ocrPreview =
       result.ocrCanvas
         ? result.ocrCanvas
@@ -1550,14 +1615,13 @@ async function runOcrForWhiteCards(
 
     if (fallbackDecision.shouldRun) {
       card.ocrFallbackAttempted = true;
+      ocrPerformanceMetrics.fallbackTargetCards++;
 
       const fallbackAttempt =
         await recognizeShortSkillFallback(
           worker,
           result.ocrCanvas,
-          createSkillMatchContext(
-            shortSkillDictionary
-          ),
+          matchContext,
           card.ocrText,
           fallbackDecision.reason,
           matchResult
@@ -1566,10 +1630,15 @@ async function runOcrForWhiteCards(
       card.ocrFallbackResults =
         fallbackAttempt.attempts;
 
+      ocrPerformanceMetrics.fallbackCallsByCard.push(
+        fallbackAttempt.attempts.length
+      );
+
       const fallback =
         fallbackAttempt.bestResult;
 
       if (fallback) {
+        ocrPerformanceMetrics.fallbackAdoptions++;
         card.ocrText =
           fallback.ocrText;
 
@@ -1662,6 +1731,9 @@ async function runOcrForWhiteCards(
         card.ocrFallbackPsm =
           fallback.psm;
       } else {
+        if (fallbackAttempt.attempts.some(attempt => attempt.ocrText)) {
+          ocrPerformanceMetrics.fallbackAdoptionFailures++;
+        }
         if (
           fallbackDecision.reason === "weak-short-canonical-match" &&
           card.finalStatus === "confirmed"
@@ -1727,5 +1799,7 @@ export {
   createOcrWorker,
   runOcrForFactorMetadata,
   runOcrForWhiteCards,
-  createShortSkillFallbackVariants
+  createShortSkillFallbackVariants,
+  resetOcrPerformanceMetrics,
+  getOcrPerformanceMetrics
 };

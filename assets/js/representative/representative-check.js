@@ -11,7 +11,7 @@ import {
   getOriginalRecognition,
   ignoreRecognition,
   setManualCorrection
-} from "../result/result-model.js?v=20260915-representative-check-03";
+} from "../result/result-model.js?v=20260916-ocr-regression-01";
 import {
   getRequirementRank,
   normalizeSkillText
@@ -27,7 +27,7 @@ import {
   getShareSkills,
   removeShareSkill,
   replaceShareSkillsFromS
-} from "../export/share-skills.js?v=20260915-representative-check-03";
+} from "../export/share-skills.js?v=20260916-ocr-regression-01";
 import {
   REPRESENTATIVE_MEMBER_ORDER,
   representativeMembers,
@@ -588,18 +588,30 @@ function loadRepresentativePreferences() {
 }
 
 function initializeModeSwitch() {
+  let representativeMode = false;
+  const updateModeVisibility = () => {
+    const imagesTab = document.getElementById("images");
+    const imagesTabActive = imagesTab?.classList.contains("active") === true;
+    imagesTab?.classList.toggle("representative-mode", representativeMode);
+    document.getElementById("representative-check-workspace").hidden =
+      !representativeMode || !imagesTabActive;
+  };
+
   document.querySelectorAll(".mode-switch-button").forEach(button => {
     button.addEventListener("click", () => {
-      const representativeMode = button.dataset.mode === "representative-check";
+      representativeMode = button.dataset.mode === "representative-check";
       document.querySelectorAll(".mode-switch-button").forEach(item => {
         item.classList.toggle("active", item === button);
       });
-      document.getElementById("skill-check-workspace").hidden = representativeMode;
-      document.getElementById("representative-check-workspace").hidden = !representativeMode;
+      updateModeVisibility();
       if (representativeMode) {
         renderRepresentativeOutput();
       }
     });
+  });
+
+  document.querySelectorAll(".tab-button").forEach(button => {
+    button.addEventListener("click", updateModeVisibility);
   });
 }
 

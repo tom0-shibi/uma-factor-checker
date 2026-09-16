@@ -4,6 +4,20 @@ import {
   detectFactorSectionAnchorCandidates
 } from "./factor-anchor.js";
 
+const HIGH_DPI_IMAGE_WIDTH_THRESHOLD = 2000;
+const HIGH_DPI_ANALYSIS_SCALE = 0.5;
+
+function getAnalysisCanvasSize(width, height) {
+  const scale = width >= HIGH_DPI_IMAGE_WIDTH_THRESHOLD
+    ? HIGH_DPI_ANALYSIS_SCALE
+    : 1;
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+    scale
+  };
+}
+
 /* =========================================================
   FileをImageへ読み込む処理
   ========================================================= */
@@ -61,11 +75,14 @@ async function drawOriginalImage(
       "analysis-canvas"
     );
 
-  canvas.width =
-    image.naturalWidth;
+  const analysisSize = getAnalysisCanvasSize(
+    image.naturalWidth,
+    image.naturalHeight
+  );
 
-  canvas.height =
-    image.naturalHeight;
+  canvas.width = analysisSize.width;
+
+  canvas.height = analysisSize.height;
 
   const ctx =
     canvas.getContext(
@@ -85,7 +102,9 @@ async function drawOriginalImage(
   ctx.drawImage(
     image,
     0,
-    0
+    0,
+    canvas.width,
+    canvas.height
   );
 
   return {
@@ -94,7 +113,10 @@ async function drawOriginalImage(
     width:
       canvas.width,
     height:
-      canvas.height
+      canvas.height,
+    originalWidth: image.naturalWidth,
+    originalHeight: image.naturalHeight,
+    analysisScale: analysisSize.scale
   };
 }
 
@@ -2373,6 +2395,7 @@ function analyzeFactorImage(
 
 
 export {
+  getAnalysisCanvasSize,
   drawOriginalImage,
   getLuminance,
   analyzeFactorImage,

@@ -1,4 +1,4 @@
-const APP_BUILD = "20260915-representative-check-03";
+const APP_BUILD = "20260916-ocr-regression-01";
 
 /* =========================================================
   アプリ内データ

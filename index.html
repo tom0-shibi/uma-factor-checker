@@ -23,11 +23,11 @@
     </script>
     <link
       rel="stylesheet"
-      href="./assets/css/tokens.css?v=20260915-representative-check-03"
+      href="./assets/css/tokens.css?v=20260916-ocr-regression-01"
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260915-representative-check-03"
+      href="./assets/css/style.css?v=20260916-ocr-regression-01"
     />
   </head>
   <body>
@@ -48,8 +48,15 @@
       </div>
     </header>
 
-    <main class="app-main common-requirements">
-      <section id="requirements">
+    <div id="skill-check-workspace">
+    <nav class="tabs">
+      <button class="tab-button active" data-tab="requirements">スキル要件</button>
+      <button class="tab-button" data-tab="images">画像登録</button>
+      <button class="tab-button" data-tab="results">判定結果</button>
+    </nav>
+
+    <main class="app-main">
+      <section id="requirements" class="tab-content active">
         <div class="section-heading">
           <div>
             <h2>スキル要件</h2>
@@ -222,28 +229,18 @@
           ></span>
         </div>
       </section>
-    </main>
-
-    <nav class="mode-switch" aria-label="チェック方法">
-      <span class="mode-switch-label">チェック方法</span>
-      <button class="mode-switch-button active" data-mode="skill-check">
-        スキル要件チェック
-      </button>
-      <button class="mode-switch-button" data-mode="representative-check">
-        代表ウマ娘チェック
-      </button>
-    </nav>
-
-    <div id="skill-check-workspace">
-    <nav class="tabs">
-      <button class="tab-button active" data-tab="images">画像登録</button>
-      <button class="tab-button" data-tab="results">判定結果</button>
-    </nav>
-
-    <main class="app-main">
-
-      <section id="images" class="tab-content active">
+      <section id="images" class="tab-content">
         <h2>画像登録</h2>
+
+        <nav class="mode-switch" aria-label="チェック方法">
+          <span class="mode-switch-label">チェック方法</span>
+          <button class="mode-switch-button active" data-mode="skill-check">
+            スキル要件チェック
+          </button>
+          <button class="mode-switch-button" data-mode="representative-check">
+            代表ウマ娘チェック
+          </button>
+        </nav>
 
         <p class="description">
           チェックしたい因子画像を登録してください。1人分だけでも、最大6人分でも使用できます。
@@ -495,7 +492,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260915-representative-check-03"
+      src="./assets/js/app.js?v=20260916-ocr-regression-01"
     ></script>
   </body>
 </html>

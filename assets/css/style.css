@@ -139,6 +139,10 @@
   font-weight: 700;
 }
 
+#images.representative-mode > :not(.mode-switch) {
+  display: none;
+}
+
 .mode-switch-button {
   min-width: min(260px, 46vw);
   padding: 11px 18px;

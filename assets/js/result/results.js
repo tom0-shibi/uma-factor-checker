@@ -1,5 +1,5 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260915-representative-check-03";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260916-ocr-regression-01";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
@@ -12,7 +12,7 @@ import {
   setManualCorrection,
   ignoreRecognition,
   clearManualCorrection
-} from "./result-model.js?v=20260915-representative-check-03";
+} from "./result-model.js?v=20260916-ocr-regression-01";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -29,7 +29,7 @@ import {
   clearShareSkills,
   getRequirementSkillCandidates,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260915-representative-check-03";
+} from "../export/share-skills.js?v=20260916-ocr-regression-01";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -236,6 +236,8 @@ function renderAnalysisDebug(
         <th>RGB</th>
         <th>Y</th>
         <th>高さ</th>
+        <th>card geometry</th>
+        <th>crop geometry</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -479,6 +481,8 @@ function renderAnalysisDebug(
 
         <td>${card.y}</td>
         <td>${card.height}</td>
+        <td>${card.x},${card.y},${card.width},${card.height}</td>
+        <td>${card.ocrCrop ? `${card.ocrCrop.x},${card.ocrCrop.y},${card.ocrCrop.width},${card.ocrCrop.height}` : "-"}</td>
       `;
 
       tbody.appendChild(
@@ -587,7 +591,7 @@ function renderAnalysisDebug(
   logLines.push("");
 
   logLines.push(
-    "画像\t列\tNo.\t種類\t星数\tOCR結果\t正式名称\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t最終status\t要確認理由\t近似候補群\tfallback実行\tfallback理由\t通常OCR判定\tfallback結果\t要件\t信頼度\t星判定率\tRGB\tY\t高さ"
+    "画像\t列\tNo.\t種類\t星数\tOCR結果\t正式名称\t第1候補\t第1類似度\t第2候補\t第2類似度\t候補差\t閾値\t一致\t最終status\t要確認理由\t近似候補群\tfallback実行\tfallback理由\t通常OCR判定\tfallback結果\t要件\t信頼度\t星判定率\tRGB\tY\t高さ\tcardX\tcardY\tcardWidth\tcardHeight\tcropX\tcropY\tcropWidth\tcropHeight"
   );
 
   allCards.forEach(
@@ -689,7 +693,15 @@ function renderAnalysisDebug(
           ratioText,
           `${card.color.r}, ${card.color.g}, ${card.color.b}`,
           card.y,
-          card.height
+          card.height,
+          card.x,
+          card.y,
+          card.width,
+          card.height,
+          card.ocrCrop?.x ?? "",
+          card.ocrCrop?.y ?? "",
+          card.ocrCrop?.width ?? "",
+          card.ocrCrop?.height ?? ""
         ].join("\t")
       );
     }
