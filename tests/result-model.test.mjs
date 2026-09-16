@@ -106,7 +106,7 @@ assert.equal(model.factorInfo.grandA1.blue.name, "スピード");
 assert.equal(model.factorInfo.grandA1.blue.stars, 3);
 assert.equal(model.factorInfo.grandA1.red.name, "マイル");
 assert.equal(model.factorInfo.parentA.blue, null);
-assert.equal(getReviewItems().length, 1, "空OCRかつfallback済みのみ表示する");
+assert.equal(getReviewItems().length, 1, "未確定因子を保持する");
 
 const originalSnapshot = {
   ocrText: unrecognizedCard.ocrText,
@@ -178,7 +178,29 @@ const unrelatedUnresolved = createCard({
   ocrFallbackAttempted: false
 });
 members.grandA1.analysisResults[0].analysis.rightCards.push(unrelatedUnresolved);
-assert.equal(getReviewItems().length, 1, "要件外unresolved全件は表示しない");
+assert.equal(getReviewItems().length, 2, "要件外unresolvedも低優先度で保持する");
+assert.equal(
+  getReviewItems().find(item => item.card === unrelatedUnresolved).priority,
+  "low",
+  "要件候補の証拠がない因子は低優先度に分類する"
+);
+
+const overlapDuplicate = createCard({
+  ocrText: "大阪杯",
+  ocrFallbackAttempted: false
+});
+members.grandA1.analysisResults[1].analysis.rightCards.push(overlapDuplicate);
+const dedupedReviewItems = getReviewItems();
+assert.equal(
+  dedupedReviewItems.length,
+  2,
+  "連結画像の同一候補は確認UI上で重複表示しない"
+);
+assert.equal(
+  dedupedReviewItems.find(item => item.card === unrelatedUnresolved).cards.length,
+  2,
+  "重複元カードを補正・取り消し用に保持する"
+);
 
 for (const canonicalName of [
   "春の目覚め",

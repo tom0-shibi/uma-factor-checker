@@ -6,7 +6,7 @@ import {
 import {
   getRequirementRank,
   normalizeSkillText
-} from "../matching/matching.js";
+} from "../matching/matching.js?v=20260916-review-ui-06";
 
 const RANKS = ["S", "A", "B", "C"];
 
@@ -27,9 +27,13 @@ function getOriginalRecognition(card) {
     firstSimilarity: card.matchSimilarity || 0,
     secondCandidate: card.secondMatchCandidate || null,
     secondSimilarity: card.secondMatchSimilarity || 0,
+    candidateScores: card.matchCandidateScores ?? [],
+    ambiguousCandidates: card.ambiguousCandidates ?? [],
     reason: card.reviewReason || null,
     fallbackAttempted: Boolean(card.ocrFallbackAttempted),
-    fallbackUsed: Boolean(card.ocrFallbackUsed)
+    fallbackUsed: Boolean(card.ocrFallbackUsed),
+    fallbackResults: card.ocrFallbackResults ?? [],
+    threshold: card.matchThreshold ?? 1
   };
 }
 
@@ -133,7 +137,9 @@ function aggregateMemberSkills(memberId) {
           resolutionSource: effective.resolutionSource,
           imageIndex: imageResult.imageIndex,
           column: card.column,
-          row: card.row
+          row: card.row,
+          sourceThumbnail:
+            card.sourceThumbnail ?? card.reviewThumbnail ?? null
         });
       }
     });
@@ -279,6 +285,56 @@ function buildOverallSkillSummary() {
 
 function getReviewItems() {
   const items = [];
+  const rankOrder = { S: 0, A: 1, B: 2, C: 3 };
+
+  function getCandidateEvidence(card, original) {
+    const evidence = new Map();
+    const add = (name, similarity, source) => {
+      const rank = name ? getRequirementRank(name) : null;
+      if (!name) {
+        return;
+      }
+      const current = evidence.get(name);
+      if (!current || similarity > current.similarity) {
+        evidence.set(name, {
+          name,
+          similarity: Number(similarity) || 0,
+          rank,
+          source
+        });
+      }
+    };
+
+    add(original.firstCandidate, original.firstSimilarity, "normal");
+    add(original.secondCandidate, original.secondSimilarity, "normal");
+    original.candidateScores.forEach(candidate => {
+      add(candidate.candidate, candidate.similarity, "normal-top-candidates");
+    });
+    original.ambiguousCandidates.forEach(candidate => {
+      add(
+        typeof candidate === "string"
+          ? candidate
+          : candidate.candidate ?? candidate.name,
+        typeof candidate === "string"
+          ? Math.max(
+              original.firstSimilarity,
+              original.secondSimilarity
+            )
+          : candidate.similarity,
+        "ambiguity"
+      );
+    });
+    original.fallbackResults.forEach(result => {
+      add(result.firstCandidate, result.firstSimilarity, "fallback");
+      add(result.secondCandidate, result.secondSimilarity, "fallback");
+    });
+
+    return [...evidence.values()].sort((a, b) => {
+      const aOrder = rankOrder[a.rank] ?? 9;
+      const bOrder = rankOrder[b.rank] ?? 9;
+      return b.similarity - a.similarity || aOrder - bOrder;
+    });
+  }
 
   MEMBER_ORDER.forEach(memberId => {
     members[memberId].analysisResults.forEach(imageResult => {
@@ -294,15 +350,21 @@ function getReviewItems() {
 
         const original = ensureOriginalRecognition(card);
         const isReview = original.status === "review";
-        const isUnrecognized =
-          original.status === "unresolved" &&
-          !original.ocrText &&
-          original.fallbackAttempted &&
-          !original.canonicalName;
+        const isUnrecognized = original.status === "unresolved";
 
         if (!isReview && !isUnrecognized) {
           return;
         }
+
+        const suggestedCandidates = getCandidateEvidence(card, original);
+        const strongestCandidate = suggestedCandidates.find(
+          candidate => candidate.rank
+        ) ?? null;
+        const highPriority =
+          Boolean(
+            strongestCandidate &&
+            strongestCandidate.similarity >= original.threshold
+          );
 
         items.push({
           memberId,
@@ -311,13 +373,58 @@ function getReviewItems() {
           card,
           original,
           effective: getEffectiveRecognition(card),
-          type: isReview ? "review" : "unrecognized"
+          type: isReview ? "review" : "unrecognized",
+          priority: highPriority ? "high" : "low",
+          suggestedCandidates,
+          priorityRank: strongestCandidate?.rank ?? null,
+          cards: [card],
+          duplicateLocations: []
         });
       });
     });
   });
 
-  return items;
+  const sortedItems = items.sort((a, b) => {
+    if (a.priority !== b.priority) {
+      return a.priority === "high" ? -1 : 1;
+    }
+    return (
+      (rankOrder[a.priorityRank] ?? 9) -
+      (rankOrder[b.priorityRank] ?? 9)
+    );
+  });
+
+  const uniqueItems = [];
+  const itemsByRecognition = new Map();
+  sortedItems.forEach(item => {
+    const candidateSignature = item.suggestedCandidates
+      .slice(0, 3)
+      .map(candidate => candidate.name)
+      .join("|");
+    const key = [
+      item.memberId,
+      item.card.column,
+      item.card.stars,
+      item.original.ocrText,
+      item.original.status,
+      candidateSignature
+    ].join("::");
+    const existing = itemsByRecognition.get(key);
+    if (!existing) {
+      itemsByRecognition.set(key, item);
+      uniqueItems.push(item);
+      return;
+    }
+
+    existing.cards.push(item.card);
+    existing.duplicateLocations.push({
+      imageIndex: item.imageIndex,
+      column: item.card.column,
+      row: item.card.row
+    });
+  });
+
+  return uniqueItems;
 }
 
 export {

@@ -1186,6 +1186,30 @@ body {
   background: #f4fbf6;
 }
 
+.review-low-priority-group {
+  opacity: 0.92;
+}
+
+.result-source-evidence {
+  margin-top: 6px;
+}
+
+.result-source-evidence summary {
+  color: var(--color-primary, #4267a9);
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.result-source-evidence img {
+  display: block;
+  width: 220px;
+  max-width: min(70vw, 220px);
+  margin-top: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
 .result-review-item h4,
 .result-review-details,
 .result-review-resolution {

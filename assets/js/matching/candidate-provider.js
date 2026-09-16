@@ -1,7 +1,7 @@
 import { requirements } from "../config.js";
 import {
   TEMPORARY_SKILL_NAME_MASTER
-} from "../master/temporary-skill-name-master.js";
+} from "../master/temporary-skill-name-master.js?v=20260916-review-ui-06";
 
 let cachedSignature = null;
 let cachedCandidates = [];

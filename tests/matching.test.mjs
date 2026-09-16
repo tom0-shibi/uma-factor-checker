@@ -21,7 +21,7 @@ import {
   isStrongShortSkillFallbackResult
 } from "../assets/js/matching/fallback-policy.js";
 
-assert.equal(APP_BUILD, "20260916-ocr-regression-02");
+assert.equal(APP_BUILD, "20260916-review-ui-06");
 assert.deepEqual(SKILL_MATCH_CONFIG, {
   thresholds: {
     1: 1.00,
@@ -33,7 +33,7 @@ assert.deepEqual(SKILL_MATCH_CONFIG, {
   defaultThreshold: 0.60,
   minimumMargin: 0.15
 });
-assert.equal(getTemporaryCandidateCount(), 31);
+assert.equal(getTemporaryCandidateCount(), 32);
 
 requirements.S = ["連綿", "負けん気", "いざ我が道へ！"];
 requirements.A = ["向こう見ず", "マイルコーナー〇"];
@@ -42,6 +42,15 @@ requirements.C = [];
 
 const dictionary = getCanonicalSkillCandidates();
 const context = createSkillMatchContext(dictionary);
+
+assert.deepEqual(
+  findBestSkillMatch("レースの真髄・カ", dictionary)
+    .candidateScores
+    .slice(0, 3)
+    .map(item => item.candidate),
+  ["レースの真髄・体", "レースの真髄・力", "レースの真髄・速"],
+  "同率の第3候補も確認UIへ渡す"
+);
 
 assert.equal(
   dictionary.filter(name => name === "連綿").length,

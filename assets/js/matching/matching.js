@@ -231,7 +231,8 @@ function findBestSkillMatch(
       secondCandidate: null,
       secondSimilarity: 0,
       similarityMargin: 0,
-      normalizedOcr
+      normalizedOcr,
+      candidateScores: []
     };
   }
 
@@ -300,7 +301,11 @@ function findBestSkillMatch(
         ? bestSimilarity -
           secondSimilarity
         : 0,
-    normalizedOcr
+    normalizedOcr,
+    candidateScores: matches.slice(0, 5).map(match => ({
+      candidate: match.candidate,
+      similarity: match.similarity
+    }))
   };
 }
 

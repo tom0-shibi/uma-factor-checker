@@ -3,7 +3,7 @@ import {
   analysisProgress
 } from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
-import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260916-ocr-regression-02";
+import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260916-review-ui-06";
 import {
   getRequirementRank,
   normalizeOcrText,
@@ -12,10 +12,10 @@ import {
   getSkillMatchThreshold,
   createSkillMatchContext,
   assessSkillMatch
-} from "../matching/matching.js";
+} from "../matching/matching.js?v=20260916-review-ui-06";
 import {
   getCanonicalSkillCandidates
-} from "../matching/candidate-provider.js";
+} from "../matching/candidate-provider.js?v=20260916-review-ui-06";
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
@@ -444,6 +444,44 @@ function createOcrCanvas(
   };
 
   return canvas;
+}
+
+function createSourceCardThumbnail(
+  sourceCanvas,
+  card
+) {
+  const paddingX = Math.round(card.width * 0.02);
+  const paddingY = Math.round(card.height * 0.08);
+  const crop = {
+    x: Math.max(0, card.x - paddingX),
+    y: Math.max(0, card.y - paddingY),
+    width: Math.min(
+      sourceCanvas.width - Math.max(0, card.x - paddingX),
+      card.width + paddingX * 2
+    ),
+    height: Math.min(
+      sourceCanvas.height - Math.max(0, card.y - paddingY),
+      card.height + paddingY * 2
+    )
+  };
+  const canvas = document.createElement("canvas");
+  canvas.width = crop.width;
+  canvas.height = crop.height;
+  canvas.getContext("2d").drawImage(
+    sourceCanvas,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    crop.width,
+    crop.height
+  );
+  return {
+    dataUrl: canvas.toDataURL("image/jpeg", 0.88),
+    crop
+  };
 }
 
 /* =========================================================
@@ -1416,6 +1454,16 @@ async function runOcrForWhiteCards(
     const card =
       whiteCards[i];
 
+    if (!card.sourceThumbnail) {
+      const thumbnail = createSourceCardThumbnail(
+        sourceCanvas,
+        card
+      );
+      card.sourceThumbnail = thumbnail.dataUrl;
+      card.sourceThumbnailCrop = thumbnail.crop;
+      card.reviewThumbnail = thumbnail.dataUrl;
+    }
+
     analysisProgress
       .currentWhiteCard =
         i + 1;
@@ -1494,6 +1542,9 @@ async function runOcrForWhiteCards(
     card.matchSimilarityMargin =
       matchResult
         .similarityMargin;
+
+    card.matchCandidateScores =
+      matchResult.candidateScores ?? [];
 
     card.matchThreshold =
       getSkillMatchThreshold(

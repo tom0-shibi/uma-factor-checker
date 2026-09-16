@@ -1,17 +1,27 @@
 import {
   analyzeFactorImage
-} from "../assets/js/analysis/image-analysis.js?v=20260916-ocr-regression-02";
+} from "../assets/js/analysis/image-analysis.js?v=20260916-review-ui-06";
 import {
   createOcrWorker,
   runOcrForFactorMetadata,
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "../assets/js/ocr/ocr.js?v=20260916-ocr-regression-02";
-import { requirements } from "../assets/js/config.js";
+} from "../assets/js/ocr/ocr.js?v=20260916-review-ui-06";
+import {
+  requirements,
+  members,
+  MEMBER_ORDER
+} from "../assets/js/config.js";
 import { normalizeSkillText } from "../assets/js/matching/matching.js";
 import { SKILL_EXAM_HIGH_EFFICIENCY_PRESET } from "../assets/js/preset/skill-exam-high-efficiency.js";
 import { getCanonicalSkillCandidates } from "../assets/js/matching/candidate-provider.js";
+import {
+  getReviewItems
+} from "../assets/js/result/result-model.js?v=20260916-review-ui-06";
+import {
+  renderOverallSkillSummary
+} from "../assets/js/result/results.js?v=20260916-review-ui-06";
 
 const root = "./fixtures/factor-images/regression-20260916";
 
@@ -43,6 +53,10 @@ async function run() {
   const output = document.getElementById("output");
   const manifest = await fetch(`${root}/expected.json?v=20260916-02`).then(r => r.json());
   Object.assign(requirements, structuredClone(SKILL_EXAM_HIGH_EFFICIENCY_PRESET.skills));
+  MEMBER_ORDER.forEach(memberId => {
+    members[memberId].images = [];
+    members[memberId].analysisResults = [];
+  });
   resetOcrPerformanceMetrics();
   const canonicalCandidateKeys = new Set(
     getCanonicalSkillCandidates().map(normalizeSkillText)
@@ -129,6 +143,12 @@ async function run() {
         metadataFound: analysis.factorMetadataFound
       });
       await runOcrForWhiteCards(worker, canvas, analysis, fixture.member, fixture.imageIndex);
+      members[fixture.member].images.push({ id: filename });
+      members[fixture.member].analysisResults.push({
+        imageId: filename,
+        imageIndex: fixture.imageIndex,
+        analysis
+      });
       for (const expected of fixture.whiteFactors) {
         const card = getWhiteCard(analysis, expected);
         const normalizedExpected = normalizeSkillText(expected.name);
@@ -185,8 +205,40 @@ async function run() {
   const requirementCorrect = requirementChecks.filter(item =>
     JSON.stringify(item.actual) === JSON.stringify(item.expected)
   ).length;
+  const reviewItems = getReviewItems();
+  const reviewCounts = {
+    total: reviewItems.length,
+    review: reviewItems.filter(item => item.original.status === "review").length,
+    unresolved: reviewItems.filter(item => item.original.status === "unresolved").length,
+    high: reviewItems.filter(item => item.priority === "high").length,
+    low: reviewItems.filter(item => item.priority === "low").length,
+    byRank: Object.fromEntries(
+      ["S", "A", "B", "C"].map(rank => [
+        rank,
+        reviewItems.filter(
+          item => item.priority === "high" && item.priorityRank === rank
+        ).length
+      ])
+    ),
+    parentBShinzui: reviewItems
+      .filter(item =>
+        item.memberId === "parentB" &&
+        item.suggestedCandidates?.some(candidate =>
+          candidate.name.startsWith("レースの真髄・")
+        )
+      )
+      .map(item => ({
+        imageIndex: item.imageIndex,
+        column: item.card.column,
+        row: item.card.row,
+        ocrText: item.original.ocrText,
+        priority: item.priority,
+        candidates: item.suggestedCandidates ?? [],
+        hasThumbnail: Boolean(item.card.sourceThumbnail)
+      }))
+  };
   const summary = {
-    build: "20260916-ocr-regression-02",
+    build: "20260916-review-ui-06",
     fixtures: Object.keys(manifest.fixtures).length,
     raw: { correct: rawCorrect, total: rawTotal, accuracy: rawCorrect / rawTotal },
     canonical: { correct: canonicalCorrect, total: canonicalTotal, accuracy: canonicalCorrect / canonicalTotal },
@@ -200,6 +252,7 @@ async function run() {
       greenStars: { correct: greenStarsCorrect, total: greenTotal, accuracy: greenStarsCorrect / greenTotal },
       details: metadataDetails
     },
+    reviewCounts,
     requirements: {
       correct: requirementCorrect,
       total: requirementChecks.length,
@@ -214,6 +267,9 @@ async function run() {
   };
   window.ocrRegressionResult = summary;
   output.textContent = JSON.stringify(summary, null, 2);
+  if (new URLSearchParams(location.search).has("reviewUi")) {
+    renderOverallSkillSummary();
+  }
 }
 
 run().catch(error => {

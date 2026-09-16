@@ -12,7 +12,7 @@ import {
 import {
   markRequirementsDirty,
   clearRequirementApplyStatus
-} from "../ui/ui.js?v=20260916-ocr-regression-02";
+} from "../ui/ui.js?v=20260916-review-ui-06";
 
 const RANKS = ["S", "A", "B", "C"];
 const DEFAULT_LABELS = {
