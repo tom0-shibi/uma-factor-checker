@@ -222,4 +222,28 @@ for (const canonicalName of [
   assert.equal(reviewCard.finalStatus, "review", "元review状態を保持する");
 }
 
+const ambiguousReview = createCard({
+  ocrText: "レースの真髄・カ",
+  finalStatus: "review",
+  matchCandidate: "レースの真髄・体",
+  matchSimilarity: 0.875,
+  secondMatchCandidate: "レースの真髄・力",
+  secondMatchSimilarity: 0.875,
+  reviewReason: "ambiguous-similar-candidates"
+});
+members.grandA1.analysisResults[0].analysis.rightCards.push(ambiguousReview);
+const ambiguousReviewItem = getReviewItems().find(
+  item => item.card === ambiguousReview
+);
+assert.equal(
+  ambiguousReviewItem.priority,
+  "high",
+  "曖昧候補reviewは要件ランク外でも高優先度にする"
+);
+assert.equal(
+  ambiguousReviewItem.priorityRank,
+  null,
+  "閾値未満の要件候補を優先度ランク表示へ使わない"
+);
+
 console.log("result model tests: OK");

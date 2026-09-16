@@ -29,6 +29,24 @@ assert.equal(
   null
 );
 
+for (const [ocrText, candidates, expectedCandidate] of [
+  ["買さ", BLUE_FACTOR_NAMES, "賢さ"],
+  ["條込", RED_FACTOR_NAMES, "追込"]
+]) {
+  const result = matchFactorMetadataName(
+    ocrText,
+    candidates,
+    { confidence: 90 }
+  );
+  assert.equal(result.match.candidate, expectedCandidate, ocrText);
+  assert.equal(result.match.similarity, 0.5, ocrText);
+  assert.equal(
+    result.canonicalName,
+    null,
+    "2文字中1文字だけの一致は専用閾値を満たさないため安全側で未確定にする"
+  );
+}
+
 for (const ocrText of ["人追込", "追込人"]) {
   const result = matchFactorMetadataName(
     ocrText,

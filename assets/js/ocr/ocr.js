@@ -3,7 +3,7 @@ import {
   analysisProgress
 } from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
-import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260916-review-ui-06";
+import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260917-result-ui-01";
 import {
   getRequirementRank,
   normalizeOcrText,
@@ -12,10 +12,10 @@ import {
   getSkillMatchThreshold,
   createSkillMatchContext,
   assessSkillMatch
-} from "../matching/matching.js?v=20260916-review-ui-06";
+} from "../matching/matching.js?v=20260917-result-ui-01";
 import {
   getCanonicalSkillCandidates
-} from "../matching/candidate-provider.js?v=20260916-review-ui-06";
+} from "../matching/candidate-provider.js?v=20260917-result-ui-01";
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult

@@ -1,27 +1,29 @@
 import {
   analyzeFactorImage
-} from "../assets/js/analysis/image-analysis.js?v=20260916-review-ui-06";
+} from "../assets/js/analysis/image-analysis.js?v=20260917-result-ui-01";
 import {
   createOcrWorker,
   runOcrForFactorMetadata,
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "../assets/js/ocr/ocr.js?v=20260916-review-ui-06";
+} from "../assets/js/ocr/ocr.js?v=20260917-result-ui-01";
 import {
   requirements,
   members,
-  MEMBER_ORDER
+  MEMBER_ORDER,
+  debugLogLines
 } from "../assets/js/config.js";
 import { normalizeSkillText } from "../assets/js/matching/matching.js";
 import { SKILL_EXAM_HIGH_EFFICIENCY_PRESET } from "../assets/js/preset/skill-exam-high-efficiency.js";
 import { getCanonicalSkillCandidates } from "../assets/js/matching/candidate-provider.js";
 import {
   getReviewItems
-} from "../assets/js/result/result-model.js?v=20260916-review-ui-06";
+} from "../assets/js/result/result-model.js?v=20260917-result-ui-01";
 import {
-  renderOverallSkillSummary
-} from "../assets/js/result/results.js?v=20260916-review-ui-06";
+  renderOverallSkillSummary,
+  appendSummaryToDebugLog
+} from "../assets/js/result/results.js?v=20260917-result-ui-01";
 
 const root = "./fixtures/factor-images/regression-20260916";
 
@@ -206,6 +208,7 @@ async function run() {
     JSON.stringify(item.actual) === JSON.stringify(item.expected)
   ).length;
   const reviewItems = getReviewItems();
+  const rawReviewItems = getReviewItems({ deduplicate: false });
   const reviewCounts = {
     total: reviewItems.length,
     review: reviewItems.filter(item => item.original.status === "review").length,
@@ -238,7 +241,7 @@ async function run() {
       }))
   };
   const summary = {
-    build: "20260916-review-ui-06",
+    build: "20260917-result-ui-01",
     fixtures: Object.keys(manifest.fixtures).length,
     raw: { correct: rawCorrect, total: rawTotal, accuracy: rawCorrect / rawTotal },
     canonical: { correct: canonicalCorrect, total: canonicalTotal, accuracy: canonicalCorrect / canonicalTotal },
@@ -253,6 +256,25 @@ async function run() {
       details: metadataDetails
     },
     reviewCounts,
+    rawReviewCounts: {
+      total: rawReviewItems.length,
+      review: rawReviewItems.filter(
+        item => item.original.status === "review"
+      ).length,
+      unresolved: rawReviewItems.filter(
+        item => item.original.status === "unresolved"
+      ).length,
+      high: rawReviewItems.filter(item => item.priority === "high").length,
+      low: rawReviewItems.filter(item => item.priority === "low").length,
+      byRank: Object.fromEntries(
+        ["S", "A", "B", "C"].map(rank => [
+          rank,
+          rawReviewItems.filter(
+            item => item.priority === "high" && item.priorityRank === rank
+          ).length
+        ])
+      )
+    },
     requirements: {
       correct: requirementCorrect,
       total: requirementChecks.length,
@@ -265,6 +287,13 @@ async function run() {
     totalAnalysisMs: performance.now() - startedAt,
     details
   };
+  appendSummaryToDebugLog();
+  const reviewSummaryIndex = debugLogLines.lastIndexOf(
+    "===== review summary ====="
+  );
+  summary.reviewDebugLog = reviewSummaryIndex >= 0
+    ? debugLogLines.slice(reviewSummaryIndex, reviewSummaryIndex + 11)
+    : [];
   window.ocrRegressionResult = summary;
   output.textContent = JSON.stringify(summary, null, 2);
   if (new URLSearchParams(location.search).has("reviewUi")) {

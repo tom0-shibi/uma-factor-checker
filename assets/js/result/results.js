@@ -1,10 +1,10 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260916-review-ui-06";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260917-result-ui-01";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
 } from "../preset/preset-manager.js";
-import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260916-review-ui-06";
+import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260917-result-ui-01";
 import {
   RANKS,
   buildOverallSkillSummary as buildResultModel,
@@ -12,7 +12,7 @@ import {
   setManualCorrection,
   ignoreRecognition,
   clearManualCorrection
-} from "./result-model.js?v=20260916-review-ui-06";
+} from "./result-model.js?v=20260917-result-ui-01";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -29,7 +29,7 @@ import {
   clearShareSkills,
   getRequirementSkillCandidates,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260916-review-ui-06";
+} from "../export/share-skills.js?v=20260917-result-ui-01";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -1128,7 +1128,21 @@ function renderShareSkillSettings() {
   return section;
 }
 
-function renderResultShareActions(container, model) {
+function renderResultShareActions(model) {
+  const entry = document.getElementById("result-share-entry");
+  const container = document.getElementById("result-share-content");
+  if (!entry || !container) {
+    return;
+  }
+
+  const hasShareableResults = model.registeredMemberCount > 0;
+  entry.hidden = !hasShareableResults;
+  container.innerHTML = "";
+  if (!hasShareableResults) {
+    entry.open = false;
+    return;
+  }
+
   const section =
     document.createElement("section");
 
@@ -1139,7 +1153,7 @@ function renderResultShareActions(container, model) {
     document.createElement("h3");
 
   heading.textContent =
-    "結果を共有";
+    "共有形式";
 
   const actions =
     document.createElement("div");
@@ -1254,6 +1268,14 @@ function renderResultShareActions(container, model) {
     status
   );
 
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "secondary-button compact-button result-share-close";
+  closeButton.textContent = "閉じる";
+  closeButton.addEventListener("click", () => {
+    entry.open = false;
+  });
+  section.appendChild(closeButton);
   container.appendChild(section);
 }
 
@@ -1580,7 +1602,7 @@ function createReviewArticle(item, candidates) {
   status.className = "result-review-status";
   status.textContent = item.priority === "high"
     ? `優先度 高${item.priorityRank ? `・${item.priorityRank}` : ""}`
-    : "その他の未確定因子";
+    : "その他の読み取り結果";
   header.appendChild(status);
   article.appendChild(header);
 
@@ -1756,14 +1778,14 @@ function renderReviewItems(container) {
     ? "result-review-heading is-warning"
     : "result-review-heading is-clear";
   heading.textContent = unresolvedItems.length > 0
-    ? `要確認 ${highPriorityItems.length}件・その他未確定 ${lowPriorityItems.length}件・補正済み ${resolvedItems.length}件`
+    ? `要確認 ${highPriorityItems.length}件・その他の読み取り結果 ${lowPriorityItems.length}件・補正済み ${resolvedItems.length}件`
     : "✓ 要確認項目はありません";
   section.appendChild(heading);
 
   const guide = document.createElement("p");
   guide.className = "result-review-guide";
   guide.textContent =
-    "画像からスキル名を確定できなかった項目です。候補から選択するか、別のスキルを指定してください。要件に関係のない因子・レース因子・シナリオ因子は「無視」を選択してください。";
+    "要件スキルの可能性が高い項目を先に表示します。その他の読み取り結果には、要件外のレース因子・その他白因子も含まれます。";
   section.appendChild(guide);
 
   const candidates = getRequirementSkillCandidates(requirements)
@@ -1786,7 +1808,7 @@ function renderReviewItems(container) {
     const lowSummary = document.createElement("summary");
     const lowLabel = document.createElement("span");
     lowLabel.className = "review-member-label";
-    lowLabel.textContent = "その他の未確定因子";
+    lowLabel.textContent = "その他の読み取り結果";
     const lowCount = document.createElement("span");
     lowCount.className = "review-member-count";
     lowCount.textContent = `${lowPriorityItems.length}件`;
@@ -1833,7 +1855,7 @@ function renderManualResolutionDebug() {
   }
 
   document.getElementById("manual-resolution-debug")?.remove();
-  const items = getReviewItems();
+  const items = getReviewItems({ deduplicate: false });
   if (items.length === 0) {
     return;
   }
@@ -1851,10 +1873,16 @@ function renderManualResolutionDebug() {
     item => item.original.status === "unresolved"
   ).length;
   const highPriorityReviewCount = items.filter(
-    item => item.priority === "high" && !item.card.manualCorrection
+    item =>
+      item.original.status === "review" &&
+      item.priority === "high" &&
+      !item.card.manualCorrection
   ).length;
   const lowPriorityUnresolvedCount = items.filter(
-    item => item.priority === "low" && !item.card.manualCorrection
+    item =>
+      item.original.status === "unresolved" &&
+      item.priority === "low" &&
+      !item.card.manualCorrection
   ).length;
   const manualCorrectionCount = items.filter(
     item => item.card.manualCorrection
@@ -1932,18 +1960,6 @@ function renderOverallSkillSummary() {
 
   container.innerHTML = "";
 
-  const heading =
-    document.createElement(
-      "h2"
-    );
-
-  heading.textContent =
-    "スキル要件 判定結果";
-
-  container.appendChild(
-    heading
-  );
-
   const note =
     document.createElement(
       "p"
@@ -1959,10 +1975,7 @@ function renderOverallSkillSummary() {
     note
   );
 
-  renderResultShareActions(
-    container,
-    model
-  );
+  renderResultShareActions(model);
 
   renderMemberSummary(container, model);
   renderFactorInfo(container, model);
@@ -2296,6 +2309,39 @@ function renderOverallSkillSummary() {
 function appendSummaryToDebugLog() {
   const model = buildResultModel();
   const summary = model.ranks;
+  const reviewItems = getReviewItems({ deduplicate: false });
+  const reviewCount = reviewItems.filter(
+    item => item.original.status === "review"
+  ).length;
+  const unresolvedCount = reviewItems.filter(
+    item => item.original.status === "unresolved"
+  ).length;
+  const highPriorityReviewCount = reviewItems.filter(
+    item =>
+      item.original.status === "review" &&
+      item.priority === "high" &&
+      !item.card.manualCorrection
+  ).length;
+  const lowPriorityUnresolvedCount = reviewItems.filter(
+    item =>
+      item.original.status === "unresolved" &&
+      item.priority === "low" &&
+      !item.card.manualCorrection
+  ).length;
+  const manualCorrectionCount = reviewItems.filter(
+    item => item.card.manualCorrection
+  ).length;
+  const rankCounts = Object.fromEntries(
+    RANKS.map(rank => [
+      rank,
+      reviewItems.filter(
+        item =>
+          item.priority === "high" &&
+          item.priorityRank === rank &&
+          !item.card.manualCorrection
+      ).length
+    ])
+  );
 
   debugLogLines.push(
     "===== 集計結果 ====="
@@ -2306,6 +2352,21 @@ function appendSummaryToDebugLog() {
   );
 
   debugLogLines.push("");
+
+  debugLogLines.push(
+    "===== review summary =====",
+    `reviewCount=${reviewCount}`,
+    `unresolvedCount=${unresolvedCount}`,
+    `highPriorityReviewCount=${highPriorityReviewCount}`,
+    `lowPriorityUnresolvedCount=${lowPriorityUnresolvedCount}`,
+    `manualCorrectionCount=${manualCorrectionCount}`,
+    "rank candidate review:",
+    `S=${rankCounts.S}`,
+    `A=${rankCounts.A}`,
+    `B=${rankCounts.B}`,
+    `C=${rankCounts.C}`,
+    ""
+  );
 
   for (
     const rank

@@ -6,7 +6,7 @@ import {
 import {
   getRequirementRank,
   normalizeSkillText
-} from "../matching/matching.js?v=20260916-review-ui-06";
+} from "../matching/matching.js?v=20260917-result-ui-01";
 
 const RANKS = ["S", "A", "B", "C"];
 
@@ -283,7 +283,7 @@ function buildOverallSkillSummary() {
   };
 }
 
-function getReviewItems() {
+function getReviewItems({ deduplicate = true } = {}) {
   const items = [];
   const rankOrder = { S: 0, A: 1, B: 2, C: 3 };
 
@@ -361,10 +361,16 @@ function getReviewItems() {
           candidate => candidate.rank
         ) ?? null;
         const highPriority =
+          isReview ||
           Boolean(
             strongestCandidate &&
             strongestCandidate.similarity >= original.threshold
           );
+        const priorityRank =
+          strongestCandidate &&
+          strongestCandidate.similarity >= original.threshold
+            ? strongestCandidate.rank
+            : null;
 
         items.push({
           memberId,
@@ -376,7 +382,7 @@ function getReviewItems() {
           type: isReview ? "review" : "unrecognized",
           priority: highPriority ? "high" : "low",
           suggestedCandidates,
-          priorityRank: strongestCandidate?.rank ?? null,
+          priorityRank,
           cards: [card],
           duplicateLocations: []
         });
@@ -393,6 +399,10 @@ function getReviewItems() {
       (rankOrder[b.priorityRank] ?? 9)
     );
   });
+
+  if (!deduplicate) {
+    return sortedItems;
+  }
 
   const uniqueItems = [];
   const itemsByRecognition = new Map();

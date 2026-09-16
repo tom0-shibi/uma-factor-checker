@@ -1,5 +1,5 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
-import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260916-review-ui-06";
+import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260917-result-ui-01";
 import {
   createOcrWorker,
   runOcrForFactorMetadata,
@@ -7,11 +7,11 @@ import {
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
 } from "./ocr/ocr.js";
-import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260916-review-ui-06";
-import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260916-review-ui-06";
+import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260917-result-ui-01";
+import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260917-result-ui-01";
 import { initializePresetManager } from "./preset/preset-manager.js";
 import { initializeTheme } from "./ui/theme.js";
-import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260916-review-ui-06";
+import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-result-ui-01";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`

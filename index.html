@@ -23,11 +23,11 @@
     </script>
     <link
       rel="stylesheet"
-      href="./assets/css/tokens.css?v=20260916-review-ui-06"
+      href="./assets/css/tokens.css?v=20260917-result-ui-01"
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260916-review-ui-06"
+      href="./assets/css/style.css?v=20260917-result-ui-01"
     />
   </head>
   <body>
@@ -392,11 +392,18 @@
       </section>
 
       <section id="results" class="tab-content">
-        <h2>判定結果</h2>
-
-        <p class="description">
-          解析結果の確認、要確認項目の手動訂正、スキル要件ごとの集計ができます。
-        </p>
+        <div class="section-heading">
+          <div>
+            <h2>判定結果</h2>
+            <p class="description">
+              解析結果の確認、要確認項目の手動訂正、スキル要件ごとの集計ができます。
+            </p>
+          </div>
+          <details id="result-share-entry" class="inline-help result-share-entry" hidden>
+            <summary>結果を共有</summary>
+            <div id="result-share-content" class="inline-help-content result-share-content"></div>
+          </details>
+        </div>
 
         <div id="debug-actions" class="debug-actions" hidden>
           <button id="copy-debug-log" class="secondary-button" disabled>
@@ -492,7 +499,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260916-review-ui-06"
+      src="./assets/js/app.js?v=20260917-result-ui-01"
     ></script>
   </body>
 </html>
