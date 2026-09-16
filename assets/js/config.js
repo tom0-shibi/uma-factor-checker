@@ -1,4 +1,4 @@
-const APP_BUILD = "20260916-ocr-regression-01";
+const APP_BUILD = "20260916-ocr-regression-02";
 
 /* =========================================================
   アプリ内データ

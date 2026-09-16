@@ -1,5 +1,5 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260916-ocr-regression-01";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260916-ocr-regression-02";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
@@ -12,7 +12,7 @@ import {
   setManualCorrection,
   ignoreRecognition,
   clearManualCorrection
-} from "./result-model.js?v=20260916-ocr-regression-01";
+} from "./result-model.js?v=20260916-ocr-regression-02";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -29,7 +29,7 @@ import {
   clearShareSkills,
   getRequirementSkillCandidates,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260916-ocr-regression-01";
+} from "../export/share-skills.js?v=20260916-ocr-regression-02";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -189,6 +189,7 @@ function renderAnalysisDebug(
     <span>列X：${analysis.columnGeometry?.leftX ?? "-"} / ${analysis.columnGeometry?.rightX ?? "-"}</span>
     <span>カード幅：${analysis.columnGeometry?.leftWidth ?? "-"} / ${analysis.columnGeometry?.rightWidth ?? "-"}</span>
     <span>カード高さ：${analysis.columnGeometry?.cardHeight ?? "-"}</span>
+    <span>元画像：${canvas.width} × ${canvas.height}</span>
     <span>所持因子開始Y：${analysis.factorAreaTop}</span>
     <span>行間隔：${analysis.pitch ?? "-"}</span>
   `;
@@ -238,6 +239,7 @@ function renderAnalysisDebug(
         <th>高さ</th>
         <th>card geometry</th>
         <th>crop geometry</th>
+        <th>normalized OCR size</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -483,6 +485,7 @@ function renderAnalysisDebug(
         <td>${card.height}</td>
         <td>${card.x},${card.y},${card.width},${card.height}</td>
         <td>${card.ocrCrop ? `${card.ocrCrop.x},${card.ocrCrop.y},${card.ocrCrop.width},${card.ocrCrop.height}` : "-"}</td>
+        <td>${card.ocrNormalizedSize ? `${card.ocrNormalizedSize.width}×${card.ocrNormalizedSize.height}` : "-"}</td>
       `;
 
       tbody.appendChild(

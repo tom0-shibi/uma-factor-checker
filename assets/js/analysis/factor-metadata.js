@@ -164,7 +164,10 @@ function createFactorMetadata({
           confidence: blueRecognition?.ocrConfidence ?? 0,
           candidate: blueMatch?.match?.candidate ?? null,
           similarity: blueMatch?.match?.similarity ?? 0,
-          status: blueMatch?.status ?? "unresolved"
+          status: blueMatch?.status ?? "unresolved",
+          ocrCrop: blueRecognition?.ocrCrop ?? null,
+          ocrNormalizedSize:
+            blueRecognition?.ocrNormalizedSize ?? null
         }
       : null,
     red:
@@ -180,7 +183,10 @@ function createFactorMetadata({
           confidence: redRecognition?.ocrConfidence ?? 0,
           candidate: redMatch?.match?.candidate ?? null,
           similarity: redMatch?.match?.similarity ?? 0,
-          status: redMatch?.status ?? "unresolved"
+          status: redMatch?.status ?? "unresolved",
+          ocrCrop: redRecognition?.ocrCrop ?? null,
+          ocrNormalizedSize:
+            redRecognition?.ocrNormalizedSize ?? null
         }
       : null,
     green: hasValidStars(greenCard)

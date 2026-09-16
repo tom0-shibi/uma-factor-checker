@@ -4,6 +4,7 @@
   "fixtures": {
     "skill-check-parent-a-01.png": {
       "member": "parentA", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"賢さ","stars":3},"red":{"name":"ダート","stars":2},"green":{"stars":1}},
       "whiteFactors": [
         {"column":"left","row":1,"name":"安田記念","stars":2,"type":"race"},
         {"column":"left","row":5,"name":"末脚","stars":1,"type":"skill"},
@@ -30,6 +31,7 @@
     },
     "skill-check-grand-a1-01.png": {
       "member": "grandA1", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"賢さ","stars":1},"red":{"name":"追込","stars":3},"green":{"stars":2}},
       "whiteFactors": [
         {"column":"left","row":1,"name":"チャンピオンズC","stars":2,"type":"race"},
         {"column":"left","row":7,"name":"連綿","stars":3,"type":"skill"},
@@ -43,6 +45,7 @@
     },
     "skill-check-grand-a2-01.png": {
       "member": "grandA2", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"パワー","stars":2},"red":{"name":"追込","stars":3},"green":{"stars":2}},
       "whiteFactors": [
         {"column":"left","row":1,"name":"ヴィクトリアマイル","stars":3,"type":"race"},
         {"column":"left","row":4,"name":"マイルCS南部杯","stars":2,"type":"race"},
@@ -71,6 +74,7 @@
     },
     "skill-check-parent-b-01.png": {
       "member": "parentB", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"根性","stars":2},"red":{"name":"中距離","stars":3},"green":{"stars":3}},
       "whiteFactors": [
         {"column":"left","row":1,"name":"朝日杯FS","stars":2,"type":"race"},
         {"column":"left","row":6,"name":"たぎる血潮","stars":2,"type":"skill"},
@@ -97,6 +101,7 @@
     },
     "skill-check-grand-b1-01.png": {
       "member": "grandB1", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"スタミナ","stars":3},"red":{"name":"追込","stars":3},"green":{"stars":2}},
       "whiteFactors": [
         {"column":"left","row":1,"name":"安田記念","stars":2,"type":"race"},
         {"column":"left","row":8,"name":"阿吽の呼吸","stars":1,"type":"skill"},
@@ -111,6 +116,7 @@
     },
     "skill-check-grand-b2-01.png": {
       "member": "grandB2", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"パワー","stars":3},"red":{"name":"追込","stars":3},"green":{"stars":2}},
       "whiteFactors": [
         {"column":"left","row":1,"name":"マイルCS","stars":2,"type":"race"},
         {"column":"left","row":2,"name":"JDダービー","stars":2,"type":"race"},

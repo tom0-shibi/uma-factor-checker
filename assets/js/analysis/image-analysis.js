@@ -4,20 +4,6 @@ import {
   detectFactorSectionAnchorCandidates
 } from "./factor-anchor.js";
 
-const HIGH_DPI_IMAGE_WIDTH_THRESHOLD = 2000;
-const HIGH_DPI_ANALYSIS_SCALE = 0.5;
-
-function getAnalysisCanvasSize(width, height) {
-  const scale = width >= HIGH_DPI_IMAGE_WIDTH_THRESHOLD
-    ? HIGH_DPI_ANALYSIS_SCALE
-    : 1;
-  return {
-    width: Math.round(width * scale),
-    height: Math.round(height * scale),
-    scale
-  };
-}
-
 /* =========================================================
   FileをImageへ読み込む処理
   ========================================================= */
@@ -75,14 +61,9 @@ async function drawOriginalImage(
       "analysis-canvas"
     );
 
-  const analysisSize = getAnalysisCanvasSize(
-    image.naturalWidth,
-    image.naturalHeight
-  );
+  canvas.width = image.naturalWidth;
 
-  canvas.width = analysisSize.width;
-
-  canvas.height = analysisSize.height;
+  canvas.height = image.naturalHeight;
 
   const ctx =
     canvas.getContext(
@@ -116,7 +97,7 @@ async function drawOriginalImage(
       canvas.height,
     originalWidth: image.naturalWidth,
     originalHeight: image.naturalHeight,
-    analysisScale: analysisSize.scale
+    analysisScale: 1
   };
 }
 
@@ -754,6 +735,20 @@ function hasFullCardBody(
 function calculateRowPitch(
   cards
 ) {
+  const cardHeights = cards
+    .map(card => card.height)
+    .filter(height => Number.isFinite(height) && height > 0)
+    .sort((a, b) => a - b);
+
+  if (cardHeights.length === 0) {
+    return null;
+  }
+
+  const medianCardHeight = cardHeights[
+    Math.floor(cardHeights.length / 2)
+  ];
+  const minimumPitch = medianCardHeight * 0.55;
+  const maximumPitch = medianCardHeight * 2;
   const yValues = [
     ...new Set(
       cards
@@ -783,8 +778,8 @@ function calculateRowPitch(
       yValues[i - 1];
 
     if (
-      diff >= 40 &&
-      diff <= 120
+      diff >= minimumPitch &&
+      diff <= maximumPitch
     ) {
       differences.push(
         diff
@@ -2395,7 +2390,6 @@ function analyzeFactorImage(
 
 
 export {
-  getAnalysisCanvasSize,
   drawOriginalImage,
   getLuminance,
   analyzeFactorImage,
