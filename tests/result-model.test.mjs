@@ -7,8 +7,10 @@ import {
 import {
   getEffectiveRecognition,
   setManualCorrection,
+  setManualCorrections,
   ignoreRecognition,
   clearManualCorrection,
+  clearManualCorrections,
   buildOverallSkillSummary,
   buildConfirmedCanonicalNamesByMember,
   getReviewItems
@@ -172,6 +174,29 @@ clearManualCorrection(unrecognizedCard);
 effective = getEffectiveRecognition(unrecognizedCard);
 assert.equal(effective.status, "unresolved");
 assert.equal(effective.canonicalName, null);
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 0, "補正取消で面数を戻す");
+assert.equal(model.ranks.A[0].totalStars, 0, "補正取消で星合計を戻す");
+
+requirements.B = ["風切り"];
+setManualCorrection(unrecognizedCard, "溌剌");
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 1, "最初の補正を反映する");
+setManualCorrection(unrecognizedCard, "風切り");
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 0, "補正変更で旧スキルを除外する");
+assert.equal(model.ranks.B[0].ownedCount, 1, "補正変更で新スキルを反映する");
+assert.equal(model.ranks.B[0].totalStars, 2, "補正変更後の星を反映する");
+clearManualCorrection(unrecognizedCard);
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.B[0].ownedCount, 0, "再取消で新スキルを除外する");
+setManualCorrection(unrecognizedCard, "溌剌");
+clearManualCorrection(unrecognizedCard);
+setManualCorrection(unrecognizedCard, "風切り");
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 0, "取消後の旧補正を残さない");
+assert.equal(model.ranks.B[0].ownedCount, 1, "取消後の再補正だけを反映する");
+clearManualCorrection(unrecognizedCard);
 
 const unrelatedUnresolved = createCard({
   ocrText: "大阪杯",
@@ -200,6 +225,19 @@ assert.equal(
   dedupedReviewItems.find(item => item.card === unrelatedUnresolved).cards.length,
   2,
   "重複元カードを補正・取り消し用に保持する"
+);
+const overlapCards = dedupedReviewItems.find(
+  item => item.card === unrelatedUnresolved
+).cards;
+setManualCorrections(overlapCards, "風切り");
+assert.ok(
+  overlapCards.every(card => card.manualCorrection?.canonicalName === "風切り"),
+  "重複カード群へ同じ補正を一括反映する"
+);
+clearManualCorrections(overlapCards);
+assert.ok(
+  overlapCards.every(card => !card.manualCorrection),
+  "重複カード群の補正を一括取消する"
 );
 
 for (const canonicalName of [

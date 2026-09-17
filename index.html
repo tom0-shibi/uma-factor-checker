@@ -23,18 +23,21 @@
     </script>
     <link
       rel="stylesheet"
-      href="./assets/css/tokens.css?v=20260917-result-ui-01"
+      href="./assets/css/tokens.css?v=20260917-public-beta-01"
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260917-result-ui-01"
+      href="./assets/css/style.css?v=20260917-public-beta-01"
     />
   </head>
   <body>
     <header class="app-header">
       <div class="app-header-inner">
         <div>
-          <h1>Uma Factor Checker</h1>
+          <div class="app-title-row">
+            <h1>Uma Factor Checker</h1>
+            <span class="beta-badge">β・公開テスト中</span>
+          </div>
           <p>ウマ娘 因子画像解析・スキル要件チェッカー</p>
         </div>
         <label class="theme-control" for="theme-select">
@@ -71,6 +74,8 @@
               <p><strong>2. スキル要件を調整</strong><br />各ランクを開き、必要なスキルを追加・削除します。</p>
               <p><strong>3. 自分用として保存</strong><br />調整した内容は新しいプリセットとして保存できます。固定プリセットは上書き・削除されません。</p>
               <p><strong>画像について</strong><br />各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。</p>
+              <p><strong>公開テスト中</strong><br />OCRは誤認識する場合があります。要確認項目は元画像を見ながら補正できます。低優先度の読み取り結果には、要件外の因子やレース因子も含まれます。</p>
+              <p><strong>現在の対応状況</strong><br />スキル要件チェックは公開テスト対象です。代表ウマ娘チェックは開発中のため、公開テスト対象外です。</p>
             </div>
           </details>
         </div>
@@ -235,10 +240,10 @@
         <nav class="mode-switch" aria-label="チェック方法">
           <span class="mode-switch-label">チェック方法</span>
           <button class="mode-switch-button active" data-mode="skill-check">
-            スキル要件チェック
+            スキル要件チェック（公開テスト中）
           </button>
           <button class="mode-switch-button" data-mode="representative-check">
-            代表ウマ娘チェック
+            代表ウマ娘チェック（開発中）
           </button>
         </nav>
 
@@ -253,6 +258,16 @@
         <p class="description image-format-note">
           各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。
         </p>
+
+        <details class="known-limitations">
+          <summary>公開テスト中の既知の制限</summary>
+          <ul>
+            <li>OCRのため誤認識や青・赤因子の「名称未確定」が発生する場合があります。</li>
+            <li>その他の読み取り結果には、要件外の因子やレース因子も含まれます。</li>
+            <li>現在対応しているウマ娘1人分の「因子一覧」画像を使用してください。</li>
+            <li>代表ウマ娘チェックは開発中で、公開テスト対象外です。</li>
+          </ul>
+        </details>
 
         <div class="paste-guide">
           <strong>クリップボードから貼り付け</strong>
@@ -423,8 +438,8 @@
       <section class="representative-check">
         <div class="section-heading">
           <div>
-            <h2>代表ウマ娘チェック</h2>
-            <p class="description">レンタル代表として公開する本体・親A・親Bの因子を確認し、共有用画像とX本文を作成します。</p>
+            <h2>代表ウマ娘チェック <span class="development-badge">開発中</span></h2>
+            <p class="description">現在開発中のため公開テスト対象外です。表示や共有機能が正しく動作しない場合があります。</p>
           </div>
         </div>
 
@@ -499,7 +514,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260917-result-ui-01"
+      src="./assets/js/app.js?v=20260917-public-beta-01"
     ></script>
   </body>
 </html>

@@ -6,7 +6,7 @@ import {
 import {
   getRequirementRank,
   normalizeSkillText
-} from "../matching/matching.js?v=20260917-result-ui-01";
+} from "../matching/matching.js?v=20260917-public-beta-01";
 
 const RANKS = ["S", "A", "B", "C"];
 
@@ -99,7 +99,25 @@ function ignoreRecognition(card) {
 }
 
 function clearManualCorrection(card) {
-  card.manualCorrection = null;
+  delete card.manualCorrection;
+}
+
+function setManualCorrections(cards, canonicalName) {
+  [...new Set(cards)].forEach(card => {
+    setManualCorrection(card, canonicalName);
+  });
+}
+
+function ignoreRecognitions(cards) {
+  [...new Set(cards)].forEach(card => {
+    ignoreRecognition(card);
+  });
+}
+
+function clearManualCorrections(cards) {
+  [...new Set(cards)].forEach(card => {
+    clearManualCorrection(card);
+  });
 }
 
 function aggregateMemberSkills(memberId) {
@@ -443,8 +461,11 @@ export {
   getOriginalRecognition,
   getEffectiveRecognition,
   setManualCorrection,
+  setManualCorrections,
   ignoreRecognition,
+  ignoreRecognitions,
   clearManualCorrection,
+  clearManualCorrections,
   aggregateMemberSkills,
   buildMemberFactorInfo,
   buildConfirmedCanonicalNamesByMember,

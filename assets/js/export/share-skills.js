@@ -1,6 +1,6 @@
 import {
   SHARE_SKILL_GROUPS
-} from "./share-skill-groups.js?v=20260917-result-ui-01";
+} from "./share-skill-groups.js?v=20260917-public-beta-01";
 
 const MAX_SHARE_SKILLS = 10;
 const RANKS = ["S", "A", "B", "C"];

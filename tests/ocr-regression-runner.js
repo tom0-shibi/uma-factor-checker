@@ -1,13 +1,13 @@
 import {
   analyzeFactorImage
-} from "../assets/js/analysis/image-analysis.js?v=20260917-result-ui-01";
+} from "../assets/js/analysis/image-analysis.js?v=20260917-public-beta-01";
 import {
   createOcrWorker,
   runOcrForFactorMetadata,
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "../assets/js/ocr/ocr.js?v=20260917-result-ui-01";
+} from "../assets/js/ocr/ocr.js?v=20260917-public-beta-01";
 import {
   requirements,
   members,
@@ -19,11 +19,11 @@ import { SKILL_EXAM_HIGH_EFFICIENCY_PRESET } from "../assets/js/preset/skill-exa
 import { getCanonicalSkillCandidates } from "../assets/js/matching/candidate-provider.js";
 import {
   getReviewItems
-} from "../assets/js/result/result-model.js?v=20260917-result-ui-01";
+} from "../assets/js/result/result-model.js?v=20260917-public-beta-01";
 import {
   renderOverallSkillSummary,
   appendSummaryToDebugLog
-} from "../assets/js/result/results.js?v=20260917-result-ui-01";
+} from "../assets/js/result/results.js?v=20260917-public-beta-01";
 
 const root = "./fixtures/factor-images/regression-20260916";
 
@@ -209,6 +209,18 @@ async function run() {
   ).length;
   const reviewItems = getReviewItems();
   const rawReviewItems = getReviewItems({ deduplicate: false });
+  const whiteCardCount = MEMBER_ORDER.reduce(
+    (total, memberId) =>
+      total + members[memberId].analysisResults.reduce(
+        (memberTotal, imageResult) =>
+          memberTotal + [
+            ...imageResult.analysis.leftCards,
+            ...imageResult.analysis.rightCards
+          ].filter(card => card.factorType === "white").length,
+        0
+      ),
+    0
+  );
   const reviewCounts = {
     total: reviewItems.length,
     review: reviewItems.filter(item => item.original.status === "review").length,
@@ -241,7 +253,7 @@ async function run() {
       }))
   };
   const summary = {
-    build: "20260917-result-ui-01",
+    build: "20260917-public-beta-01",
     fixtures: Object.keys(manifest.fixtures).length,
     raw: { correct: rawCorrect, total: rawTotal, accuracy: rawCorrect / rawTotal },
     canonical: { correct: canonicalCorrect, total: canonicalTotal, accuracy: canonicalCorrect / canonicalTotal },
@@ -256,6 +268,26 @@ async function run() {
       details: metadataDetails
     },
     reviewCounts,
+    reviewDetails: reviewItems
+      .filter(item => item.original.status === "review")
+      .map(item => ({
+        memberId: item.memberId,
+        memberLabel: item.memberLabel,
+        imageIndex: item.imageIndex,
+        column: item.card.column,
+        row: item.card.row,
+        ocrText: item.original.ocrText,
+        confidence: item.original.confidence,
+        reason: item.original.reason,
+        firstCandidate: item.original.firstCandidate,
+        firstSimilarity: item.original.firstSimilarity,
+        secondCandidate: item.original.secondCandidate,
+        secondSimilarity: item.original.secondSimilarity,
+        fallbackAttempted: item.original.fallbackAttempted,
+        fallbackUsed: item.original.fallbackUsed,
+        fallbackResults: item.original.fallbackResults,
+        hasThumbnail: Boolean(item.card.sourceThumbnail)
+      })),
     rawReviewCounts: {
       total: rawReviewItems.length,
       review: rawReviewItems.filter(
@@ -283,7 +315,10 @@ async function run() {
     },
     cropMissing,
     analyses,
-    metrics: getOcrPerformanceMetrics(),
+    metrics: {
+      whiteCardCount,
+      ...getOcrPerformanceMetrics()
+    },
     totalAnalysisMs: performance.now() - startedAt,
     details
   };

@@ -1,5 +1,5 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
-import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260917-result-ui-01";
+import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260917-public-beta-01";
 import {
   createOcrWorker,
   runOcrForFactorMetadata,
@@ -7,11 +7,11 @@ import {
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
 } from "./ocr/ocr.js";
-import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260917-result-ui-01";
-import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260917-result-ui-01";
+import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260917-public-beta-01";
+import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260917-public-beta-01";
 import { initializePresetManager } from "./preset/preset-manager.js";
 import { initializeTheme } from "./ui/theme.js";
-import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-result-ui-01";
+import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-public-beta-01";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
@@ -360,6 +360,7 @@ if (analyzeImagesButton) {
                 `blueSimilarity=${factorMetadata.blue?.similarity?.toFixed(3) ?? "-"}`,
                 `blueConfidence=${factorMetadata.blue?.confidence?.toFixed(1) ?? "-"}`,
                 `blueCanonical=${factorMetadata.blue?.name ?? "-"}`,
+                `blueMatchStrategy=${factorMetadata.blue?.matchStrategy ?? "-"}`,
                 `blueStars=${factorMetadata.blue?.stars ?? "-"}`,
                 `blueCrop=${JSON.stringify(factorMetadata.blue?.ocrCrop ?? null)}`,
                 `blueNormalizedSize=${JSON.stringify(factorMetadata.blue?.ocrNormalizedSize ?? null)}`,
@@ -370,6 +371,7 @@ if (analyzeImagesButton) {
                 `redSimilarity=${factorMetadata.red?.similarity?.toFixed(3) ?? "-"}`,
                 `redConfidence=${factorMetadata.red?.confidence?.toFixed(1) ?? "-"}`,
                 `redCanonical=${factorMetadata.red?.name ?? "-"}`,
+                `redMatchStrategy=${factorMetadata.red?.matchStrategy ?? "-"}`,
                 `redCrop=${JSON.stringify(factorMetadata.red?.ocrCrop ?? null)}`,
                 `redNormalizedSize=${JSON.stringify(factorMetadata.red?.ocrNormalizedSize ?? null)}`,
                 `redStars=${factorMetadata.red?.stars ?? "-"}`,

@@ -1,18 +1,18 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260917-result-ui-01";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260917-public-beta-01";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
 } from "../preset/preset-manager.js";
-import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260917-result-ui-01";
+import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260917-public-beta-01";
 import {
   RANKS,
   buildOverallSkillSummary as buildResultModel,
   getReviewItems,
-  setManualCorrection,
-  ignoreRecognition,
-  clearManualCorrection
-} from "./result-model.js?v=20260917-result-ui-01";
+  setManualCorrections,
+  ignoreRecognitions,
+  clearManualCorrections
+} from "./result-model.js?v=20260917-public-beta-01";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -29,7 +29,7 @@ import {
   clearShareSkills,
   getRequirementSkillCandidates,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260917-result-ui-01";
+} from "../export/share-skills.js?v=20260917-public-beta-01";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -1438,9 +1438,7 @@ function getReviewItemCards(item) {
 }
 
 function applyManualChoice(item, canonicalName) {
-  getReviewItemCards(item).forEach(card => {
-    setManualCorrection(card, canonicalName);
-  });
+  setManualCorrections(getReviewItemCards(item), canonicalName);
   renderOverallSkillSummary();
 }
 
@@ -1499,7 +1497,7 @@ function renderLegacyReviewItems(container) {
       clearButton.className = "secondary-button compact-button";
       clearButton.textContent = "訂正を解除";
       clearButton.addEventListener("click", () => {
-        clearManualCorrection(card);
+        clearManualCorrections(getReviewItemCards(item));
         renderOverallSkillSummary();
       });
       article.appendChild(clearButton);
@@ -1566,9 +1564,7 @@ function renderLegacyReviewItems(container) {
     ignoreButton.className = "secondary-button compact-button";
     ignoreButton.textContent = "無視";
     ignoreButton.addEventListener("click", () => {
-      getReviewItemCards(item).forEach(itemCard => {
-        ignoreRecognition(itemCard);
-      });
+      ignoreRecognitions(getReviewItemCards(item));
       renderOverallSkillSummary();
     });
     controls.appendChild(ignoreButton);
@@ -1648,9 +1644,7 @@ function createReviewArticle(item, candidates) {
     clearButton.className = "secondary-button compact-button";
     clearButton.textContent = "補正を取り消す";
     clearButton.addEventListener("click", () => {
-      getReviewItemCards(item).forEach(itemCard => {
-        clearManualCorrection(itemCard);
-      });
+      clearManualCorrections(getReviewItemCards(item));
       renderOverallSkillSummary();
     });
     article.appendChild(clearButton);
@@ -1725,9 +1719,7 @@ function createReviewArticle(item, candidates) {
   ignoreButton.textContent = "要件対象外";
   ignoreButton.title = "該当するスキルがない場合や要件外因子はこちら";
   ignoreButton.addEventListener("click", () => {
-    getReviewItemCards(item).forEach(itemCard => {
-      ignoreRecognition(itemCard);
-    });
+    ignoreRecognitions(getReviewItemCards(item));
     renderOverallSkillSummary();
   });
   const ignoreHelp = document.createElement("small");
