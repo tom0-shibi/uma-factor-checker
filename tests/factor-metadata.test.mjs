@@ -29,6 +29,65 @@ assert.equal(
   null
 );
 
+for (const [ocrText, candidates, expectedCandidate] of [
+  ["買さ", BLUE_FACTOR_NAMES, "賢さ"],
+  ["條込", RED_FACTOR_NAMES, "追込"]
+]) {
+  const result = matchFactorMetadataName(
+    ocrText,
+    candidates,
+    { confidence: 90 }
+  );
+  assert.equal(result.match.candidate, expectedCandidate, ocrText);
+  assert.equal(result.match.similarity, 0.5, ocrText);
+  assert.equal(
+    result.canonicalName,
+    expectedCandidate,
+    "専用候補内で一意かつ高confidenceならmetadataとして確定する"
+  );
+  assert.equal(result.matchStrategy, "unique-fuzzy-candidate", ocrText);
+}
+
+assert.equal(
+  matchFactorMetadataName(
+    "ババワー",
+    BLUE_FACTOR_NAMES,
+    { confidence: 90 }
+  ).canonicalName,
+  "パワー"
+);
+
+for (const [ocrText, candidates] of [
+  ["買さ", BLUE_FACTOR_NAMES],
+  ["條込", RED_FACTOR_NAMES],
+  ["ババワー", BLUE_FACTOR_NAMES]
+]) {
+  assert.equal(
+    matchFactorMetadataName(
+      ocrText,
+      candidates,
+      { confidence: 39 }
+    ).canonicalName,
+    null,
+    "低confidenceの曖昧文字列は確定しない"
+  );
+}
+
+for (const [ocrText, candidates] of [
+  ["根さ", BLUE_FACTOR_NAMES],
+  ["逃し", RED_FACTOR_NAMES]
+]) {
+  assert.equal(
+    matchFactorMetadataName(
+      ocrText,
+      candidates,
+      { confidence: 90 }
+    ).canonicalName,
+    null,
+    "第1・第2候補を区別できないmetadataは未確定にする"
+  );
+}
+
 for (const ocrText of ["人追込", "追込人"]) {
   const result = matchFactorMetadataName(
     ocrText,

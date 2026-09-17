@@ -61,11 +61,9 @@ async function drawOriginalImage(
       "analysis-canvas"
     );
 
-  canvas.width =
-    image.naturalWidth;
+  canvas.width = image.naturalWidth;
 
-  canvas.height =
-    image.naturalHeight;
+  canvas.height = image.naturalHeight;
 
   const ctx =
     canvas.getContext(
@@ -85,7 +83,9 @@ async function drawOriginalImage(
   ctx.drawImage(
     image,
     0,
-    0
+    0,
+    canvas.width,
+    canvas.height
   );
 
   return {
@@ -94,7 +94,10 @@ async function drawOriginalImage(
     width:
       canvas.width,
     height:
-      canvas.height
+      canvas.height,
+    originalWidth: image.naturalWidth,
+    originalHeight: image.naturalHeight,
+    analysisScale: 1
   };
 }
 
@@ -732,6 +735,20 @@ function hasFullCardBody(
 function calculateRowPitch(
   cards
 ) {
+  const cardHeights = cards
+    .map(card => card.height)
+    .filter(height => Number.isFinite(height) && height > 0)
+    .sort((a, b) => a - b);
+
+  if (cardHeights.length === 0) {
+    return null;
+  }
+
+  const medianCardHeight = cardHeights[
+    Math.floor(cardHeights.length / 2)
+  ];
+  const minimumPitch = medianCardHeight * 0.55;
+  const maximumPitch = medianCardHeight * 2;
   const yValues = [
     ...new Set(
       cards
@@ -761,8 +778,8 @@ function calculateRowPitch(
       yValues[i - 1];
 
     if (
-      diff >= 40 &&
-      diff <= 120
+      diff >= minimumPitch &&
+      diff <= maximumPitch
     ) {
       differences.push(
         diff

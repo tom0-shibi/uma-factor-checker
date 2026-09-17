@@ -32,6 +32,13 @@ const FACTOR_METADATA_MATCH_CONFIG = {
     maximumExtraCharacters: 1,
     minimumSimilarity: 2 / 3,
     minimumConfidence: 40
+  },
+  uniqueFuzzyCandidate: {
+    minimumCandidateLength: 2,
+    maximumLengthDifference: 1,
+    minimumSimilarity: 0.50,
+    minimumMargin: 0.50,
+    minimumConfidence: 40
   }
 };
 
@@ -95,6 +102,17 @@ function matchFactorMetadataName(
       FACTOR_METADATA_MATCH_CONFIG.minimumMargin &&
     (options.confidence ?? 0) >=
       containedConfig.minimumConfidence;
+  const fuzzyConfig =
+    FACTOR_METADATA_MATCH_CONFIG.uniqueFuzzyCandidate;
+  const isUniqueFuzzyCandidate =
+    normalizedCandidate.length >=
+      fuzzyConfig.minimumCandidateLength &&
+    Math.abs(
+      normalizedOcr.length - normalizedCandidate.length
+    ) <= fuzzyConfig.maximumLengthDifference &&
+    match.similarity >= fuzzyConfig.minimumSimilarity &&
+    match.similarityMargin >= fuzzyConfig.minimumMargin &&
+    (options.confidence ?? 0) >= fuzzyConfig.minimumConfidence;
 
   const confirmed =
     (
@@ -103,7 +121,20 @@ function matchFactorMetadataName(
       match.similarityMargin >=
         FACTOR_METADATA_MATCH_CONFIG.minimumMargin
     ) ||
-    isContainedCandidate;
+    isContainedCandidate ||
+    isUniqueFuzzyCandidate;
+
+  const matchStrategy =
+    match.similarity >=
+        FACTOR_METADATA_MATCH_CONFIG.minimumSimilarity &&
+      match.similarityMargin >=
+        FACTOR_METADATA_MATCH_CONFIG.minimumMargin
+      ? "standard"
+      : isContainedCandidate
+        ? "contained-candidate"
+        : isUniqueFuzzyCandidate
+          ? "unique-fuzzy-candidate"
+          : null;
 
   return {
     status: confirmed
@@ -112,7 +143,8 @@ function matchFactorMetadataName(
     canonicalName: confirmed
       ? match.candidate
       : null,
-    match
+    match,
+    matchStrategy
   };
 }
 
@@ -164,7 +196,11 @@ function createFactorMetadata({
           confidence: blueRecognition?.ocrConfidence ?? 0,
           candidate: blueMatch?.match?.candidate ?? null,
           similarity: blueMatch?.match?.similarity ?? 0,
-          status: blueMatch?.status ?? "unresolved"
+          status: blueMatch?.status ?? "unresolved",
+          matchStrategy: blueMatch?.matchStrategy ?? null,
+          ocrCrop: blueRecognition?.ocrCrop ?? null,
+          ocrNormalizedSize:
+            blueRecognition?.ocrNormalizedSize ?? null
         }
       : null,
     red:
@@ -180,7 +216,11 @@ function createFactorMetadata({
           confidence: redRecognition?.ocrConfidence ?? 0,
           candidate: redMatch?.match?.candidate ?? null,
           similarity: redMatch?.match?.similarity ?? 0,
-          status: redMatch?.status ?? "unresolved"
+          status: redMatch?.status ?? "unresolved",
+          matchStrategy: redMatch?.matchStrategy ?? null,
+          ocrCrop: redRecognition?.ocrCrop ?? null,
+          ocrNormalizedSize:
+            redRecognition?.ocrNormalizedSize ?? null
         }
       : null,
     green: hasValidStars(greenCard)

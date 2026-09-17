@@ -1,10 +1,17 @@
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
-import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js";
-import { createOcrWorker, runOcrForFactorMetadata, runOcrForWhiteCards } from "./ocr/ocr.js";
-import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260915-share-skills-03";
-import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js";
+import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260917-public-beta-01";
+import {
+  createOcrWorker,
+  runOcrForFactorMetadata,
+  runOcrForWhiteCards,
+  resetOcrPerformanceMetrics,
+  getOcrPerformanceMetrics
+} from "./ocr/ocr.js";
+import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260917-public-beta-01";
+import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260917-public-beta-01";
 import { initializePresetManager } from "./preset/preset-manager.js";
 import { initializeTheme } from "./ui/theme.js";
+import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-public-beta-01";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
@@ -13,6 +20,7 @@ console.info(
 initializeTheme();
 initializePageScrollPosition();
 initializePresetManager();
+initializeRepresentativeCheck();
 
 /* =========================================================
   全人物の保存済み解析結果初期化処理
@@ -79,6 +87,9 @@ if (analyzeImagesButton) {
       ) {
         return;
       }
+
+      const analysisStartedAt = performance.now();
+      resetOcrPerformanceMetrics();
 
       const debugContainer =
         document.getElementById(
@@ -248,7 +259,10 @@ if (analyzeImagesButton) {
                 canvas,
                 ctx,
                 width,
-                height
+                height,
+                originalWidth,
+                originalHeight,
+                analysisScale
               } =
                 await drawOriginalImage(
                   imageData.file
@@ -280,6 +294,9 @@ if (analyzeImagesButton) {
                 "image classification:",
                 `member=${memberId}`,
                 `imageIndex=${i + 1}`,
+                `originalSize=${originalWidth}x${originalHeight}`,
+                `analysisSize=${width}x${height}`,
+                `analysisScale=${analysisScale}`,
                 `supported=${analysis.supported === true}`,
                 `layout=${analysis.classificationLayout ?? analysis.layoutType}`,
                 `reason=${analysis.supportReason ?? analysis.unsupportedReason ?? "-"}`,
@@ -343,7 +360,10 @@ if (analyzeImagesButton) {
                 `blueSimilarity=${factorMetadata.blue?.similarity?.toFixed(3) ?? "-"}`,
                 `blueConfidence=${factorMetadata.blue?.confidence?.toFixed(1) ?? "-"}`,
                 `blueCanonical=${factorMetadata.blue?.name ?? "-"}`,
+                `blueMatchStrategy=${factorMetadata.blue?.matchStrategy ?? "-"}`,
                 `blueStars=${factorMetadata.blue?.stars ?? "-"}`,
+                `blueCrop=${JSON.stringify(factorMetadata.blue?.ocrCrop ?? null)}`,
+                `blueNormalizedSize=${JSON.stringify(factorMetadata.blue?.ocrNormalizedSize ?? null)}`,
                 `redCardFound=${Boolean(factorMetadata.red)}`,
                 `redRawOcr=${JSON.stringify(factorMetadata.red?.rawOcrText ?? "")}`,
                 `redNormalized=${JSON.stringify(factorMetadata.red?.normalizedOcrText ?? "")}`,
@@ -351,6 +371,9 @@ if (analyzeImagesButton) {
                 `redSimilarity=${factorMetadata.red?.similarity?.toFixed(3) ?? "-"}`,
                 `redConfidence=${factorMetadata.red?.confidence?.toFixed(1) ?? "-"}`,
                 `redCanonical=${factorMetadata.red?.name ?? "-"}`,
+                `redMatchStrategy=${factorMetadata.red?.matchStrategy ?? "-"}`,
+                `redCrop=${JSON.stringify(factorMetadata.red?.ocrCrop ?? null)}`,
+                `redNormalizedSize=${JSON.stringify(factorMetadata.red?.ocrNormalizedSize ?? null)}`,
                 `redStars=${factorMetadata.red?.stars ?? "-"}`,
                 `greenCardFound=${Boolean(factorMetadata.green)}`,
                 `greenCanonical=${factorMetadata.green?.name ?? "-"}`,
@@ -452,6 +475,35 @@ if (analyzeImagesButton) {
       debugLogLines.push(
         `supportedImageCount=${analyzedImageCount}`,
         `unsupportedImageCount=${unsupportedLayouts.length}`,
+        ""
+      );
+
+      const ocrMetrics = getOcrPerformanceMetrics();
+      const whiteCardCount = MEMBER_ORDER.reduce(
+        (total, memberId) => total + members[memberId].analysisResults.reduce(
+          (memberTotal, result) => memberTotal + [
+            ...(result.analysis?.leftCards ?? []),
+            ...(result.analysis?.rightCards ?? [])
+          ].filter(card => card.factorType === "white").length,
+          0
+        ),
+        0
+      );
+      debugLogLines.push(
+        "OCR performance:",
+        `imageCount=${totalImages}`,
+        `whiteCardCount=${whiteCardCount}`,
+        `normalOcrCalls=${ocrMetrics.normalOcrCalls}`,
+        `normalOcrMs=${ocrMetrics.normalOcrMs.toFixed(1)}`,
+        `fallbackTargetCards=${ocrMetrics.fallbackTargetCards}`,
+        `fallbackOcrCalls=${ocrMetrics.fallbackOcrCalls}`,
+        `fallbackOcrMs=${ocrMetrics.fallbackOcrMs.toFixed(1)}`,
+        `averageFallbackCallsPerCard=${ocrMetrics.averageFallbackCallsPerCard.toFixed(2)}`,
+        `maximumFallbackCallsPerCard=${ocrMetrics.maximumFallbackCallsPerCard}`,
+        `fallbackAdoptions=${ocrMetrics.fallbackAdoptions}`,
+        `fallbackAdoptionFailures=${ocrMetrics.fallbackAdoptionFailures}`,
+        `totalOcrCalls=${ocrMetrics.totalOcrCalls}`,
+        `totalAnalysisMs=${(performance.now() - analysisStartedAt).toFixed(1)}`,
         ""
       );
 

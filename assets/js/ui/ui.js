@@ -880,7 +880,7 @@ const dropZones =
 
 const memberPanels =
   document.querySelectorAll(
-    ".member-panel"
+    ".member-panel[data-member]"
   );
 
 /* =========================================================
@@ -1092,6 +1092,26 @@ function updateImageSummary() {
     analyzeButton.disabled =
       total === 0;
   }
+
+  const registeredCount = Object.values(
+    members
+  ).filter(member => member.images.length > 0).length;
+
+  const faceCount = document.getElementById(
+    "skill-registered-face-count"
+  );
+
+  if (faceCount) {
+    faceCount.textContent = `${registeredCount}面`;
+  }
+
+  const disabledReason = document.getElementById(
+    "skill-analysis-disabled-reason"
+  );
+
+  if (disabledReason) {
+    disabledReason.hidden = total > 0;
+  }
 }
 
 /* =========================================================
@@ -1279,6 +1299,14 @@ memberPanels.forEach(panel => {
 document.addEventListener(
   "paste",
   event => {
+    if (
+      document.getElementById(
+        "skill-check-workspace"
+      )?.hidden
+    ) {
+      return;
+    }
+
     const items =
       event.clipboardData?.items;
 

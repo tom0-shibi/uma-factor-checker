@@ -3,7 +3,7 @@ import {
   analysisProgress
 } from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
-import { updateAnalysisProgressDisplay } from "../ui/ui.js";
+import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260917-public-beta-01";
 import {
   getRequirementRank,
   normalizeOcrText,
@@ -12,10 +12,10 @@ import {
   getSkillMatchThreshold,
   createSkillMatchContext,
   assessSkillMatch
-} from "../matching/matching.js";
+} from "../matching/matching.js?v=20260917-public-beta-01";
 import {
   getCanonicalSkillCandidates
-} from "../matching/candidate-provider.js";
+} from "../matching/candidate-provider.js?v=20260917-public-beta-01";
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
@@ -31,6 +31,84 @@ const SHORT_SKILL_FALLBACK_CONFIG = {
   minimumLength: 2,
   binaryThresholds: [165, 195, 220]
 };
+
+const OCR_INPUT_NORMALIZATION = {
+  whiteTextHeight: 64,
+  coloredFactorHeight: 180
+};
+
+const ocrPerformanceMetrics = {
+  normalOcrCalls: 0,
+  normalOcrMs: 0,
+  fallbackTargetCards: 0,
+  fallbackOcrCalls: 0,
+  fallbackOcrMs: 0,
+  fallbackAdoptions: 0,
+  fallbackAdoptionFailures: 0,
+  fallbackCallsByCard: [],
+  fallbackVariants: {}
+};
+
+function resetOcrPerformanceMetrics() {
+  ocrPerformanceMetrics.normalOcrCalls = 0;
+  ocrPerformanceMetrics.normalOcrMs = 0;
+  ocrPerformanceMetrics.fallbackTargetCards = 0;
+  ocrPerformanceMetrics.fallbackOcrCalls = 0;
+  ocrPerformanceMetrics.fallbackOcrMs = 0;
+  ocrPerformanceMetrics.fallbackAdoptions = 0;
+  ocrPerformanceMetrics.fallbackAdoptionFailures = 0;
+  ocrPerformanceMetrics.fallbackCallsByCard = [];
+  ocrPerformanceMetrics.fallbackVariants = {};
+}
+
+function getOcrPerformanceMetrics() {
+  const calls = ocrPerformanceMetrics.fallbackCallsByCard;
+  return {
+    ...ocrPerformanceMetrics,
+    fallbackCallsByCard: [...calls],
+    averageFallbackCallsPerCard: calls.length
+      ? calls.reduce((total, count) => total + count, 0) / calls.length
+      : 0,
+    maximumFallbackCallsPerCard: calls.length ? Math.max(...calls) : 0,
+    totalOcrCalls:
+      ocrPerformanceMetrics.normalOcrCalls +
+      ocrPerformanceMetrics.fallbackOcrCalls
+  };
+}
+
+async function recognizeWithMetrics(worker, canvas, kind) {
+  const startedAt = performance.now();
+  const result = await worker.recognize(canvas);
+  const elapsed = performance.now() - startedAt;
+  if (kind === "fallback") {
+    ocrPerformanceMetrics.fallbackOcrCalls++;
+    ocrPerformanceMetrics.fallbackOcrMs += elapsed;
+  } else {
+    ocrPerformanceMetrics.normalOcrCalls++;
+    ocrPerformanceMetrics.normalOcrMs += elapsed;
+  }
+  result.ocrElapsedMs = elapsed;
+  return result;
+}
+
+function recordFallbackVariant(
+  variant,
+  elapsedMs,
+  assessment
+) {
+  const stats = ocrPerformanceMetrics.fallbackVariants[variant] ?? {
+    runs: 0,
+    confirmed: 0,
+    adopted: 0,
+    totalMs: 0
+  };
+  stats.runs++;
+  stats.totalMs += elapsedMs;
+  stats.confirmed += Number(
+    assessment.finalStatus === "confirmed"
+  );
+  ocrPerformanceMetrics.fallbackVariants[variant] = stats;
+}
 
 /* =========================================================
   OCR対象となるスキル文字色判定処理
@@ -315,17 +393,16 @@ function createOcrCanvas(
       "canvas"
     );
 
-  canvas.width =
-    Math.round(
-      textBounds.width *
-      OCR_CONFIG.scale
-    );
+  const normalizedScale =
+    OCR_INPUT_NORMALIZATION.whiteTextHeight /
+    textBounds.height;
 
-  canvas.height =
-    Math.round(
-      textBounds.height *
-      OCR_CONFIG.scale
-    );
+  canvas.width = Math.max(
+    1,
+    Math.round(textBounds.width * normalizedScale)
+  );
+
+  canvas.height = OCR_INPUT_NORMALIZATION.whiteTextHeight;
 
   const ctx =
     canvas.getContext(
@@ -360,7 +437,51 @@ function createOcrCanvas(
     canvas.height
   );
 
+  canvas.ocrCrop = { ...textBounds };
+  canvas.ocrNormalizedSize = {
+    width: canvas.width,
+    height: canvas.height
+  };
+
   return canvas;
+}
+
+function createSourceCardThumbnail(
+  sourceCanvas,
+  card
+) {
+  const paddingX = Math.round(card.width * 0.02);
+  const paddingY = Math.round(card.height * 0.08);
+  const crop = {
+    x: Math.max(0, card.x - paddingX),
+    y: Math.max(0, card.y - paddingY),
+    width: Math.min(
+      sourceCanvas.width - Math.max(0, card.x - paddingX),
+      card.width + paddingX * 2
+    ),
+    height: Math.min(
+      sourceCanvas.height - Math.max(0, card.y - paddingY),
+      card.height + paddingY * 2
+    )
+  };
+  const canvas = document.createElement("canvas");
+  canvas.width = crop.width;
+  canvas.height = crop.height;
+  canvas.getContext("2d").drawImage(
+    sourceCanvas,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    crop.width,
+    crop.height
+  );
+  return {
+    dataUrl: canvas.toDataURL("image/jpeg", 0.88),
+    crop
+  };
 }
 
 /* =========================================================
@@ -715,35 +836,7 @@ function createShortSkillFallbackVariants(sourceCanvas) {
       Math.min(255, Math.round((value - 128) * 1.8 + 128))
     )
   );
-  const variants = [];
-  const blueChannelContrast = copyCanvasWithPixelTransform(
-    sourceCanvas,
-    (r, g, b) => Math.max(
-      0,
-      Math.min(255, Math.round((b - 128) * 2 + 128))
-    )
-  );
-  const localThreshold = applyLocalThreshold(
-    sourceCanvas,
-    { radius: 5, offset: 10 }
-  );
-  const locallyThresholdedClosed = applyDarkClosing(localThreshold);
-
-  for (const threshold of SHORT_SKILL_FALLBACK_CONFIG.binaryThresholds) {
-    const legacyScaled = createScaledFallbackCanvas(
-      sourceCanvas,
-      { scale: 1.5, paddingRatio: 0, smoothing: false }
-    );
-    variants.push({
-      name: `legacy-binary-${threshold}-1.5x`,
-      preprocessing:
-        `旧fallback：1.5倍拡大（smoothing OFF） → 輝度二値化 ${threshold}`,
-      psm: "7",
-      canvas: applyBinaryThreshold(legacyScaled, threshold)
-    });
-  }
-
-  variants.push(
+  return [
     {
       name: "grayscale-contrast-smooth-2x",
       preprocessing:
@@ -763,79 +856,14 @@ function createShortSkillFallbackVariants(sourceCanvas) {
         contrast,
         { scale: 3, paddingRatio: 0.10, smoothing: false }
       )
-    },
-    {
-      name: "color-smooth-3x-wide-padding",
-      preprocessing:
-        "元画像 → 余白追加 → 3倍拡大（smoothing ON）",
-      psm: "7",
-      canvas: createScaledFallbackCanvas(
-        sourceCanvas,
-        { scale: 3, paddingRatio: 0.14, smoothing: true }
-      )
-    },
-    {
-      name: "channel-blue-contrast-nearest-3x",
-      preprocessing:
-        "青チャンネル抽出 → コントラスト強調 → 3倍拡大（smoothing OFF）",
-      psm: "7",
-      canvas: createScaledFallbackCanvas(
-        blueChannelContrast,
-        { scale: 3, paddingRatio: 0.12, smoothing: false }
-      )
-    },
-    {
-      name: "local-threshold-morph-close-nearest-3x",
-      preprocessing:
-        "局所二値化（radius 5 / offset 10） → 3x3 closing → 3倍拡大（smoothing OFF）",
-      psm: "7",
-      canvas: createScaledFallbackCanvas(
-        locallyThresholdedClosed,
-        { scale: 3, paddingRatio: 0.12, smoothing: false }
-      )
     }
-  );
-
-  for (const threshold of SHORT_SKILL_FALLBACK_CONFIG.binaryThresholds) {
-    const scaledGrayscale = createScaledFallbackCanvas(
-      grayscale,
-      { scale: 2.5, paddingRatio: 0.10, smoothing: false }
-    );
-    variants.push({
-      name: `grayscale-binary-${threshold}-2.5x`,
-      preprocessing:
-        `グレースケール → 2.5倍拡大（smoothing OFF） → 二値化 ${threshold}`,
-      psm: "7",
-      canvas: applyBinaryThreshold(scaledGrayscale, threshold)
-    });
-  }
-
-  const adaptiveSource = createScaledFallbackCanvas(
-    grayscale,
-    { scale: 3, paddingRatio: 0.12, smoothing: false }
-  );
-  const adaptiveThreshold = calculateOtsuThreshold(adaptiveSource);
-  variants.push({
-    name: "grayscale-otsu-nearest-3x",
-    preprocessing:
-      `グレースケール → 3倍拡大（smoothing OFF） → Otsu二値化 ${adaptiveThreshold}`,
-    psm: "7",
-    canvas: applyBinaryThreshold(
-      adaptiveSource,
-      adaptiveThreshold
-    )
-  });
-
-  return variants;
+  ];
 }
 
 function createEmptyTextPsmVariants(variants) {
   const psmVariants = [
     ["grayscale-contrast-smooth-2x", "8"],
-    ["color-smooth-3x-wide-padding", "8"],
-    ["grayscale-contrast-nearest-3x", "13"],
-    ["channel-blue-contrast-nearest-3x", "8"],
-    ["local-threshold-morph-close-nearest-3x", "13"]
+    ["grayscale-contrast-nearest-3x", "13"]
   ];
 
   return psmVariants.map(([name, psm]) => {
@@ -913,10 +941,11 @@ async function recognizeShortSkillFallback(
         activePsm = variant.psm;
       }
 
-      const result =
-        await worker.recognize(
-          fallbackCanvas
-        );
+      const result = await recognizeWithMetrics(
+        worker,
+        fallbackCanvas,
+        "fallback"
+      );
 
       const rawText =
         result.data.text || "";
@@ -935,6 +964,12 @@ async function recognizeShortSkillFallback(
       const assessment = assessSkillMatch(
         matchResult,
         matchContext
+      );
+
+      recordFallbackVariant(
+        variant.name,
+        result.ocrElapsedMs ?? 0,
+        assessment
       );
 
       const adoptionEvaluation =
@@ -991,8 +1026,23 @@ async function recognizeShortSkillFallback(
             result.data.confidence ?? 0,
           ocrCanvas: fallbackCanvas,
           matchResult,
-          assessment
+          assessment,
+          confidence: result.data.confidence ?? 0
         };
+
+        if (
+          (
+            assessment.matchStatus === "exact" &&
+            (result.data.confidence ?? 0) >= 60
+          ) ||
+          (
+            matchResult.similarity >= 0.8 &&
+            matchResult.similarityMargin >= 0.3 &&
+            (result.data.confidence ?? 0) >= 70
+          )
+        ) {
+          break;
+        }
       }
     }
   } finally {
@@ -1105,10 +1155,11 @@ async function recognizeSkillName(
     };
   }
 
-  const result =
-    await worker.recognize(
-      ocrCanvas
-    );
+  const result = await recognizeWithMetrics(
+    worker,
+    ocrCanvas,
+    "normal"
+  );
 
   const rawText =
     result.data.text ||
@@ -1124,7 +1175,8 @@ async function recognizeSkillName(
     ocrConfidence:
       result.data
         .confidence ?? 0,
-    ocrCanvas
+    ocrCanvas,
+    ocrCrop: ocrCanvas.ocrCrop ?? null
   };
 }
 
@@ -1145,10 +1197,12 @@ function createColoredFactorNameCanvas(
     width: Math.round(card.width * 0.62),
     height: Math.round(card.height * 0.62)
   };
-  const scale = 4;
+  const scale =
+    OCR_INPUT_NORMALIZATION.coloredFactorHeight /
+    crop.height;
   const canvas = document.createElement("canvas");
-  canvas.width = crop.width * scale;
-  canvas.height = crop.height * scale;
+  canvas.width = Math.max(1, Math.round(crop.width * scale));
+  canvas.height = OCR_INPUT_NORMALIZATION.coloredFactorHeight;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1165,6 +1219,12 @@ function createColoredFactorNameCanvas(
     canvas.width,
     canvas.height
   );
+
+  canvas.ocrCrop = { ...crop };
+  canvas.ocrNormalizedSize = {
+    width: canvas.width,
+    height: canvas.height
+  };
 
   if (variant === "raw-color") {
     return canvas;
@@ -1208,14 +1268,16 @@ async function recognizeColoredFactorName(
       card,
       variant
     );
-    const result = await worker.recognize(ocrCanvas);
+    const result = await recognizeWithMetrics(worker, ocrCanvas, "normal");
     const rawText = result.data.text || "";
     const recognition = {
       ocrText: normalizeOcrText(rawText),
       ocrRawText: rawText,
       ocrConfidence: result.data.confidence ?? 0,
       ocrCanvas,
-      ocrVariant: variant
+      ocrVariant: variant,
+      ocrCrop: ocrCanvas.ocrCrop,
+      ocrNormalizedSize: ocrCanvas.ocrNormalizedSize
     };
     const match = findBestSkillMatch(recognition.ocrText, candidates);
     recognition.factorCandidate = match.candidate;
@@ -1392,6 +1454,16 @@ async function runOcrForWhiteCards(
     const card =
       whiteCards[i];
 
+    if (!card.sourceThumbnail) {
+      const thumbnail = createSourceCardThumbnail(
+        sourceCanvas,
+        card
+      );
+      card.sourceThumbnail = thumbnail.dataUrl;
+      card.sourceThumbnailCrop = thumbnail.crop;
+      card.reviewThumbnail = thumbnail.dataUrl;
+    }
+
     analysisProgress
       .currentWhiteCard =
         i + 1;
@@ -1427,6 +1499,11 @@ async function runOcrForWhiteCards(
 
     card.ocrConfidence =
       result.ocrConfidence;
+
+    card.ocrCrop = result.ocrCrop;
+
+    card.ocrNormalizedSize =
+      result.ocrCanvas?.ocrNormalizedSize ?? null;
 
     card.ocrPreview =
       result.ocrCanvas
@@ -1465,6 +1542,9 @@ async function runOcrForWhiteCards(
     card.matchSimilarityMargin =
       matchResult
         .similarityMargin;
+
+    card.matchCandidateScores =
+      matchResult.candidateScores ?? [];
 
     card.matchThreshold =
       getSkillMatchThreshold(
@@ -1550,14 +1630,13 @@ async function runOcrForWhiteCards(
 
     if (fallbackDecision.shouldRun) {
       card.ocrFallbackAttempted = true;
+      ocrPerformanceMetrics.fallbackTargetCards++;
 
       const fallbackAttempt =
         await recognizeShortSkillFallback(
           worker,
           result.ocrCanvas,
-          createSkillMatchContext(
-            shortSkillDictionary
-          ),
+          matchContext,
           card.ocrText,
           fallbackDecision.reason,
           matchResult
@@ -1566,10 +1645,15 @@ async function runOcrForWhiteCards(
       card.ocrFallbackResults =
         fallbackAttempt.attempts;
 
+      ocrPerformanceMetrics.fallbackCallsByCard.push(
+        fallbackAttempt.attempts.length
+      );
+
       const fallback =
         fallbackAttempt.bestResult;
 
       if (fallback) {
+        ocrPerformanceMetrics.fallbackAdoptions++;
         card.ocrText =
           fallback.ocrText;
 
@@ -1661,7 +1745,18 @@ async function runOcrForWhiteCards(
 
         card.ocrFallbackPsm =
           fallback.psm;
+
+        const adoptedStats =
+          ocrPerformanceMetrics.fallbackVariants[
+            fallback.variant
+          ];
+        if (adoptedStats) {
+          adoptedStats.adopted++;
+        }
       } else {
+        if (fallbackAttempt.attempts.some(attempt => attempt.ocrText)) {
+          ocrPerformanceMetrics.fallbackAdoptionFailures++;
+        }
         if (
           fallbackDecision.reason === "weak-short-canonical-match" &&
           card.finalStatus === "confirmed"
@@ -1727,5 +1822,7 @@ export {
   createOcrWorker,
   runOcrForFactorMetadata,
   runOcrForWhiteCards,
-  createShortSkillFallbackVariants
+  createShortSkillFallbackVariants,
+  resetOcrPerformanceMetrics,
+  getOcrPerformanceMetrics
 };

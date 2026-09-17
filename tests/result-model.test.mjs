@@ -7,8 +7,10 @@ import {
 import {
   getEffectiveRecognition,
   setManualCorrection,
+  setManualCorrections,
   ignoreRecognition,
   clearManualCorrection,
+  clearManualCorrections,
   buildOverallSkillSummary,
   buildConfirmedCanonicalNamesByMember,
   getReviewItems
@@ -106,7 +108,7 @@ assert.equal(model.factorInfo.grandA1.blue.name, "スピード");
 assert.equal(model.factorInfo.grandA1.blue.stars, 3);
 assert.equal(model.factorInfo.grandA1.red.name, "マイル");
 assert.equal(model.factorInfo.parentA.blue, null);
-assert.equal(getReviewItems().length, 1, "空OCRかつfallback済みのみ表示する");
+assert.equal(getReviewItems().length, 1, "未確定因子を保持する");
 
 const originalSnapshot = {
   ocrText: unrecognizedCard.ocrText,
@@ -172,13 +174,71 @@ clearManualCorrection(unrecognizedCard);
 effective = getEffectiveRecognition(unrecognizedCard);
 assert.equal(effective.status, "unresolved");
 assert.equal(effective.canonicalName, null);
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 0, "補正取消で面数を戻す");
+assert.equal(model.ranks.A[0].totalStars, 0, "補正取消で星合計を戻す");
+
+requirements.B = ["風切り"];
+setManualCorrection(unrecognizedCard, "溌剌");
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 1, "最初の補正を反映する");
+setManualCorrection(unrecognizedCard, "風切り");
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 0, "補正変更で旧スキルを除外する");
+assert.equal(model.ranks.B[0].ownedCount, 1, "補正変更で新スキルを反映する");
+assert.equal(model.ranks.B[0].totalStars, 2, "補正変更後の星を反映する");
+clearManualCorrection(unrecognizedCard);
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.B[0].ownedCount, 0, "再取消で新スキルを除外する");
+setManualCorrection(unrecognizedCard, "溌剌");
+clearManualCorrection(unrecognizedCard);
+setManualCorrection(unrecognizedCard, "風切り");
+model = buildOverallSkillSummary();
+assert.equal(model.ranks.A[0].ownedCount, 0, "取消後の旧補正を残さない");
+assert.equal(model.ranks.B[0].ownedCount, 1, "取消後の再補正だけを反映する");
+clearManualCorrection(unrecognizedCard);
 
 const unrelatedUnresolved = createCard({
   ocrText: "大阪杯",
   ocrFallbackAttempted: false
 });
 members.grandA1.analysisResults[0].analysis.rightCards.push(unrelatedUnresolved);
-assert.equal(getReviewItems().length, 1, "要件外unresolved全件は表示しない");
+assert.equal(getReviewItems().length, 2, "要件外unresolvedも低優先度で保持する");
+assert.equal(
+  getReviewItems().find(item => item.card === unrelatedUnresolved).priority,
+  "low",
+  "要件候補の証拠がない因子は低優先度に分類する"
+);
+
+const overlapDuplicate = createCard({
+  ocrText: "大阪杯",
+  ocrFallbackAttempted: false
+});
+members.grandA1.analysisResults[1].analysis.rightCards.push(overlapDuplicate);
+const dedupedReviewItems = getReviewItems();
+assert.equal(
+  dedupedReviewItems.length,
+  2,
+  "連結画像の同一候補は確認UI上で重複表示しない"
+);
+assert.equal(
+  dedupedReviewItems.find(item => item.card === unrelatedUnresolved).cards.length,
+  2,
+  "重複元カードを補正・取り消し用に保持する"
+);
+const overlapCards = dedupedReviewItems.find(
+  item => item.card === unrelatedUnresolved
+).cards;
+setManualCorrections(overlapCards, "風切り");
+assert.ok(
+  overlapCards.every(card => card.manualCorrection?.canonicalName === "風切り"),
+  "重複カード群へ同じ補正を一括反映する"
+);
+clearManualCorrections(overlapCards);
+assert.ok(
+  overlapCards.every(card => !card.manualCorrection),
+  "重複カード群の補正を一括取消する"
+);
 
 for (const canonicalName of [
   "春の目覚め",
@@ -199,5 +259,29 @@ for (const canonicalName of [
   assert.equal(reviewEffective.requirementRank, null, canonicalName);
   assert.equal(reviewCard.finalStatus, "review", "元review状態を保持する");
 }
+
+const ambiguousReview = createCard({
+  ocrText: "レースの真髄・カ",
+  finalStatus: "review",
+  matchCandidate: "レースの真髄・体",
+  matchSimilarity: 0.875,
+  secondMatchCandidate: "レースの真髄・力",
+  secondMatchSimilarity: 0.875,
+  reviewReason: "ambiguous-similar-candidates"
+});
+members.grandA1.analysisResults[0].analysis.rightCards.push(ambiguousReview);
+const ambiguousReviewItem = getReviewItems().find(
+  item => item.card === ambiguousReview
+);
+assert.equal(
+  ambiguousReviewItem.priority,
+  "high",
+  "曖昧候補reviewは要件ランク外でも高優先度にする"
+);
+assert.equal(
+  ambiguousReviewItem.priorityRank,
+  null,
+  "閾値未満の要件候補を優先度ランク表示へ使わない"
+);
 
 console.log("result model tests: OK");

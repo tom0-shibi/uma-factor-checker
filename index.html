@@ -23,18 +23,21 @@
     </script>
     <link
       rel="stylesheet"
-      href="./assets/css/tokens.css?v=20260915-share-skills-03"
+      href="./assets/css/tokens.css?v=20260917-public-beta-01"
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260915-share-skills-03"
+      href="./assets/css/style.css?v=20260917-public-beta-01"
     />
   </head>
   <body>
     <header class="app-header">
       <div class="app-header-inner">
         <div>
-          <h1>Uma Factor Checker</h1>
+          <div class="app-title-row">
+            <h1>Uma Factor Checker</h1>
+            <span class="beta-badge">β・公開テスト中</span>
+          </div>
           <p>ウマ娘 因子画像解析・スキル要件チェッカー</p>
         </div>
         <label class="theme-control" for="theme-select">
@@ -48,10 +51,9 @@
       </div>
     </header>
 
+    <div id="skill-check-workspace">
     <nav class="tabs">
-      <button class="tab-button active" data-tab="requirements">
-        スキル要件
-      </button>
+      <button class="tab-button active" data-tab="requirements">スキル要件</button>
       <button class="tab-button" data-tab="images">画像登録</button>
       <button class="tab-button" data-tab="results">判定結果</button>
     </nav>
@@ -72,6 +74,8 @@
               <p><strong>2. スキル要件を調整</strong><br />各ランクを開き、必要なスキルを追加・削除します。</p>
               <p><strong>3. 自分用として保存</strong><br />調整した内容は新しいプリセットとして保存できます。固定プリセットは上書き・削除されません。</p>
               <p><strong>画像について</strong><br />各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。</p>
+              <p><strong>公開テスト中</strong><br />OCRは誤認識する場合があります。要確認項目は元画像を見ながら補正できます。低優先度の読み取り結果には、要件外の因子やレース因子も含まれます。</p>
+              <p><strong>現在の対応状況</strong><br />スキル要件チェックは公開テスト対象です。代表ウマ娘チェックは開発中のため、公開テスト対象外です。</p>
             </div>
           </details>
         </div>
@@ -94,6 +98,7 @@
                 maxlength="80"
                 placeholder="例: 202609 LOH マイル"
               />
+              <small>プリセット名はX共有時のタイトルとして表示されます。</small>
             </div>
             <div class="preset-create-actions">
               <button id="preset-create-empty" type="button" class="secondary-button">
@@ -229,9 +234,18 @@
           ></span>
         </div>
       </section>
-
       <section id="images" class="tab-content">
         <h2>画像登録</h2>
+
+        <nav class="mode-switch" aria-label="チェック方法">
+          <span class="mode-switch-label">チェック方法</span>
+          <button class="mode-switch-button active" data-mode="skill-check">
+            スキル要件チェック（公開テスト中）
+          </button>
+          <button class="mode-switch-button" data-mode="representative-check">
+            代表ウマ娘チェック（開発中）
+          </button>
+        </nav>
 
         <p class="description">
           チェックしたい因子画像を登録してください。1人分だけでも、最大6人分でも使用できます。
@@ -244,6 +258,16 @@
         <p class="description image-format-note">
           各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。
         </p>
+
+        <details class="known-limitations">
+          <summary>公開テスト中の既知の制限</summary>
+          <ul>
+            <li>OCRのため誤認識や青・赤因子の「名称未確定」が発生する場合があります。</li>
+            <li>その他の読み取り結果には、要件外の因子やレース因子も含まれます。</li>
+            <li>現在対応しているウマ娘1人分の「因子一覧」画像を使用してください。</li>
+            <li>代表ウマ娘チェックは開発中で、公開テスト対象外です。</li>
+          </ul>
+        </details>
 
         <div class="paste-guide">
           <strong>クリップボードから貼り付け</strong>
@@ -367,6 +391,7 @@
         <div class="image-summary">
           登録画像：<strong id="total-image-count">0</strong> 枚
         </div>
+        <p class="registered-face-count">今回の判定対象: <strong id="skill-registered-face-count">0面</strong></p>
 
         <label class="debug-mode-toggle">
           <input id="debug-mode-toggle" type="checkbox" />
@@ -377,15 +402,23 @@
           <button id="analyze-images" class="primary-button" disabled>
             画像を解析
           </button>
+          <p id="skill-analysis-disabled-reason" class="disabled-reason">ⓘ 解析する因子一覧画像を1つ以上登録してください。</p>
         </div>
       </section>
 
       <section id="results" class="tab-content">
-        <h2>判定結果</h2>
-
-        <p class="description">
-          解析結果の確認、要確認項目の手動訂正、スキル要件ごとの集計ができます。
-        </p>
+        <div class="section-heading">
+          <div>
+            <h2>判定結果</h2>
+            <p class="description">
+              解析結果の確認、要確認項目の手動訂正、スキル要件ごとの集計ができます。
+            </p>
+          </div>
+          <details id="result-share-entry" class="inline-help result-share-entry" hidden>
+            <summary>結果を共有</summary>
+            <div id="result-share-content" class="inline-help-content result-share-content"></div>
+          </details>
+        </div>
 
         <div id="debug-actions" class="debug-actions" hidden>
           <button id="copy-debug-log" class="secondary-button" disabled>
@@ -399,13 +432,89 @@
         <div id="analysis-debug" hidden></div>
       </section>
     </main>
+    </div>
+
+    <main id="representative-check-workspace" class="app-main" hidden>
+      <section class="representative-check">
+        <div class="section-heading">
+          <div>
+            <h2>代表ウマ娘チェック <span class="development-badge">開発中</span></h2>
+            <p class="description">現在開発中のため公開テスト対象外です。表示や共有機能が正しく動作しない場合があります。</p>
+          </div>
+        </div>
+
+        <div class="paste-guide">
+          <strong>画像登録</strong>
+          <p>各枠には複数画像を登録できます。クリック、ドラッグ＆ドロップ、クリップボード貼り付けに対応します。</p>
+          <p class="paste-target-status">貼り付け先：<strong id="representative-paste-target-label">本体</strong></p>
+        </div>
+
+        <div class="representative-member-grid">
+          <section class="representative-member-panel" data-representative-member="target">
+            <h3>本体</h3>
+            <div class="representative-image-drop-zone" data-representative-member="target">
+              <p>画像をここにドロップ</p><p class="drop-sub-text">またはクリックして選択</p>
+              <input type="file" class="representative-image-input" data-representative-member="target" accept="image/*" multiple />
+            </div>
+            <div id="representative-preview-target" class="image-preview-list"></div>
+          </section>
+          <section class="representative-member-panel" data-representative-member="parentA">
+            <h3>親A</h3>
+            <button type="button" class="secondary-button representative-reuse-button" data-source-member="parentA">スキル要件チェックの親Aを使用</button>
+            <div class="representative-image-drop-zone" data-representative-member="parentA">
+              <p>別の画像を登録</p><p class="drop-sub-text">クリックまたはドロップ</p>
+              <input type="file" class="representative-image-input" data-representative-member="parentA" accept="image/*" multiple />
+            </div>
+            <div id="representative-preview-parentA" class="image-preview-list"></div>
+          </section>
+          <section class="representative-member-panel" data-representative-member="parentB">
+            <h3>親B</h3>
+            <button type="button" class="secondary-button representative-reuse-button" data-source-member="parentB">スキル要件チェックの親Bを使用</button>
+            <div class="representative-image-drop-zone" data-representative-member="parentB">
+              <p>別の画像を登録</p><p class="drop-sub-text">クリックまたはドロップ</p>
+              <input type="file" class="representative-image-input" data-representative-member="parentB" accept="image/*" multiple />
+            </div>
+            <div id="representative-preview-parentB" class="image-preview-list"></div>
+          </section>
+        </div>
+
+        <div class="representative-analysis-actions">
+          <p>登録画像：<strong id="representative-image-count">0</strong>枚</p>
+          <p>今回の判定対象: <strong id="representative-registered-face-count">0面</strong></p>
+          <button id="analyze-representative-images" type="button" class="primary-button" disabled>画像を解析</button>
+          <span id="representative-analysis-status" role="status" aria-live="polite"></span>
+          <p id="representative-analysis-disabled-reason" class="disabled-reason">ⓘ 解析する因子一覧画像を1つ以上登録してください。</p>
+        </div>
+
+        <section id="representative-results" class="representative-results" aria-live="polite"></section>
+
+        <section class="representative-share-panel">
+          <h3>共有設定</h3>
+          <label>トレーナーID
+            <input id="representative-trainer-id" type="text" inputmode="numeric" maxlength="12" placeholder="************" autocomplete="off" />
+          </label>
+          <label class="representative-id-toggle"><input id="representative-show-trainer-id" type="checkbox" /> X本文にトレーナーIDを表示</label>
+          <div id="representative-share-skills"></div>
+          <div class="result-share-buttons">
+            <button id="create-representative-image" type="button" class="secondary-button" disabled>代表ウマ娘画像を生成</button>
+            <button id="copy-representative-x" type="button" class="secondary-button">X用テキストをコピー</button>
+          </div>
+          <p id="representative-image-guidance" class="disabled-reason">ⓘ 代表画像は「本体のみ」または「本体・親A・親B」の構成で生成できます。</p>
+          <details class="x-share-preview" open>
+            <summary>X投稿プレビュー</summary>
+            <pre id="representative-x-preview"></pre>
+          </details>
+          <p id="representative-share-status" class="result-share-status" aria-live="polite"></p>
+        </section>
+      </section>
+    </main>
 
     <canvas id="analysis-canvas" hidden></canvas>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260915-share-skills-03"
+      src="./assets/js/app.js?v=20260917-public-beta-01"
     ></script>
   </body>
 </html>
