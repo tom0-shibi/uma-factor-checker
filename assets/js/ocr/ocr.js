@@ -16,7 +16,7 @@ import {
 import {
   getCanonicalSkillCandidates,
   getFactorMasterEntry
-} from "../matching/candidate-provider.js?v=20260917-factor-master-01";
+} from "../matching/candidate-provider.js?v=20260918-factor-master-data-01";
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
@@ -1797,17 +1797,18 @@ async function runOcrForWhiteCards(
       normalOcrResult: card.normalOcrResult
     };
 
+    const factorMasterEntry = card.canonicalName
+      ? getFactorMasterEntry(card.canonicalName)
+      : null;
+
     card.requirementRank =
       card.finalStatus === "confirmed" &&
-      card.canonicalName
+      card.canonicalName &&
+      factorMasterEntry?.type === "skill"
         ? getRequirementRank(
             card.canonicalName
           )
         : null;
-
-    const factorMasterEntry = card.canonicalName
-      ? getFactorMasterEntry(card.canonicalName)
-      : null;
 
     card.canonicalFactorType =
       factorMasterEntry?.type ?? null;

@@ -21,7 +21,7 @@ import {
   isStrongShortSkillFallbackResult
 } from "../assets/js/matching/fallback-policy.js";
 
-assert.equal(APP_BUILD, "20260917-factor-master-01");
+assert.equal(APP_BUILD, "20260918-factor-master-data-01");
 assert.deepEqual(SKILL_MATCH_CONFIG, {
   thresholds: {
     1: 1.00,
@@ -33,7 +33,7 @@ assert.deepEqual(SKILL_MATCH_CONFIG, {
   defaultThreshold: 0.60,
   minimumMargin: 0.15
 });
-assert.equal(getFactorMasterCandidateCount(), 56);
+assert.equal(getFactorMasterCandidateCount(), 582);
 
 requirements.S = ["連綿", "負けん気", "いざ我が道へ！"];
 requirements.A = ["向こう見ず", "マイルコーナー〇"];
@@ -43,13 +43,20 @@ requirements.C = [];
 const dictionary = getCanonicalSkillCandidates();
 const context = createSkillMatchContext(dictionary);
 
+const raceEssenceMatch = findBestSkillMatch("レースの真髄・カ", dictionary);
 assert.deepEqual(
-  findBestSkillMatch("レースの真髄・カ", dictionary)
-    .candidateScores
-    .slice(0, 3)
-    .map(item => item.candidate),
-  ["レースの真髄・体", "レースの真髄・力", "レースの真髄・速"],
-  "同率の第3候補も確認UIへ渡す"
+  new Set(
+    raceEssenceMatch.candidateScores
+      .slice(0, 3)
+      .map(item => item.candidate)
+  ),
+  new Set(["レースの真髄・体", "レースの真髄・力", "レースの真髄・速"]),
+  "同率の3候補を確認UIへ渡す"
+);
+assert.equal(
+  assessSkillMatch(raceEssenceMatch, context).finalStatus,
+  "review",
+  "真髄の識別文字が曖昧な場合は自動確定しない"
 );
 
 assert.equal(
@@ -147,7 +154,9 @@ for (const ocrText of ["吾の目覚め。", "の目質め。"]) {
 for (const ocrText of [
   "大阪杯",
   "ヴィクトリアマイル",
-  "安田記念"
+  "安田記念",
+  "Dreamsシナリオ",
+  "マイルの遺伝子"
 ]) {
   const result = resolve(ocrText);
   assert.equal(result.assessment.finalStatus, "confirmed", ocrText);
@@ -156,8 +165,6 @@ for (const ocrText of [
 }
 
 for (const ocrText of [
-  "Dreamsシナリオ",
-  "マイルの遺伝子",
   "omキリ",
   "洪処",
   "漠制",

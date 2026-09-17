@@ -4,7 +4,7 @@ import {
   getRequirementRankLabel,
   getSelectedPresetName
 } from "../preset/preset-manager.js";
-import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260917-factor-master-01";
+import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260918-factor-master-data-01";
 import {
   RANKS,
   buildOverallSkillSummary as buildResultModel,
@@ -13,7 +13,7 @@ import {
   setManualCorrections,
   ignoreRecognitions,
   clearManualCorrections
-} from "./result-model.js?v=20260917-factor-master-01";
+} from "./result-model.js?v=20260918-factor-master-data-01";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,

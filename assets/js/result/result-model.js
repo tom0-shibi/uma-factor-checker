@@ -9,7 +9,7 @@ import {
 } from "../matching/matching.js?v=20260917-factor-master-01";
 import {
   getFactorMasterEntry
-} from "../matching/candidate-provider.js?v=20260917-factor-master-01";
+} from "../matching/candidate-provider.js?v=20260918-factor-master-data-01";
 
 const RANKS = ["S", "A", "B", "C"];
 
@@ -67,8 +67,10 @@ function getEffectiveRecognition(card) {
   }
 
   if (manual?.canonicalName) {
-    const requirementRank = getRequirementRank(manual.canonicalName);
     const factorType = getFactorMasterEntry(manual.canonicalName)?.type ?? "skill";
+    const requirementRank = factorType === "skill"
+      ? getRequirementRank(manual.canonicalName)
+      : null;
     return {
       ...original,
       status: "confirmed",
@@ -83,10 +85,19 @@ function getEffectiveRecognition(card) {
     };
   }
 
+  const factorType = original.factorType ?? (
+    original.canonicalName
+      ? getFactorMasterEntry(original.canonicalName)?.type ?? null
+      : null
+  );
+
   return {
     ...original,
+    factorType,
     requirementRank:
-      original.status === "confirmed" && original.canonicalName
+      original.status === "confirmed" &&
+      original.canonicalName &&
+      factorType === "skill"
         ? getRequirementRank(original.canonicalName)
         : null,
     resolutionSource: original.fallbackUsed ? "fallback" : "ocr",
