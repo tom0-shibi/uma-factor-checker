@@ -6,7 +6,10 @@ import {
 import {
   getRequirementRank,
   normalizeSkillText
-} from "../matching/matching.js?v=20260917-public-beta-01";
+} from "../matching/matching.js?v=20260917-factor-master-01";
+import {
+  getFactorMasterEntry
+} from "../matching/candidate-provider.js?v=20260917-factor-master-01";
 
 const RANKS = ["S", "A", "B", "C"];
 
@@ -21,7 +24,10 @@ function getOriginalRecognition(card) {
     ocrText: card.ocrText || "",
     confidence: card.ocrConfidence ?? null,
     status: card.finalStatus || "unresolved",
+    factorStatus: card.factorFinalStatus || card.finalStatus || "unresolved",
     canonicalName: card.canonicalName || null,
+    factorType: card.canonicalFactorType || null,
+    factorMasterMatch: card.factorMasterMatch || null,
     requirementRank: card.requirementRank || null,
     firstCandidate: card.matchCandidate || null,
     firstSimilarity: card.matchSimilarity || 0,
@@ -61,11 +67,17 @@ function getEffectiveRecognition(card) {
   }
 
   if (manual?.canonicalName) {
+    const requirementRank = getRequirementRank(manual.canonicalName);
+    const factorType = getFactorMasterEntry(manual.canonicalName)?.type ?? "skill";
     return {
       ...original,
       status: "confirmed",
+      factorStatus: requirementRank
+        ? "confirmed-requirement"
+        : "recognized-non-requirement",
       canonicalName: manual.canonicalName,
-      requirementRank: getRequirementRank(manual.canonicalName),
+      factorType,
+      requirementRank,
       resolutionSource: "manual",
       manualCorrection: manual
     };
@@ -80,6 +92,61 @@ function getEffectiveRecognition(card) {
     resolutionSource: original.fallbackUsed ? "fallback" : "ocr",
     manualCorrection: null
   };
+}
+
+function buildRecognitionSummary() {
+  const summary = {
+    whiteCardCount: 0,
+    confirmedRequirementCount: 0,
+    recognizedNonRequirementCount: 0,
+    recognizedSkillNonRequirementCount: 0,
+    recognizedRaceCount: 0,
+    recognizedOtherCount: 0,
+    reviewCount: 0,
+    unresolvedCount: 0,
+    manualCorrectionCount: 0
+  };
+
+  MEMBER_ORDER.forEach(memberId => {
+    members[memberId].analysisResults.forEach(imageResult => {
+      [
+        ...imageResult.analysis.leftCards,
+        ...imageResult.analysis.rightCards
+      ].forEach(card => {
+        if (card.factorType !== "white") {
+          return;
+        }
+        summary.whiteCardCount++;
+        const effective = getEffectiveRecognition(card);
+        summary.manualCorrectionCount += Number(Boolean(card.manualCorrection));
+        if (effective.status === "review") {
+          summary.reviewCount++;
+          return;
+        }
+        if (effective.status === "unresolved") {
+          summary.unresolvedCount++;
+          return;
+        }
+        if (effective.status !== "confirmed") {
+          return;
+        }
+        if (effective.requirementRank) {
+          summary.confirmedRequirementCount++;
+          return;
+        }
+        summary.recognizedNonRequirementCount++;
+        if (effective.factorType === "race") {
+          summary.recognizedRaceCount++;
+        } else if (effective.factorType === "other") {
+          summary.recognizedOtherCount++;
+        } else {
+          summary.recognizedSkillNonRequirementCount++;
+        }
+      });
+    });
+  });
+
+  return summary;
 }
 
 function setManualCorrection(card, canonicalName) {
@@ -469,6 +536,7 @@ export {
   aggregateMemberSkills,
   buildMemberFactorInfo,
   buildConfirmedCanonicalNamesByMember,
+  buildRecognitionSummary,
   buildOverallSkillSummary,
   getReviewItems
 };

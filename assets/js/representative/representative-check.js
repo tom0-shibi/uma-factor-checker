@@ -11,7 +11,7 @@ import {
   getOriginalRecognition,
   ignoreRecognition,
   setManualCorrection
-} from "../result/result-model.js?v=20260917-public-beta-01";
+} from "../result/result-model.js?v=20260917-factor-master-01";
 import {
   getRequirementRank,
   normalizeSkillText
@@ -27,7 +27,7 @@ import {
   getShareSkills,
   removeShareSkill,
   replaceShareSkillsFromS
-} from "../export/share-skills.js?v=20260917-public-beta-01";
+} from "../export/share-skills.js?v=20260917-factor-master-01";
 import {
   REPRESENTATIVE_MEMBER_ORDER,
   representativeMembers,

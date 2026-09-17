@@ -1,13 +1,13 @@
 import {
   analyzeFactorImage
-} from "../assets/js/analysis/image-analysis.js?v=20260917-public-beta-01";
+} from "../assets/js/analysis/image-analysis.js?v=20260917-factor-master-01";
 import {
   createOcrWorker,
   runOcrForFactorMetadata,
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "../assets/js/ocr/ocr.js?v=20260917-public-beta-01";
+} from "../assets/js/ocr/ocr.js?v=20260917-factor-master-01";
 import {
   requirements,
   members,
@@ -18,12 +18,16 @@ import { normalizeSkillText } from "../assets/js/matching/matching.js";
 import { SKILL_EXAM_HIGH_EFFICIENCY_PRESET } from "../assets/js/preset/skill-exam-high-efficiency.js";
 import { getCanonicalSkillCandidates } from "../assets/js/matching/candidate-provider.js";
 import {
-  getReviewItems
-} from "../assets/js/result/result-model.js?v=20260917-public-beta-01";
+  getReviewItems,
+  buildRecognitionSummary
+} from "../assets/js/result/result-model.js?v=20260917-factor-master-01";
+import {
+  getFactorMasterStats
+} from "../assets/js/matching/candidate-provider.js?v=20260917-factor-master-01";
 import {
   renderOverallSkillSummary,
   appendSummaryToDebugLog
-} from "../assets/js/result/results.js?v=20260917-public-beta-01";
+} from "../assets/js/result/results.js?v=20260917-factor-master-01";
 
 const root = "./fixtures/factor-images/regression-20260916";
 
@@ -66,6 +70,7 @@ async function run() {
   const startedAt = performance.now();
   const worker = await createOcrWorker();
   const details = [];
+  const recognitionDetails = [];
   const analyses = [];
   const requirementActual = {};
   let rawTotal = 0;
@@ -145,6 +150,24 @@ async function run() {
         metadataFound: analysis.factorMetadataFound
       });
       await runOcrForWhiteCards(worker, canvas, analysis, fixture.member, fixture.imageIndex);
+      [
+        ...analysis.leftCards,
+        ...analysis.rightCards
+      ].filter(card => card.factorType === "white").forEach(card => {
+        recognitionDetails.push({
+          filename,
+          member: fixture.member,
+          imageIndex: fixture.imageIndex,
+          column: card.column,
+          row: card.row,
+          ocrText: card.ocrText ?? "",
+          canonicalName: card.canonicalName ?? null,
+          factorType: card.canonicalFactorType ?? null,
+          factorMasterMatch: card.factorMasterMatch ?? null,
+          finalStatus: card.factorFinalStatus ?? card.finalStatus ?? null,
+          requirementRank: card.requirementRank ?? null
+        });
+      });
       members[fixture.member].images.push({ id: filename });
       members[fixture.member].analysisResults.push({
         imageId: filename,
@@ -163,11 +186,10 @@ async function run() {
         if (expected.type === "race") {
           raceTotal++;
           raceRawCorrect += Number(rawMatches);
-        } else {
+        }
         if (canonicalCandidateKeys.has(normalizedExpected)) {
           canonicalTotal++;
           canonicalCorrect += Number(canonicalMatches);
-        }
         }
         if (card?.requirementRank && card.canonicalName) {
           requirementActual[card.requirementRank] ??= {};
@@ -185,6 +207,9 @@ async function run() {
           ocrText: card?.ocrText ?? null,
           confidence: card?.ocrConfidence ?? null,
           canonicalName: card?.canonicalName ?? null,
+          factorType: card?.canonicalFactorType ?? null,
+          factorMasterMatch: card?.factorMasterMatch ?? null,
+          finalStatus: card?.factorFinalStatus ?? card?.finalStatus ?? null,
           requirementRank: card?.requirementRank ?? null,
           stars: card?.stars ?? null,
           rawMatches,
@@ -209,6 +234,7 @@ async function run() {
   ).length;
   const reviewItems = getReviewItems();
   const rawReviewItems = getReviewItems({ deduplicate: false });
+  const recognitionSummary = buildRecognitionSummary();
   const whiteCardCount = MEMBER_ORDER.reduce(
     (total, memberId) =>
       total + members[memberId].analysisResults.reduce(
@@ -253,7 +279,7 @@ async function run() {
       }))
   };
   const summary = {
-    build: "20260917-public-beta-01",
+    build: "20260917-factor-master-01",
     fixtures: Object.keys(manifest.fixtures).length,
     raw: { correct: rawCorrect, total: rawTotal, accuracy: rawCorrect / rawTotal },
     canonical: { correct: canonicalCorrect, total: canonicalTotal, accuracy: canonicalCorrect / canonicalTotal },
@@ -268,6 +294,8 @@ async function run() {
       details: metadataDetails
     },
     reviewCounts,
+    recognitionSummary,
+    factorMaster: getFactorMasterStats(),
     reviewDetails: reviewItems
       .filter(item => item.original.status === "review")
       .map(item => ({
@@ -320,7 +348,8 @@ async function run() {
       ...getOcrPerformanceMetrics()
     },
     totalAnalysisMs: performance.now() - startedAt,
-    details
+    details,
+    recognitionDetails
   };
   appendSummaryToDebugLog();
   const reviewSummaryIndex = debugLogLines.lastIndexOf(

@@ -12,6 +12,7 @@ import {
   clearManualCorrection,
   clearManualCorrections,
   buildOverallSkillSummary,
+  buildRecognitionSummary,
   buildConfirmedCanonicalNamesByMember,
   getReviewItems
 } from "../assets/js/result/result-model.js";
@@ -74,13 +75,23 @@ const duplicateHigherStars = createCard({
   stars: 3,
   ocrFallbackAttempted: false
 });
+const recognizedRaceCard = createCard({
+  row: 4,
+  ocrText: "安田記念",
+  finalStatus: "confirmed",
+  factorFinalStatus: "recognized-non-requirement",
+  canonicalName: "安田記念",
+  canonicalFactorType: "race",
+  requirementRank: null,
+  ocrFallbackAttempted: false
+});
 
 members.grandA1.images = [{ id: "image-1" }, { id: "image-2" }];
 members.grandA1.analysisResults = [
   {
     imageIndex: 0,
     analysis: {
-      leftCards: [unrecognizedCard, duplicateLowerStars],
+      leftCards: [unrecognizedCard, duplicateLowerStars, recognizedRaceCard],
       rightCards: [],
       factorMetadata: {
         blue: { name: "スピード", stars: 3 },
@@ -109,6 +120,13 @@ assert.equal(model.factorInfo.grandA1.blue.stars, 3);
 assert.equal(model.factorInfo.grandA1.red.name, "マイル");
 assert.equal(model.factorInfo.parentA.blue, null);
 assert.equal(getReviewItems().length, 1, "未確定因子を保持する");
+
+const recognitionSummary = buildRecognitionSummary();
+assert.equal(recognitionSummary.whiteCardCount, 4);
+assert.equal(recognitionSummary.confirmedRequirementCount, 2);
+assert.equal(recognitionSummary.recognizedNonRequirementCount, 1);
+assert.equal(recognitionSummary.recognizedRaceCount, 1);
+assert.equal(recognitionSummary.unresolvedCount, 1);
 
 const originalSnapshot = {
   ocrText: unrecognizedCard.ocrText,
