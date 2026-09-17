@@ -3,7 +3,7 @@ import {
   analysisProgress
 } from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
-import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260917-public-beta-01";
+import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260917-factor-master-01";
 import {
   getRequirementRank,
   normalizeOcrText,
@@ -12,10 +12,11 @@ import {
   getSkillMatchThreshold,
   createSkillMatchContext,
   assessSkillMatch
-} from "../matching/matching.js?v=20260917-public-beta-01";
+} from "../matching/matching.js?v=20260917-factor-master-01";
 import {
-  getCanonicalSkillCandidates
-} from "../matching/candidate-provider.js?v=20260917-public-beta-01";
+  getCanonicalSkillCandidates,
+  getFactorMasterEntry
+} from "../matching/candidate-provider.js?v=20260917-factor-master-01";
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
@@ -1804,8 +1805,37 @@ async function runOcrForWhiteCards(
           )
         : null;
 
+    const factorMasterEntry = card.canonicalName
+      ? getFactorMasterEntry(card.canonicalName)
+      : null;
+
+    card.canonicalFactorType =
+      factorMasterEntry?.type ?? null;
+
+    card.factorMasterMatch = card.canonicalName
+      ? card.matchStatus === "exact"
+        ? "exact"
+        : "fuzzy"
+      : null;
+
+    card.factorFinalStatus =
+      card.finalStatus === "confirmed"
+        ? card.requirementRank
+          ? "confirmed-requirement"
+          : "recognized-non-requirement"
+        : card.finalStatus;
+
     card.skillMatchResult.requirementRank =
       card.requirementRank;
+
+    card.skillMatchResult.factorType =
+      card.canonicalFactorType;
+
+    card.skillMatchResult.factorMasterMatch =
+      card.factorMasterMatch;
+
+    card.skillMatchResult.finalStatus =
+      card.factorFinalStatus;
 
     analysisProgress
       .tesseractProgress = 1;

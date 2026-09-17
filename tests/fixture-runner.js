@@ -11,8 +11,8 @@ import {
   members
 } from "../assets/js/config.js";
 import {
-  TEMPORARY_SKILL_NAME_MASTER
-} from "../assets/js/master/temporary-skill-name-master.js";
+  FACTOR_MASTER
+} from "../assets/js/data/factor-master.js";
 import {
   aggregateMemberSkills,
   buildMemberFactorInfo
@@ -162,7 +162,9 @@ async function run() {
         "factor-list-continuation-01.jpg",
         "factor-list-end-01.jpg"
       ];
-      requirements.S = [...TEMPORARY_SKILL_NAME_MASTER];
+      requirements.S = FACTOR_MASTER
+        .filter(entry => entry.type === "skill")
+        .map(entry => entry.name);
       members.parentA.images = sequence.map((name, index) => ({
         id: `fixture-${index + 1}`,
         name

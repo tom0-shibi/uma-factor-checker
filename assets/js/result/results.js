@@ -1,18 +1,19 @@
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260917-public-beta-01";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260917-factor-master-01";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
 } from "../preset/preset-manager.js";
-import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260917-public-beta-01";
+import { getCanonicalSkillCandidates } from "../matching/candidate-provider.js?v=20260917-factor-master-01";
 import {
   RANKS,
   buildOverallSkillSummary as buildResultModel,
+  buildRecognitionSummary,
   getReviewItems,
   setManualCorrections,
   ignoreRecognitions,
   clearManualCorrections
-} from "./result-model.js?v=20260917-public-beta-01";
+} from "./result-model.js?v=20260917-factor-master-01";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -29,7 +30,7 @@ import {
   clearShareSkills,
   getRequirementSkillCandidates,
   getShareSkillLimitWarning
-} from "../export/share-skills.js?v=20260917-public-beta-01";
+} from "../export/share-skills.js?v=20260917-factor-master-01";
 
 const openReviewGroups = new Set();
 let unsupportedImages = [];
@@ -217,6 +218,8 @@ function renderAnalysisDebug(
         <th>星数</th>
         <th>OCR結果</th>
         <th>正式名称</th>
+        <th>因子分類</th>
+        <th>Master一致</th>
         <th>第1候補</th>
         <th>第1類似度</th>
         <th>第2候補</th>
@@ -421,6 +424,10 @@ function renderAnalysisDebug(
           ${escapeHtml(card.canonicalName || "-")}
         </td>
 
+        <td>${escapeHtml(card.canonicalFactorType || "-")}</td>
+
+        <td>${escapeHtml(card.factorMasterMatch || "-")}</td>
+
         <td>
           ${escapeHtml(candidateText)}
         </td>
@@ -449,7 +456,7 @@ function renderAnalysisDebug(
           ${matchStatusText}
         </td>
 
-        <td>${escapeHtml(card.finalStatus || "-")}</td>
+        <td>${escapeHtml(card.factorFinalStatus || card.finalStatus || "-")}</td>
 
         <td>${escapeHtml(card.reviewReason || "-")}</td>
 
@@ -645,6 +652,8 @@ function renderAnalysisDebug(
           card.stars,
           card.ocrText || "",
           card.canonicalName || "",
+          card.canonicalFactorType || "",
+          card.factorMasterMatch || "",
           card.matchCandidate || "",
           card.factorType ===
           "white"
@@ -669,7 +678,7 @@ function renderAnalysisDebug(
                 .toFixed(3)
             : "",
           matchStatusText,
-          card.finalStatus || "",
+          card.factorFinalStatus || card.finalStatus || "",
           card.reviewReason || "",
           card.hasSimilarCandidateGroup
             ? "あり"
@@ -1777,7 +1786,7 @@ function renderReviewItems(container) {
   const guide = document.createElement("p");
   guide.className = "result-review-guide";
   guide.textContent =
-    "要件スキルの可能性が高い項目を先に表示します。その他の読み取り結果には、要件外のレース因子・その他白因子も含まれます。";
+    "要件スキルの可能性が高い項目を先に表示します。その他の未確定因子には、Factor Master未登録の正式因子が含まれる場合があります。";
   section.appendChild(guide);
 
   const candidates = getRequirementSkillCandidates(requirements)
@@ -2301,6 +2310,7 @@ function renderOverallSkillSummary() {
 function appendSummaryToDebugLog() {
   const model = buildResultModel();
   const summary = model.ranks;
+  const recognitionSummary = buildRecognitionSummary();
   const reviewItems = getReviewItems({ deduplicate: false });
   const reviewCount = reviewItems.filter(
     item => item.original.status === "review"
@@ -2347,6 +2357,12 @@ function appendSummaryToDebugLog() {
 
   debugLogLines.push(
     "===== review summary =====",
+    `whiteCardCount=${recognitionSummary.whiteCardCount}`,
+    `confirmedRequirementCount=${recognitionSummary.confirmedRequirementCount}`,
+    `recognizedNonRequirementCount=${recognitionSummary.recognizedNonRequirementCount}`,
+    `recognizedSkillNonRequirementCount=${recognitionSummary.recognizedSkillNonRequirementCount}`,
+    `recognizedRaceCount=${recognitionSummary.recognizedRaceCount}`,
+    `recognizedOtherCount=${recognitionSummary.recognizedOtherCount}`,
     `reviewCount=${reviewCount}`,
     `unresolvedCount=${unresolvedCount}`,
     `highPriorityReviewCount=${highPriorityReviewCount}`,

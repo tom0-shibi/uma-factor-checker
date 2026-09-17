@@ -6,7 +6,7 @@ import {
 } from "../assets/js/config.js";
 import {
   getCanonicalSkillCandidates,
-  getTemporaryCandidateCount
+  getFactorMasterCandidateCount
 } from "../assets/js/matching/candidate-provider.js";
 import {
   findBestSkillMatch,
@@ -21,7 +21,7 @@ import {
   isStrongShortSkillFallbackResult
 } from "../assets/js/matching/fallback-policy.js";
 
-assert.equal(APP_BUILD, "20260917-public-beta-01");
+assert.equal(APP_BUILD, "20260917-factor-master-01");
 assert.deepEqual(SKILL_MATCH_CONFIG, {
   thresholds: {
     1: 1.00,
@@ -33,7 +33,7 @@ assert.deepEqual(SKILL_MATCH_CONFIG, {
   defaultThreshold: 0.60,
   minimumMargin: 0.15
 });
-assert.equal(getTemporaryCandidateCount(), 32);
+assert.equal(getFactorMasterCandidateCount(), 56);
 
 requirements.S = ["連綿", "負けん気", "いざ我が道へ！"];
 requirements.A = ["向こう見ず", "マイルコーナー〇"];
@@ -147,7 +147,15 @@ for (const ocrText of ["吾の目覚め。", "の目質め。"]) {
 for (const ocrText of [
   "大阪杯",
   "ヴィクトリアマイル",
-  "安田記念",
+  "安田記念"
+]) {
+  const result = resolve(ocrText);
+  assert.equal(result.assessment.finalStatus, "confirmed", ocrText);
+  assert.equal(result.canonicalName, ocrText);
+  assert.equal(result.requirementRank, null, ocrText);
+}
+
+for (const ocrText of [
   "Dreamsシナリオ",
   "マイルの遺伝子",
   "omキリ",
