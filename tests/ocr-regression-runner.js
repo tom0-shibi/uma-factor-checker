@@ -7,8 +7,9 @@ import {
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "../assets/js/ocr/ocr.js?v=20260917-factor-master-01";
+} from "../assets/js/ocr/ocr.js?v=20260918-factor-master-data-02";
 import {
+  APP_BUILD,
   requirements,
   members,
   MEMBER_ORDER,
@@ -20,14 +21,14 @@ import { getCanonicalSkillCandidates } from "../assets/js/matching/candidate-pro
 import {
   getReviewItems,
   buildRecognitionSummary
-} from "../assets/js/result/result-model.js?v=20260917-factor-master-01";
+} from "../assets/js/result/result-model.js?v=20260918-factor-master-data-02";
 import {
   getFactorMasterStats
 } from "../assets/js/matching/candidate-provider.js?v=20260917-factor-master-01";
 import {
   renderOverallSkillSummary,
   appendSummaryToDebugLog
-} from "../assets/js/result/results.js?v=20260917-factor-master-01";
+} from "../assets/js/result/results.js?v=20260918-factor-master-data-02";
 
 const root = "./fixtures/factor-images/regression-20260916";
 
@@ -92,7 +93,10 @@ async function run() {
   const metadataDetails = [];
 
   try {
-    const entries = Object.entries(manifest.fixtures);
+    const fixtureFilter = new URLSearchParams(location.search).get("fixture");
+    const entries = Object.entries(manifest.fixtures).filter(
+      ([filename]) => !fixtureFilter || filename === fixtureFilter
+    );
     for (let index = 0; index < entries.length; index++) {
       const [filename, fixture] = entries[index];
       output.textContent = `${index + 1}/${entries.length} ${filename}`;
@@ -165,7 +169,17 @@ async function run() {
           factorType: card.canonicalFactorType ?? null,
           factorMasterMatch: card.factorMasterMatch ?? null,
           finalStatus: card.factorFinalStatus ?? card.finalStatus ?? null,
-          requirementRank: card.requirementRank ?? null
+          requirementRank: card.requirementRank ?? null,
+          cardGeometry: {
+            x: card.x,
+            y: card.y,
+            width: card.width,
+            height: card.height
+          },
+          textCrop: card.ocrCrop ?? null,
+          starArea: card.area ?? null,
+          previewCrop: card.sourceThumbnailCrop ?? null,
+          stars: card.stars
         });
       });
       members[fixture.member].images.push({ id: filename });
@@ -279,7 +293,7 @@ async function run() {
       }))
   };
   const summary = {
-    build: "20260917-factor-master-01",
+    build: APP_BUILD,
     fixtures: Object.keys(manifest.fixtures).length,
     raw: { correct: rawCorrect, total: rawTotal, accuracy: rawCorrect / rawTotal },
     canonical: { correct: canonicalCorrect, total: canonicalTotal, accuracy: canonicalCorrect / canonicalTotal },

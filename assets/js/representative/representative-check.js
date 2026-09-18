@@ -11,7 +11,7 @@ import {
   getOriginalRecognition,
   ignoreRecognition,
   setManualCorrection
-} from "../result/result-model.js?v=20260917-factor-master-01";
+} from "../result/result-model.js?v=20260918-factor-master-data-02";
 import {
   getRequirementRank,
   normalizeSkillText

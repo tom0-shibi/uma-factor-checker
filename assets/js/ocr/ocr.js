@@ -22,10 +22,16 @@ import {
   evaluateStrongShortSkillFallbackResult
 } from "../matching/fallback-policy.js";
 import {
+  getAwakeningRequirementLookupName
+} from "../matching/awakening-substitution.js?v=20260918-factor-master-data-02";
+import {
   BLUE_FACTOR_NAMES,
   RED_FACTOR_NAMES,
   createFactorMetadata
 } from "../analysis/factor-metadata.js";
+import {
+  getSourceCardThumbnailCrop
+} from "./review-preview-geometry.js?v=20260918-factor-master-data-02";
 
 const SHORT_SKILL_FALLBACK_CONFIG = {
   maximumLength: 4,
@@ -451,20 +457,11 @@ function createSourceCardThumbnail(
   sourceCanvas,
   card
 ) {
-  const paddingX = Math.round(card.width * 0.02);
-  const paddingY = Math.round(card.height * 0.08);
-  const crop = {
-    x: Math.max(0, card.x - paddingX),
-    y: Math.max(0, card.y - paddingY),
-    width: Math.min(
-      sourceCanvas.width - Math.max(0, card.x - paddingX),
-      card.width + paddingX * 2
-    ),
-    height: Math.min(
-      sourceCanvas.height - Math.max(0, card.y - paddingY),
-      card.height + paddingY * 2
-    )
-  };
+  const crop = getSourceCardThumbnailCrop(
+    sourceCanvas.width,
+    sourceCanvas.height,
+    card
+  );
   const canvas = document.createElement("canvas");
   canvas.width = crop.width;
   canvas.height = crop.height;
@@ -1801,13 +1798,24 @@ async function runOcrForWhiteCards(
       ? getFactorMasterEntry(card.canonicalName)
       : null;
 
+    const awakeningLookupName =
+      factorMasterEntry?.type === "awakening"
+        ? getAwakeningRequirementLookupName(card.canonicalName)
+        : null;
+
+    card.requirementLookupName =
+      factorMasterEntry?.type === "skill"
+        ? card.canonicalName
+        : awakeningLookupName;
+
+    card.substitution = awakeningLookupName
+      ? "awakening"
+      : null;
+
     card.requirementRank =
       card.finalStatus === "confirmed" &&
-      card.canonicalName &&
-      factorMasterEntry?.type === "skill"
-        ? getRequirementRank(
-            card.canonicalName
-          )
+      card.requirementLookupName
+        ? getRequirementRank(card.requirementLookupName)
         : null;
 
     card.canonicalFactorType =
@@ -1828,6 +1836,12 @@ async function runOcrForWhiteCards(
 
     card.skillMatchResult.requirementRank =
       card.requirementRank;
+
+    card.skillMatchResult.requirementLookupName =
+      card.requirementLookupName;
+
+    card.skillMatchResult.substitution =
+      card.substitution;
 
     card.skillMatchResult.factorType =
       card.canonicalFactorType;

@@ -10,8 +10,29 @@ import {
 import {
   getFactorMasterEntry
 } from "../matching/candidate-provider.js?v=20260918-factor-master-data-01";
+import {
+  getAwakeningRequirementLookupName
+} from "../matching/awakening-substitution.js?v=20260918-factor-master-data-02";
 
 const RANKS = ["S", "A", "B", "C"];
+
+function getRequirementRecognition(canonicalName, factorType) {
+  const requirementLookupName = factorType === "skill"
+    ? canonicalName
+    : factorType === "awakening"
+      ? getAwakeningRequirementLookupName(canonicalName)
+      : null;
+
+  return {
+    requirementLookupName,
+    requirementRank: requirementLookupName
+      ? getRequirementRank(requirementLookupName)
+      : null,
+    substitution: factorType === "awakening" && requirementLookupName
+      ? "awakening"
+      : null
+  };
+}
 
 function getRegisteredMemberIds() {
   return MEMBER_ORDER.filter(
@@ -28,6 +49,8 @@ function getOriginalRecognition(card) {
     canonicalName: card.canonicalName || null,
     factorType: card.canonicalFactorType || null,
     factorMasterMatch: card.factorMasterMatch || null,
+    requirementLookupName: card.requirementLookupName || null,
+    substitution: card.substitution || null,
     requirementRank: card.requirementRank || null,
     firstCandidate: card.matchCandidate || null,
     firstSimilarity: card.matchSimilarity || 0,
@@ -60,7 +83,9 @@ function getEffectiveRecognition(card) {
       ...original,
       status: "ignored",
       canonicalName: null,
+      requirementLookupName: null,
       requirementRank: null,
+      substitution: null,
       resolutionSource: "manual",
       manualCorrection: manual
     };
@@ -68,18 +93,19 @@ function getEffectiveRecognition(card) {
 
   if (manual?.canonicalName) {
     const factorType = getFactorMasterEntry(manual.canonicalName)?.type ?? "skill";
-    const requirementRank = factorType === "skill"
-      ? getRequirementRank(manual.canonicalName)
-      : null;
+    const requirement = getRequirementRecognition(
+      manual.canonicalName,
+      factorType
+    );
     return {
       ...original,
       status: "confirmed",
-      factorStatus: requirementRank
+      factorStatus: requirement.requirementRank
         ? "confirmed-requirement"
         : "recognized-non-requirement",
       canonicalName: manual.canonicalName,
       factorType,
-      requirementRank,
+      ...requirement,
       resolutionSource: "manual",
       manualCorrection: manual
     };
@@ -90,16 +116,25 @@ function getEffectiveRecognition(card) {
       ? getFactorMasterEntry(original.canonicalName)?.type ?? null
       : null
   );
+  const requirement =
+    original.status === "confirmed" && original.canonicalName
+      ? getRequirementRecognition(original.canonicalName, factorType)
+      : {
+          requirementLookupName: null,
+          requirementRank: null,
+          substitution: null
+        };
 
   return {
     ...original,
     factorType,
-    requirementRank:
-      original.status === "confirmed" &&
-      original.canonicalName &&
-      factorType === "skill"
-        ? getRequirementRank(original.canonicalName)
-        : null,
+    ...requirement,
+    factorStatus:
+      original.status === "confirmed"
+        ? requirement.requirementRank
+          ? "confirmed-requirement"
+          : "recognized-non-requirement"
+        : original.factorStatus,
     resolutionSource: original.fallbackUsed ? "fallback" : "ocr",
     manualCorrection: null
   };
@@ -221,11 +256,15 @@ function aggregateMemberSkills(memberId) {
         return;
       }
 
-      const key = normalizeSkillText(effective.canonicalName);
+      const aggregatedSkillName =
+        effective.requirementLookupName ?? effective.canonicalName;
+      const key = normalizeSkillText(aggregatedSkillName);
       const existing = skillMap.get(key);
       if (!existing || card.stars > existing.stars) {
         skillMap.set(key, {
-          skillName: effective.canonicalName,
+          skillName: aggregatedSkillName,
+          canonicalName: effective.canonicalName,
+          substitution: effective.substitution,
           stars: card.stars,
           rank: effective.requirementRank,
           matchStatus: card.matchStatus,
