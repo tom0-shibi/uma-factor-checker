@@ -1,4 +1,4 @@
-const APP_BUILD = "20260918-factor-master-data-02";
+const APP_BUILD = "20260919-factor-master-data-03";
 
 /* =========================================================
   アプリ内データ

@@ -7,7 +7,7 @@ import {
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "../assets/js/ocr/ocr.js?v=20260918-factor-master-data-02";
+} from "../assets/js/ocr/ocr.js?v=20260919-factor-master-data-03";
 import {
   APP_BUILD,
   requirements,
@@ -21,14 +21,14 @@ import { getCanonicalSkillCandidates } from "../assets/js/matching/candidate-pro
 import {
   getReviewItems,
   buildRecognitionSummary
-} from "../assets/js/result/result-model.js?v=20260918-factor-master-data-02";
+} from "../assets/js/result/result-model.js?v=20260919-factor-master-data-03";
 import {
   getFactorMasterStats
 } from "../assets/js/matching/candidate-provider.js?v=20260917-factor-master-01";
 import {
   renderOverallSkillSummary,
   appendSummaryToDebugLog
-} from "../assets/js/result/results.js?v=20260918-factor-master-data-02";
+} from "../assets/js/result/results.js?v=20260919-factor-master-data-03";
 
 const root = "./fixtures/factor-images/regression-20260916";
 

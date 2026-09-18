@@ -138,8 +138,8 @@ const awakeningCard = createCard({
 });
 assert.equal(
   getEffectiveRecognition(awakeningCard).requirementRank,
-  null,
-  "awakeningは同名が要件にあっても今回のS/A/B/C集計対象にしない"
+  "A",
+  "awakeningはcanonicalName自身が要件にあればS/A/B/C集計対象にする"
 );
 requirements.A = requirements.A.filter(name => name !== "スピードの目覚め");
 

@@ -22,9 +22,6 @@ import {
   evaluateStrongShortSkillFallbackResult
 } from "../matching/fallback-policy.js";
 import {
-  getAwakeningRequirementLookupName
-} from "../matching/awakening-substitution.js?v=20260918-factor-master-data-02";
-import {
   BLUE_FACTOR_NAMES,
   RED_FACTOR_NAMES,
   createFactorMetadata
@@ -1798,24 +1795,11 @@ async function runOcrForWhiteCards(
       ? getFactorMasterEntry(card.canonicalName)
       : null;
 
-    const awakeningLookupName =
-      factorMasterEntry?.type === "awakening"
-        ? getAwakeningRequirementLookupName(card.canonicalName)
-        : null;
-
-    card.requirementLookupName =
-      factorMasterEntry?.type === "skill"
-        ? card.canonicalName
-        : awakeningLookupName;
-
-    card.substitution = awakeningLookupName
-      ? "awakening"
-      : null;
-
     card.requirementRank =
       card.finalStatus === "confirmed" &&
-      card.requirementLookupName
-        ? getRequirementRank(card.requirementLookupName)
+      card.canonicalName &&
+      ["skill", "awakening"].includes(factorMasterEntry?.type)
+        ? getRequirementRank(card.canonicalName)
         : null;
 
     card.canonicalFactorType =
@@ -1836,12 +1820,6 @@ async function runOcrForWhiteCards(
 
     card.skillMatchResult.requirementRank =
       card.requirementRank;
-
-    card.skillMatchResult.requirementLookupName =
-      card.requirementLookupName;
-
-    card.skillMatchResult.substitution =
-      card.substitution;
 
     card.skillMatchResult.factorType =
       card.canonicalFactorType;

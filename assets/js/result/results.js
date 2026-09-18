@@ -13,7 +13,7 @@ import {
   setManualCorrections,
   ignoreRecognitions,
   clearManualCorrections
-} from "./result-model.js?v=20260918-factor-master-data-02";
+} from "./result-model.js?v=20260919-factor-master-data-03";
 import {
   buildSpreadsheetExportData,
   formatSpreadsheetTsv,
@@ -219,8 +219,6 @@ function renderAnalysisDebug(
         <th>OCR結果</th>
         <th>正式名称</th>
         <th>因子分類</th>
-        <th>要件照合名</th>
-        <th>代用</th>
         <th>Master一致</th>
         <th>第1候補</th>
         <th>第1類似度</th>
@@ -427,10 +425,6 @@ function renderAnalysisDebug(
         </td>
 
         <td>${escapeHtml(card.canonicalFactorType || "-")}</td>
-
-        <td>${escapeHtml(card.requirementLookupName || "-")}</td>
-
-        <td>${escapeHtml(card.substitution || "-")}</td>
 
         <td>${escapeHtml(card.factorMasterMatch || "-")}</td>
 
