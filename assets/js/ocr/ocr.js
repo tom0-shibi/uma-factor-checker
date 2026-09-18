@@ -16,7 +16,7 @@ import {
 import {
   getCanonicalSkillCandidates,
   getFactorMasterEntry
-} from "../matching/candidate-provider.js?v=20260917-factor-master-01";
+} from "../matching/candidate-provider.js?v=20260918-factor-master-data-01";
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
@@ -26,6 +26,9 @@ import {
   RED_FACTOR_NAMES,
   createFactorMetadata
 } from "../analysis/factor-metadata.js";
+import {
+  getSourceCardThumbnailCrop
+} from "./review-preview-geometry.js?v=20260918-factor-master-data-02";
 
 const SHORT_SKILL_FALLBACK_CONFIG = {
   maximumLength: 4,
@@ -451,20 +454,11 @@ function createSourceCardThumbnail(
   sourceCanvas,
   card
 ) {
-  const paddingX = Math.round(card.width * 0.02);
-  const paddingY = Math.round(card.height * 0.08);
-  const crop = {
-    x: Math.max(0, card.x - paddingX),
-    y: Math.max(0, card.y - paddingY),
-    width: Math.min(
-      sourceCanvas.width - Math.max(0, card.x - paddingX),
-      card.width + paddingX * 2
-    ),
-    height: Math.min(
-      sourceCanvas.height - Math.max(0, card.y - paddingY),
-      card.height + paddingY * 2
-    )
-  };
+  const crop = getSourceCardThumbnailCrop(
+    sourceCanvas.width,
+    sourceCanvas.height,
+    card
+  );
   const canvas = document.createElement("canvas");
   canvas.width = crop.width;
   canvas.height = crop.height;
@@ -1797,17 +1791,16 @@ async function runOcrForWhiteCards(
       normalOcrResult: card.normalOcrResult
     };
 
-    card.requirementRank =
-      card.finalStatus === "confirmed" &&
-      card.canonicalName
-        ? getRequirementRank(
-            card.canonicalName
-          )
-        : null;
-
     const factorMasterEntry = card.canonicalName
       ? getFactorMasterEntry(card.canonicalName)
       : null;
+
+    card.requirementRank =
+      card.finalStatus === "confirmed" &&
+      card.canonicalName &&
+      ["skill", "awakening"].includes(factorMasterEntry?.type)
+        ? getRequirementRank(card.canonicalName)
+        : null;
 
     card.canonicalFactorType =
       factorMasterEntry?.type ?? null;

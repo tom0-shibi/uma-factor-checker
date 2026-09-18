@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import {
   FACTOR_MASTER,
   FACTOR_TYPES
@@ -17,13 +20,59 @@ import {
   createSkillMatchContext,
   assessSkillMatch
 } from "../assets/js/matching/matching.js";
+import {
+  readAndValidateFactorMaster,
+  renderFactorMasterModule
+} from "../scripts/build-factor-master.mjs";
 
 const names = FACTOR_MASTER.map(entry => entry.name);
 assert.equal(new Set(names).size, names.length, "Factor Master名称は重複しない");
 FACTOR_MASTER.forEach(entry => {
   assert.ok(entry.name);
+  assert.ok(entry.color);
   assert.ok(Object.values(FACTOR_TYPES).includes(entry.type));
 });
+
+const csvEntries = readAndValidateFactorMaster();
+assert.equal(csvEntries.length, FACTOR_MASTER.length);
+assert.deepEqual(csvEntries, [...FACTOR_MASTER]);
+const generated = renderFactorMasterModule(csvEntries);
+assert.equal(
+  generated,
+  fs.readFileSync("assets/js/data/factor-master.js", "utf8"),
+  "再生成で差分を発生させない"
+);
+assert.equal(renderFactorMasterModule(csvEntries), generated, "生成はdeterministic");
+
+const temporaryDirectory = fs.mkdtempSync(
+  path.join(os.tmpdir(), "factor-master-test-")
+);
+function assertCsvValidationError(row, expectedMessage) {
+  const csvPath = path.join(temporaryDirectory, "invalid.csv");
+  fs.writeFileSync(
+    csvPath,
+    `No.,因子名,因子色,分類,備考\n${row}\n`,
+    "utf8"
+  );
+  assert.throws(
+    () => readAndValidateFactorMaster(csvPath),
+    error => error.message.includes("行2") && error.message.includes(expectedMessage)
+  );
+}
+assertCsvValidationError("1,,white,skill,", "因子名が空");
+assertCsvValidationError("1,末脚,purple,skill,", "不正な因子色");
+assertCsvValidationError("1,末脚,white,unknown,", "不正な分類");
+const duplicateCsvPath = path.join(temporaryDirectory, "duplicate.csv");
+fs.writeFileSync(
+  duplicateCsvPath,
+  "No.,因子名,因子色,分類,備考\n1,末脚,white,skill,\n2,末脚,white,skill,\n",
+  "utf8"
+);
+assert.throws(
+  () => readAndValidateFactorMaster(duplicateCsvPath),
+  error => error.message.includes("行3") && error.message.includes("重複")
+);
+fs.rmSync(temporaryDirectory, { recursive: true });
 
 const stats = getFactorMasterStats();
 assert.equal(stats.total, FACTOR_MASTER.length);
@@ -40,8 +89,11 @@ for (const [name, type] of [
   ["天皇賞（秋）", "race"],
   ["東京大賞典", "race"],
   ["BC・サンタアニタパーク", "race"],
-  ["追込の遺伝子", "other"],
-  ["恩返し、召し上がれ", "other"],
+  ["差しの遺伝子", "gene"],
+  ["追込の遺伝子", "gene"],
+  ["スピードの目覚め", "awakening"],
+  ["連戦連勝", "hidden"],
+  ["URAシナリオ", "scenario"],
   ["末脚", "skill"]
 ]) {
   assert.equal(getFactorMasterEntry(name)?.type, type, name);
@@ -59,7 +111,15 @@ assert.equal(
 );
 
 const context = createSkillMatchContext(candidates);
-for (const name of ["安田記念", "追込の遺伝子", "末脚"]) {
+for (const name of [
+  "安田記念",
+  "差しの遺伝子",
+  "追込の遺伝子",
+  "スピードの目覚め",
+  "連戦連勝",
+  "URAシナリオ",
+  "末脚"
+]) {
   const match = findBestSkillMatch(name, candidates);
   const assessment = assessSkillMatch(match, context);
   assert.equal(match.candidate, name);
@@ -75,5 +135,5 @@ assert.deepEqual(SKILL_MATCH_CONFIG, {
 
 console.log(
   `factor master tests: OK (${stats.total} entries: ` +
-  `${stats.byType.skill} skill / ${stats.byType.race} race / ${stats.byType.other} other)`
+  `${stats.byColor.white} white candidates)`
 );

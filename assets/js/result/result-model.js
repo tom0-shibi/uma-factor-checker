@@ -9,9 +9,15 @@ import {
 } from "../matching/matching.js?v=20260917-factor-master-01";
 import {
   getFactorMasterEntry
-} from "../matching/candidate-provider.js?v=20260917-factor-master-01";
+} from "../matching/candidate-provider.js?v=20260918-factor-master-data-01";
 
 const RANKS = ["S", "A", "B", "C"];
+
+function getRequirementRankForFactor(canonicalName, factorType) {
+  return ["skill", "awakening"].includes(factorType)
+    ? getRequirementRank(canonicalName)
+    : null;
+}
 
 function getRegisteredMemberIds() {
   return MEMBER_ORDER.filter(
@@ -67,8 +73,11 @@ function getEffectiveRecognition(card) {
   }
 
   if (manual?.canonicalName) {
-    const requirementRank = getRequirementRank(manual.canonicalName);
     const factorType = getFactorMasterEntry(manual.canonicalName)?.type ?? "skill";
+    const requirementRank = getRequirementRankForFactor(
+      manual.canonicalName,
+      factorType
+    );
     return {
       ...original,
       status: "confirmed",
@@ -83,12 +92,26 @@ function getEffectiveRecognition(card) {
     };
   }
 
+  const factorType = original.factorType ?? (
+    original.canonicalName
+      ? getFactorMasterEntry(original.canonicalName)?.type ?? null
+      : null
+  );
+  const requirementRank =
+    original.status === "confirmed" && original.canonicalName
+      ? getRequirementRankForFactor(original.canonicalName, factorType)
+      : null;
+
   return {
     ...original,
-    requirementRank:
-      original.status === "confirmed" && original.canonicalName
-        ? getRequirementRank(original.canonicalName)
-        : null,
+    factorType,
+    requirementRank,
+    factorStatus:
+      original.status === "confirmed"
+        ? requirementRank
+          ? "confirmed-requirement"
+          : "recognized-non-requirement"
+        : original.factorStatus,
     resolutionSource: original.fallbackUsed ? "fallback" : "ocr",
     manualCorrection: null
   };

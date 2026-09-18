@@ -128,6 +128,21 @@ assert.equal(recognitionSummary.recognizedNonRequirementCount, 1);
 assert.equal(recognitionSummary.recognizedRaceCount, 1);
 assert.equal(recognitionSummary.unresolvedCount, 1);
 
+requirements.A.push("スピードの目覚め");
+const awakeningCard = createCard({
+  ocrText: "スピードの目覚め",
+  finalStatus: "confirmed",
+  canonicalName: "スピードの目覚め",
+  canonicalFactorType: "awakening",
+  requirementRank: null
+});
+assert.equal(
+  getEffectiveRecognition(awakeningCard).requirementRank,
+  "A",
+  "awakeningはcanonicalName自身が要件にあればS/A/B/C集計対象にする"
+);
+requirements.A = requirements.A.filter(name => name !== "スピードの目覚め");
+
 const originalSnapshot = {
   ocrText: unrecognizedCard.ocrText,
   finalStatus: unrecognizedCard.finalStatus,
