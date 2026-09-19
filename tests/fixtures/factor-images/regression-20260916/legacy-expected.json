@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "note": "Human-verified ground truth from the unmodified 2026-09-16 production screenshots. Rows are one-based within each visible column.",
+  "fixtures": {
+    "skill-check-parent-a-01.png": {
+      "member": "parentA", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"賢さ","stars":3},"red":{"name":"ダート","stars":2},"green":{"stars":1}},
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"安田記念","stars":2,"type":"race"},
+        {"column":"left","row":5,"name":"末脚","stars":1,"type":"skill"},
+        {"column":"left","row":8,"name":"連綿","stars":2,"type":"skill"},
+        {"column":"left","row":9,"name":"レースの真髄・体","stars":3,"type":"skill"},
+        {"column":"left","row":10,"name":"アメリカンドリーム","stars":2,"type":"skill"},
+        {"column":"right","row":1,"name":"ヴィクトリアマイル","stars":2,"type":"race"},
+        {"column":"right","row":2,"name":"天皇賞（秋）","stars":3,"type":"race"},
+        {"column":"right","row":9,"name":"レースの真髄・速","stars":2,"type":"skill"},
+        {"column":"right","row":12,"name":"秋の目覚め","stars":2,"type":"skill"}
+      ]
+    },
+    "skill-check-parent-a-02.png": {
+      "member": "parentA", "imageIndex": 1, "layout": "factor-list-continuation",
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"安田記念","stars":2,"type":"race"},
+        {"column":"left","row":8,"name":"連綿","stars":2,"type":"skill"},
+        {"column":"left","row":9,"name":"レースの真髄・体","stars":3,"type":"skill"},
+        {"column":"left","row":10,"name":"アメリカンドリーム","stars":2,"type":"skill"},
+        {"column":"right","row":9,"name":"レースの真髄・速","stars":2,"type":"skill"},
+        {"column":"right","row":12,"name":"秋の目覚め","stars":2,"type":"skill"},
+        {"column":"right","row":13,"name":"東の雄","stars":2,"type":"skill"}
+      ]
+    },
+    "skill-check-grand-a1-01.png": {
+      "member": "grandA1", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"賢さ","stars":1},"red":{"name":"追込","stars":3},"green":{"stars":2}},
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"チャンピオンズC","stars":2,"type":"race"},
+        {"column":"left","row":7,"name":"連綿","stars":3,"type":"skill"},
+        {"column":"left","row":9,"name":"アメリカンドリーム","stars":1,"type":"skill"},
+        {"column":"left","row":10,"name":"左回りの目覚め","stars":3,"type":"skill"},
+        {"column":"left","row":11,"name":"冬の目覚め","stars":3,"type":"skill"},
+        {"column":"right","row":3,"name":"秋ウマ娘○","stars":3,"type":"skill"},
+        {"column":"right","row":8,"name":"レースの真髄・体","stars":2,"type":"skill"},
+        {"column":"right","row":11,"name":"秋の目覚め","stars":2,"type":"skill"}
+      ]
+    },
+    "skill-check-grand-a2-01.png": {
+      "member": "grandA2", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"パワー","stars":2},"red":{"name":"追込","stars":3},"green":{"stars":2}},
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"ヴィクトリアマイル","stars":3,"type":"race"},
+        {"column":"left","row":4,"name":"マイルCS南部杯","stars":2,"type":"race"},
+        {"column":"left","row":5,"name":"根幹距離○","stars":2,"type":"skill"},
+        {"column":"left","row":6,"name":"春ウマ娘○","stars":2,"type":"skill"},
+        {"column":"left","row":7,"name":"冬ウマ娘○","stars":2,"type":"skill"},
+        {"column":"left","row":11,"name":"連綿","stars":2,"type":"skill"},
+        {"column":"right","row":6,"name":"非根幹距離○","stars":3,"type":"skill"},
+        {"column":"right","row":7,"name":"秋ウマ娘○","stars":1,"type":"skill"},
+        {"column":"right","row":12,"name":"レースの真髄・速","stars":3,"type":"skill"}
+      ]
+    },
+    "skill-check-grand-a2-02.png": {
+      "member": "grandA2", "imageIndex": 1, "layout": "factor-list-continuation",
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"春ウマ娘○","stars":2,"type":"skill"},
+        {"column":"left","row":2,"name":"冬ウマ娘○","stars":2,"type":"skill"},
+        {"column":"left","row":6,"name":"連綿","stars":2,"type":"skill"},
+        {"column":"left","row":12,"name":"右回りの目覚め","stars":3,"type":"skill"},
+        {"column":"left","row":13,"name":"春の目覚め","stars":1,"type":"skill"},
+        {"column":"left","row":14,"name":"西の雄","stars":2,"type":"skill"},
+        {"column":"right","row":1,"name":"秋ウマ娘○","stars":1,"type":"skill"},
+        {"column":"right","row":12,"name":"左回りの目覚め","stars":1,"type":"skill"},
+        {"column":"right","row":13,"name":"東の雄","stars":3,"type":"skill"}
+      ]
+    },
+    "skill-check-parent-b-01.png": {
+      "member": "parentB", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"根性","stars":2},"red":{"name":"中距離","stars":3},"green":{"stars":3}},
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"朝日杯FS","stars":2,"type":"race"},
+        {"column":"left","row":6,"name":"たぎる血潮","stars":2,"type":"skill"},
+        {"column":"left","row":7,"name":"むきだしの情熱","stars":3,"type":"skill"},
+        {"column":"left","row":11,"name":"レースの真髄・体","stars":2,"type":"skill"},
+        {"column":"right","row":1,"name":"マイルCS","stars":2,"type":"race"},
+        {"column":"right","row":2,"name":"秋ウマ娘○","stars":2,"type":"skill"},
+        {"column":"right","row":11,"name":"連綿","stars":2,"type":"skill"},
+        {"column":"right","row":12,"name":"レースの真髄・力","stars":2,"type":"skill"}
+      ]
+    },
+    "skill-check-parent-b-02.png": {
+      "member": "parentB", "imageIndex": 1, "layout": "factor-list-continuation",
+      "whiteFactors": [
+        {"column":"left","row":5,"name":"たぎる血潮","stars":2,"type":"skill"},
+        {"column":"left","row":6,"name":"むきだしの情熱","stars":3,"type":"skill"},
+        {"column":"left","row":10,"name":"レースの真髄・体","stars":2,"type":"skill"},
+        {"column":"left","row":12,"name":"スピードの目覚め","stars":2,"type":"skill"},
+        {"column":"left","row":13,"name":"春の目覚め","stars":3,"type":"skill"},
+        {"column":"right","row":9,"name":"連綿","stars":2,"type":"skill"},
+        {"column":"right","row":12,"name":"右回りの目覚め","stars":2,"type":"skill"},
+        {"column":"right","row":13,"name":"東の雄","stars":3,"type":"skill"}
+      ]
+    },
+    "skill-check-grand-b1-01.png": {
+      "member": "grandB1", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"スタミナ","stars":3},"red":{"name":"追込","stars":3},"green":{"stars":2}},
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"安田記念","stars":2,"type":"race"},
+        {"column":"left","row":8,"name":"阿吽の呼吸","stars":1,"type":"skill"},
+        {"column":"left","row":9,"name":"レースの真髄・力","stars":2,"type":"skill"},
+        {"column":"right","row":1,"name":"大阪杯","stars":2,"type":"race"},
+        {"column":"right","row":3,"name":"有馬記念","stars":1,"type":"race"},
+        {"column":"right","row":4,"name":"良バ場○","stars":2,"type":"skill"},
+        {"column":"right","row":9,"name":"連綿","stars":2,"type":"skill"},
+        {"column":"right","row":10,"name":"恩返し、召し上がれ","stars":3,"type":"skill"},
+        {"column":"right","row":11,"name":"右回りの目覚め","stars":1,"type":"skill"}
+      ]
+    },
+    "skill-check-grand-b2-01.png": {
+      "member": "grandB2", "imageIndex": 0, "layout": "factor-list-start",
+      "factorInfo": {"blue":{"name":"パワー","stars":3},"red":{"name":"追込","stars":3},"green":{"stars":2}},
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"マイルCS","stars":2,"type":"race"},
+        {"column":"left","row":2,"name":"JDダービー","stars":2,"type":"race"},
+        {"column":"left","row":9,"name":"好戦的","stars":3,"type":"skill"},
+        {"column":"left","row":10,"name":"レースの真髄・体","stars":2,"type":"skill"},
+        {"column":"right","row":2,"name":"ホープフルS","stars":2,"type":"race"},
+        {"column":"right","row":3,"name":"秋ウマ娘○","stars":3,"type":"skill"},
+        {"column":"right","row":5,"name":"品行方正","stars":3,"type":"skill"},
+        {"column":"right","row":6,"name":"たぎる血潮","stars":2,"type":"skill"},
+        {"column":"right","row":11,"name":"レースの真髄・力","stars":1,"type":"skill"}
+      ]
+    },
+    "skill-check-grand-b2-02.png": {
+      "member": "grandB2", "imageIndex": 1, "layout": "factor-list-continuation",
+      "whiteFactors": [
+        {"column":"left","row":1,"name":"マイルCS","stars":2,"type":"race"},
+        {"column":"left","row":2,"name":"JDダービー","stars":2,"type":"race"},
+        {"column":"left","row":9,"name":"好戦的","stars":3,"type":"skill"},
+        {"column":"left","row":10,"name":"レースの真髄・体","stars":2,"type":"skill"},
+        {"column":"left","row":12,"name":"右回りの目覚め","stars":2,"type":"skill"},
+        {"column":"left","row":13,"name":"秋の目覚め","stars":1,"type":"skill"},
+        {"column":"right","row":1,"name":"ホープフルS","stars":2,"type":"race"},
+        {"column":"right","row":2,"name":"秋ウマ娘○","stars":3,"type":"skill"},
+        {"column":"right","row":4,"name":"品行方正","stars":3,"type":"skill"},
+        {"column":"right","row":10,"name":"レースの真髄・力","stars":1,"type":"skill"},
+        {"column":"right","row":12,"name":"左回りの目覚め","stars":2,"type":"skill"}
+      ]
+    }
+  },
+  "requirementsExpected": {
+    "A": {
+      "秋ウマ娘○": ["grandA1", "grandA2", "parentB", "grandB2"],
+      "春ウマ娘○": ["grandA2"],
+      "冬ウマ娘○": ["grandA2"],
+      "良バ場○": ["grandB1"],
+      "春の目覚め": ["grandA2", "parentB"],
+      "秋の目覚め": ["parentA", "grandA1", "grandB2"],
+      "冬の目覚め": ["grandA1"],
+      "右回りの目覚め": ["grandA2", "parentB", "grandB1", "grandB2"],
+      "左回りの目覚め": ["grandA1", "grandA2", "grandB2"]
+    }
+  }
+}
