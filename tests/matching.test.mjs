@@ -21,7 +21,7 @@ import {
   isStrongShortSkillFallbackResult
 } from "../assets/js/matching/fallback-policy.js";
 
-assert.equal(APP_BUILD, "20260918-factor-master-data-01");
+assert.equal(APP_BUILD, "20260920-ocr-fallback-01");
 assert.deepEqual(SKILL_MATCH_CONFIG, {
   thresholds: {
     1: 1.00,
@@ -262,8 +262,8 @@ assert.equal(
     firstSimilarity: 0.80,
     threshold: 0.50
   }),
-  false,
-  "ambiguity reviewはfallbackで上書きしない"
+  true,
+  "ambiguity reviewは追加OCR対象にする"
 );
 
 assert.equal(

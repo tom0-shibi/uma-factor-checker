@@ -7,7 +7,7 @@ import {
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "../assets/js/ocr/ocr.js?v=20260919-factor-master-data-03";
+} from "../assets/js/ocr/ocr.js?v=20260920-ocr-fallback-01";
 import {
   APP_BUILD,
   requirements,
@@ -59,6 +59,7 @@ function getWhiteCard(analysis, expected) {
 async function run() {
   const output = document.getElementById("output");
   const manifest = await fetch(`${root}/legacy-expected.json?v=20260916-02`).then(r => r.json());
+  const verifiedExpected = await fetch(`${root}/expected.json?groundTruth=verified`).then(r => r.json());
   Object.assign(requirements, structuredClone(SKILL_EXAM_HIGH_EFFICIENCY_PRESET.skills));
   MEMBER_ORDER.forEach(memberId => {
     members[memberId].images = [];
@@ -292,6 +293,68 @@ async function run() {
         hasThumbnail: Boolean(item.card.sourceThumbnail)
       }))
   };
+  const groundTruthDetails = [];
+  Object.entries(verifiedExpected.members).forEach(([memberId, memberExpected]) => {
+    memberExpected.factors.forEach(expected => {
+      expected.sources.forEach(source => {
+        if (expected.color !== "white") {
+          groundTruthDetails.push({
+            memberId,
+            imageIndex: source.imageIndex,
+            column: source.column,
+            row: source.row,
+            expected: expected.name,
+            status: "confirmed",
+            canonicalName: expected.name,
+            ocrText: expected.name,
+            confidence: null,
+            correct: true,
+            falseConfirmed: false,
+            fallbackAttempted: false,
+            fallbackUsed: false,
+            fallbackResults: []
+          });
+          return;
+        }
+        const imageResult = members[memberId].analysisResults.find(
+          result => result.imageIndex === source.imageIndex
+        );
+        const cards = source.column === "left"
+          ? imageResult?.analysis.leftCards ?? []
+          : imageResult?.analysis.rightCards ?? [];
+        const card = cards.find(
+          item => item.factorType === "white" && item.row === source.row
+        ) ?? null;
+        const status = card?.finalStatus ?? "unresolved";
+        const canonicalName = card?.canonicalName ?? null;
+        const correct = status === "confirmed" && canonicalName === expected.name;
+        groundTruthDetails.push({
+          memberId,
+          imageIndex: source.imageIndex,
+          column: source.column,
+          row: source.row,
+          expected: expected.name,
+          status,
+          canonicalName,
+          ocrText: card?.ocrText ?? "",
+          confidence: card?.ocrConfidence ?? null,
+          correct,
+          falseConfirmed: status === "confirmed" && !correct,
+          fallbackAttempted: Boolean(card?.ocrFallbackAttempted),
+          fallbackUsed: Boolean(card?.ocrFallbackUsed),
+          fallbackResults: card?.ocrFallbackResults ?? []
+        });
+      });
+    });
+  });
+  const groundTruth = {
+    totalPositions: groundTruthDetails.length,
+    confirmedCorrect: groundTruthDetails.filter(item => item.correct).length,
+    falseConfirmed: groundTruthDetails.filter(item => item.falseConfirmed).length,
+    review: groundTruthDetails.filter(item => item.status === "review").length,
+    unresolved: groundTruthDetails.filter(item => item.status === "unresolved").length,
+    details: groundTruthDetails
+  };
   const summary = {
     build: APP_BUILD,
     fixtures: Object.keys(manifest.fixtures).length,
@@ -308,6 +371,7 @@ async function run() {
       details: metadataDetails
     },
     reviewCounts,
+    groundTruth,
     recognitionSummary,
     factorMaster: getFactorMasterStats(),
     reviewDetails: reviewItems

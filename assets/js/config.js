@@ -1,6 +1,6 @@
 import { IS_DEV } from "./environment.js";
 
-const APP_BUILD = "20260919-factor-master-data-03";
+const APP_BUILD = "20260920-ocr-fallback-01";
 
 /* =========================================================
   アプリ内データ

@@ -20,7 +20,7 @@ import {
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
-} from "../matching/fallback-policy.js";
+} from "../matching/fallback-policy.js?v=20260920-ocr-fallback-01";
 import {
   BLUE_FACTOR_NAMES,
   RED_FACTOR_NAMES,

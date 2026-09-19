@@ -1,13 +1,2954 @@
 {
   "version": 1,
   "fixtureSet": "regression-20260916",
-  "verification": "draft",
+  "verification": "verified",
   "members": {
-    "parentA": { "factors": [] },
-    "grandA1": { "factors": [] },
-    "grandA2": { "factors": [] },
-    "parentB": { "factors": [] },
-    "grandB1": { "factors": [] },
-    "grandB2": { "factors": [] }
+    "parentA": {
+      "factors": [
+        {
+          "name": "安田記念",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 3
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "チャンピオンズC",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 4
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "ホープフルS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "マイルCS南部杯",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 6
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "末脚",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "素直な一歩",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 8
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "足がかり",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 9
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "アメリカンドリーム",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 12
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "追込の遺伝子",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 13
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "ヴィクトリアマイル",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "天皇賞（秋）",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 3
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "朝日杯FS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 4
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "東京大賞典",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 5
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "BC・サンタアニタパーク",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 6
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "しとやかな足取り",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 7
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "好戦的",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 9
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・速",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "恩返し、召し上がれ",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 12
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "秋の目覚め",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 13
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "連戦連勝",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "旅人",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "東の雄",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・速",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "覇気十分",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "覇気十分",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "ホープフルS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "末脚",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "賢さ",
+          "color": "blue",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "ダート",
+          "color": "red",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "継承固有",
+          "color": "green",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        }
+      ]
+    },
+    "grandA1": {
+      "factors": [
+        {
+          "name": "チャンピオンズC",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "マイルCS南部杯",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "末脚",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "しとやかな足取り",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "覇気十分",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "灯を胸に",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "アメリカンドリーム",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "冬の目覚め",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "NHKマイルC",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "ホープフルS",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "秋ウマ娘○",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "シンパシー",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "推力十分",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "影を追って",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "阿吽の呼吸",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "時代を変える者",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "追込の遺伝子",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "秋の目覚め",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "左回りの目覚め",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "連戦連勝",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "賢さ",
+          "color": "blue",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "追込",
+          "color": "red",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "継承固有",
+          "color": "green",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        }
+      ]
+    },
+    "grandA2": {
+      "factors": [
+        {
+          "name": "ヴィクトリアマイル",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "エリザベス女王杯",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "有馬記念",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "マイルCS南部杯",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "根幹距離○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "春ウマ娘○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "冬ウマ娘○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 9
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "食い下がり",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 10
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "差しためらい",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "中盤巧者",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 12
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "フェブラリーS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "菊花賞",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "マイルCS",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "JBCクラシック",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "東京レース場○",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "非根幹距離○",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "秋ウマ娘○",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "直線巧者",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 9
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "先行ためらい",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 10
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "スリップストリーム",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 11
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "比類なき",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 12
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・速",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "陽の加護",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "恩返し、召し上がれ",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "ダートの遺伝子",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "右回りの目覚め",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "春の目覚め",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "西の雄",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "前だけ見据えて",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "海の加護",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "トレセン軒シナリオ",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "マイルの遺伝子",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "左回りの目覚め",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "東の雄",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・賢",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・速",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "差しためらい",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "パワー",
+          "color": "blue",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "追込",
+          "color": "red",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "継承固有",
+          "color": "green",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        }
+      ]
+    },
+    "parentB": {
+      "factors": [
+        {
+          "name": "朝日杯FS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "仕掛け抜群",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "ウマ好み",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "打開策",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "折れない心",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 7
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "たぎる血潮",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 8
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "むきだしの情熱",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 9
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "活路を拓く！",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 11
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "阿吽の呼吸",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 12
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "マイルCS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "秋ウマ娘○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "追込コーナー○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "前のめり",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 5
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "しとやかな足取り",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 6
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "中盤巧者",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 7
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "鬼気迫って",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 8
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "切り替え上手",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 9
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "垣間見た光",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 10
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "好戦的",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 11
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "恩返し、召し上がれ",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "スピードの目覚め",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "春の目覚め",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "叩き良化型",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "追込の遺伝子",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "右回りの目覚め",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "東の雄",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "バランス重視",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 13
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "ウマ好み",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "躍動",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "打開策",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "躍動",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "根性",
+          "color": "blue",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "中距離",
+          "color": "red",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "継承固有",
+          "color": "green",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        }
+      ]
+    },
+    "grandB1": {
+      "factors": [
+        {
+          "name": "安田記念",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "朝日杯FS",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "マイルCS南部杯",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "ペースキープ",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "追込コーナー○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "一歩ずつ前へ",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "阿吽の呼吸",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "トレセン軒シナリオ",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "大阪杯",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "エリザベス女王杯",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "有馬記念",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "良バ場○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "追込直線○",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "前のめり",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "切り替え上手",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "足がかり",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "連綿",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "恩返し、召し上がれ",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "右回りの目覚め",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "惜しみなし",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "スタミナ",
+          "color": "blue",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "追込",
+          "color": "red",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "継承固有",
+          "color": "green",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        }
+      ]
+    },
+    "grandB2": {
+      "factors": [
+        {
+          "name": "安田記念",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "マイルCS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "JDダービー",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 5
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "垂れウマ回避",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 6
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "しとやかな足取り",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 7
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "中盤巧者",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 8
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "惜しみなし",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "切り替え上手",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 10
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "好戦的",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 12
+            },
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "フェブラリーS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "エリザベス女王杯",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "ホープフルS",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "秋ウマ娘○",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 5
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "前のめり",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 6
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 2
+            }
+          ]
+        },
+        {
+          "name": "品行方正",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 7
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 3
+            }
+          ]
+        },
+        {
+          "name": "たぎる血潮",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 8
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 4
+            }
+          ]
+        },
+        {
+          "name": "影踏み",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 9
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "這い寄る足音",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 10
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 6
+            }
+          ]
+        },
+        {
+          "name": "夢への挑戦",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 11
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "気ままな足取り",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 12
+            },
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 8
+            }
+          ]
+        },
+        {
+          "name": "恩返し、召し上がれ",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "右回りの目覚め",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "秋の目覚め",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "健闘",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "ダートの遺伝子",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 10
+            }
+          ]
+        },
+        {
+          "name": "左回りの目覚め",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "旅人",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 12
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 13
+            }
+          ]
+        },
+        {
+          "name": "惜しみなし",
+          "color": "white",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 5
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・体",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "レースの真髄・力",
+          "color": "white",
+          "stars": 1,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "right",
+              "row": 9
+            }
+          ]
+        },
+        {
+          "name": "躍動",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 11
+            }
+          ]
+        },
+        {
+          "name": "躍動",
+          "color": "white",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 1,
+              "column": "left",
+              "row": 7
+            }
+          ]
+        },
+        {
+          "name": "パワー",
+          "color": "blue",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "追込",
+          "color": "red",
+          "stars": 3,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "right",
+              "row": 1
+            }
+          ]
+        },
+        {
+          "name": "継承固有",
+          "color": "green",
+          "stars": 2,
+          "verified": true,
+          "sources": [
+            {
+              "imageIndex": 0,
+              "column": "left",
+              "row": 2
+            }
+          ]
+        }
+      ]
+    }
   }
 }
