@@ -99,6 +99,11 @@ if (analyzeImagesButton) {
         return;
       }
 
+      if (IS_DEV) {
+        const { resetFixtureRegression } = await import("./dev/fixture-regression.js");
+        resetFixtureRegression();
+      }
+
       const analysisStartedAt = performance.now();
       resetOcrPerformanceMetrics();
 
@@ -519,6 +524,15 @@ if (analyzeImagesButton) {
       );
 
       appendSummaryToDebugLog();
+
+      if (IS_DEV) {
+        try {
+          const { completeFixtureRegression } = await import("./dev/fixture-regression.js");
+          await completeFixtureRegression();
+        } catch (error) {
+          console.error("Fixture比較に失敗しました", error);
+        }
+      }
 
       if (ocrStatus) {
         ocrStatus.textContent =

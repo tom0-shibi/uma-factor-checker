@@ -58,7 +58,7 @@ function getWhiteCard(analysis, expected) {
 
 async function run() {
   const output = document.getElementById("output");
-  const manifest = await fetch(`${root}/expected.json?v=20260916-02`).then(r => r.json());
+  const manifest = await fetch(`${root}/legacy-expected.json?v=20260916-02`).then(r => r.json());
   Object.assign(requirements, structuredClone(SKILL_EXAM_HIGH_EFFICIENCY_PRESET.skills));
   MEMBER_ORDER.forEach(memberId => {
     members[memberId].images = [];
