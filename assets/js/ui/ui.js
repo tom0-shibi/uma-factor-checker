@@ -1,4 +1,5 @@
-import { requirements, members, analysisProgress } from "../config.js";
+import { IS_DEV } from "../environment.js";
+import { requirements, members, MEMBER_ORDER, analysisProgress } from "../config.js";
 
 let pasteTargetMember = "parentA";
 
@@ -889,7 +890,8 @@ const memberPanels =
 
 function addImages(
   memberId,
-  files
+  files,
+  { target = members[memberId].images, render = true } = {}
 ) {
   const imageFiles =
     Array.from(files).filter(
@@ -900,7 +902,7 @@ function addImages(
     );
 
   imageFiles.forEach(file => {
-    members[memberId].images.push({
+    target.push({
       id:
         `${Date.now()}-${Math.random()}`,
       file,
@@ -911,11 +913,10 @@ function addImages(
     });
   });
 
-  renderImagePreviews(
-    memberId
-  );
-
-  updateImageSummary();
+  if (render) {
+    renderImagePreviews(memberId);
+    updateImageSummary();
+  }
 }
 
 /* =========================================================
@@ -1048,10 +1049,7 @@ function removeImage(
     memberId
   ].analysisResults = [];
 
-  renderImagePreviews(
-    memberId
-  );
-
+  renderImagePreviews(memberId);
   updateImageSummary();
 }
 
@@ -1351,4 +1349,33 @@ document.addEventListener(
 );
 
 
-export { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary, markRequirementsDirty, clearRequirementApplyStatus };
+function replaceImagesForDevelopment(filesByMember) {
+  if (!IS_DEV || analysisProgress.active) {
+    throw new Error("dev環境の解析停止中のみセットできます。");
+  }
+  const staged = Object.fromEntries(MEMBER_ORDER.map(id => [id, []]));
+  try {
+    for (const id of MEMBER_ORDER) {
+      const files = filesByMember[id];
+      const count = ["grandA1", "grandB1"].includes(id) ? 1 : 2;
+      if (!files || files.length !== count
+        || files.some(file => !file.type.startsWith("image/"))) {
+        throw new Error("10枚すべての画像が必要です。");
+      }
+      addImages(id, files, { target: staged[id], render: false });
+    }
+  } catch (error) {
+    Object.values(staged).flat().forEach(image => URL.revokeObjectURL(image.url));
+    throw error;
+  }
+  const previous = MEMBER_ORDER.flatMap(id => members[id].images);
+  for (const id of MEMBER_ORDER) {
+    members[id].images = staged[id];
+    members[id].analysisResults = [];
+  }
+  previous.forEach(image => URL.revokeObjectURL(image.url));
+  MEMBER_ORDER.forEach(renderImagePreviews);
+  updateImageSummary();
+}
+
+export { replaceImagesForDevelopment, ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary, markRequirementsDirty, clearRequirementApplyStatus };

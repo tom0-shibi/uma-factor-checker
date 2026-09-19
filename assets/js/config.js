@@ -1,4 +1,6 @@
-const APP_BUILD = "20260919-factor-master-data-03";
+import { IS_DEV } from "./environment.js";
+
+const APP_BUILD = "20260920-ocr-fallback-01";
 
 /* =========================================================
   アプリ内データ
@@ -54,7 +56,11 @@ const MEMBER_ORDER = [
   "grandB2"
 ];
 
-let debugLogLines = [];
+const debugLogLines = [];
+if (!IS_DEV) {
+  // Keep the shared analysis path, but do not retain development logs in pro.
+  debugLogLines.push = () => 0;
+}
 
 /* =========================================================
   解析進捗状態

@@ -23,7 +23,6 @@ function getShortSkillFallbackDecision({
   if (
     !hasOcrCanvas ||
     shortSkillCount <= 0 ||
-    finalStatus === "review" ||
     matchStatus === "exact"
   ) {
     return { shouldRun: false, reason: null };
@@ -65,6 +64,16 @@ function getShortSkillFallbackDecision({
     return {
       shouldRun: true,
       reason: "weak-short-canonical-match"
+    };
+  }
+
+  if (
+    finalStatus === "review" ||
+    finalStatus === "unresolved"
+  ) {
+    return {
+      shouldRun: true,
+      reason: "review-or-unresolved"
     };
   }
 

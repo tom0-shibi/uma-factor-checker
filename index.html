@@ -393,10 +393,14 @@
         </div>
         <p class="registered-face-count">今回の判定対象: <strong id="skill-registered-face-count">0面</strong></p>
 
-        <label class="debug-mode-toggle">
-          <input id="debug-mode-toggle" type="checkbox" />
-          デバッグモード
-        </label>
+        <div id="dev-controls" hidden>
+          <label class="debug-mode-toggle">
+            <input id="debug-mode-toggle" type="checkbox" />
+            デバッグモード（dev）
+          </label>
+          <button id="set-test-images" type="button" class="secondary-button">テスト画像10枚をセット</button>
+          <p id="test-images-status" role="status" aria-live="polite"></p>
+        </div>
 
         <div class="action-area">
           <button id="analyze-images" class="primary-button" disabled>
@@ -514,7 +518,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260919-factor-master-data-03"
+      src="./assets/js/app.js?v=20260920-ocr-fallback-01"
     ></script>
   </body>
 </html>
