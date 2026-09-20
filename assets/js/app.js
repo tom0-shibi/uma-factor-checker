@@ -1,6 +1,6 @@
 import { IS_DEV } from "./environment.js";
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
-import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260917-factor-master-01";
+import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260921-adaptive-image-layout-01";
 import {
   createOcrWorker,
   runOcrForFactorMetadata,

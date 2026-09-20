@@ -2,7 +2,7 @@ import { ANALYSIS_CONFIG, STAR_CONFIG } from "../config.js";
 import {
   classifyFactorLayout,
   detectFactorSectionAnchorCandidates
-} from "./factor-anchor.js";
+} from "./factor-anchor.js?v=20260921-adaptive-image-layout-01";
 
 /* =========================================================
   FileをImageへ読み込む処理
@@ -1441,6 +1441,31 @@ function getFactorCardColumns(layoutType) {
   };
 }
 
+function getAnchorDerivedColumns(anchor) {
+  const start = anchor.continuousStartRatio;
+  const end = anchor.continuousEndRatio;
+  const width = end - start;
+
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    width < 0.75
+  ) {
+    return null;
+  }
+
+  return {
+    left: {
+      xRatio: start + width * 0.005,
+      widthRatio: width * 0.485
+    },
+    right: {
+      xRatio: start + width * 0.51,
+      widthRatio: width * 0.485
+    }
+  };
+}
+
 function evaluateDetailColumnGeometry(
   ctx,
   width,
@@ -1518,7 +1543,7 @@ function evaluateDetailColumnGeometry(
   };
 }
 
-function detectDetailCardColumns(
+function detectAdaptiveCardColumns(
   ctx,
   width,
   height,
@@ -1527,10 +1552,15 @@ function detectDetailCardColumns(
 ) {
   const xCandidates = {
     left: [
+      0.03,
+      0.04,
+      0.05,
+      0.06,
+      0.08,
+      0.10,
       0.16,
       0.14,
       0.12,
-      0.10,
       0.18,
       0.20
     ],
@@ -1549,7 +1579,10 @@ function detectDetailCardColumns(
     0.35,
     0.37,
     0.385,
-    0.40
+    0.40,
+    0.42,
+    0.44,
+    0.46
   ];
 
   const getColumnCandidates =
@@ -1667,6 +1700,9 @@ function detectDetailCardColumns(
 
   return {
     columns: best.columns,
+    left: best.left,
+    right: best.right,
+    rowResult: best.rowResult,
     diagnostics: {
       leftScore: best.left.score,
       leftValidCards:
@@ -1696,9 +1732,9 @@ function evaluateFactorAnchorCandidate(
       height * 0.008
     );
 
-  const detailGeometry =
+  const adaptiveGeometry =
     layoutType === "detail"
-      ? detectDetailCardColumns(
+      ? detectAdaptiveCardColumns(
           ctx,
           width,
           height,
@@ -1708,7 +1744,12 @@ function evaluateFactorAnchorCandidate(
       : null;
 
   const columns =
-    detailGeometry?.columns ??
+    adaptiveGeometry?.columns ??
+    (
+      layoutType === "factor-list"
+        ? getAnchorDerivedColumns(anchor)
+        : null
+    ) ??
     getFactorCardColumns(
       layoutType
     );
@@ -1782,9 +1823,18 @@ function evaluateFactorAnchorCandidate(
       10
     ) * 0.1;
 
+  const resolvedLayoutType =
+    layoutType === "detail" &&
+    columns.left.xRatio < 0.10 &&
+    columns.left.widthRatio >= 0.40 &&
+    columns.right.widthRatio >= 0.40
+      ? "factor-list"
+      : layoutType;
+
   return {
     anchor,
-    layoutType,
+    layoutType:
+      resolvedLayoutType,
     columns,
     factorAreaTop,
     initialLeft,
@@ -1800,7 +1850,7 @@ function evaluateFactorAnchorCandidate(
         ? null
         : "no-factor-grid",
     geometryDiagnostics:
-      detailGeometry?.diagnostics ??
+      adaptiveGeometry?.diagnostics ??
       null
   };
 }
@@ -2110,12 +2160,14 @@ function analyzeFactorImage(
     selectedAnchor?.layoutType ??
     "continuation";
 
-  const detectionMode =
+  let detectionMode =
     header
-      ? "anchor-based"
+      ? selectedAnchor.geometryDiagnostics
+        ? "adaptive-anchor"
+        : "anchor-based"
       : "legacy-continuation";
 
-  const columns =
+  let columns =
     selectedAnchor?.columns ??
     ANALYSIS_CONFIG.columns;
 
@@ -2204,7 +2256,7 @@ function analyzeFactorImage(
     ...initialRight
   ];
 
-  const rowResult =
+  let rowResult =
     selectedAnchor?.rowResult ??
     buildFactorRows(
         ctx,
@@ -2214,6 +2266,56 @@ function analyzeFactorImage(
         factorAreaBottom,
         columns
       );
+
+  if (!selectedAnchor) {
+    const legacyRows =
+      rowResult?.rows ?? [];
+    const legacyPairedRows =
+      legacyRows.filter(
+        row => row.leftCard && row.rightCard
+      ).length;
+    const legacyLeftRows =
+      legacyRows.filter(row => row.leftCard).length;
+    const legacyRightRows =
+      legacyRows.filter(row => row.rightCard).length;
+    const legacyStable =
+      legacyRows.length >= 6 &&
+      legacyPairedRows >= 5 &&
+      legacyLeftRows >= 6 &&
+      legacyRightRows >= 6;
+
+    if (!legacyStable) {
+      const adaptiveGeometry =
+        detectAdaptiveCardColumns(
+          ctx,
+          width,
+          height,
+          factorAreaTop,
+          factorAreaBottom
+        );
+      const adaptiveRows =
+        adaptiveGeometry.rowResult?.rows ?? [];
+      const adaptivePairedRows =
+        adaptiveRows.filter(
+          row => row.leftCard && row.rightCard
+        ).length;
+      const adaptiveLeftRows =
+        adaptiveRows.filter(row => row.leftCard).length;
+      const adaptiveRightRows =
+        adaptiveRows.filter(row => row.rightCard).length;
+
+      if (
+        adaptiveRows.length >= 6 &&
+        adaptivePairedRows >= 5 &&
+        adaptiveLeftRows >= 6 &&
+        adaptiveRightRows >= 6
+      ) {
+        columns = adaptiveGeometry.columns;
+        rowResult = adaptiveGeometry.rowResult;
+        detectionMode = "adaptive-continuation";
+      }
+    }
+  }
 
   const columnGeometry =
     createColumnGeometry(

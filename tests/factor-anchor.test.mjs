@@ -44,6 +44,8 @@ const detailAnchor = detectFactorSectionAnchor(
 );
 assert.ok(detailAnchor);
 assert.equal(classifyFactorLayout(detailAnchor), "detail");
+assert.ok(detailAnchor.continuousStartRatio < 0.04);
+assert.ok(detailAnchor.continuousEndRatio > 0.96);
 
 const listAnchor = detectFactorSectionAnchor(
   createContext(width, height, [{ left: 150, right: 860, top: 350, bottom: 380 }]),
@@ -52,6 +54,8 @@ const listAnchor = detectFactorSectionAnchor(
 );
 assert.ok(listAnchor);
 assert.equal(classifyFactorLayout(listAnchor), "factor-list");
+assert.ok(listAnchor.continuousStartRatio > 0.14);
+assert.ok(listAnchor.continuousEndRatio < 0.87);
 
 const rentalListAnchor = detectFactorSectionAnchor(
   createContext(width, height, [{ left: 150, right: 860, top: 730, bottom: 760 }]),
