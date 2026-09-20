@@ -1,6 +1,6 @@
 import { IS_DEV } from "../environment.js";
 import { analysisProgress } from "../config.js";
-import { replaceImagesForDevelopment } from "../ui/ui.js?v=20260919-dev-pro-01";
+import { replaceImagesForDevelopment } from "../ui/ui.js?v=20260921-duplicate-paste-01";
 
 const FIXTURE_ASSIGNMENTS = {
   parentA: ["parent-a-01", "parent-a-02"],
