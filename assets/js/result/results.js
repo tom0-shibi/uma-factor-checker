@@ -1,7 +1,7 @@
 import { IS_DEV } from "../environment.js";
 
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260919-dev-pro-01";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260921-ui-screen-regression-01";
 import {
   getRequirementRankLabel,
   getSelectedPresetName

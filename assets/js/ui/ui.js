@@ -308,6 +308,11 @@ function ensureResultSummaryContainer() {
       "analysis-debug"
     );
 
+  const resultsSection =
+    document.getElementById(
+      "results"
+    );
+
   if (
     debugContainer &&
     debugContainer.parentNode
@@ -315,6 +320,10 @@ function ensureResultSummaryContainer() {
     debugContainer.parentNode.insertBefore(
       container,
       debugContainer
+    );
+  } else if (resultsSection) {
+    resultsSection.appendChild(
+      container
     );
   } else {
     document.body.appendChild(
