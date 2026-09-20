@@ -1,0 +1,36 @@
+{
+  "fixtures": {
+    "el-condor-pasa.png": {
+      "supported": true,
+      "layout": "factor-list-start",
+      "anchorFound": true,
+      "leftCount": 13,
+      "rightCount": 13,
+      "whiteCardCount": 23
+    },
+    "narita-top-road.png": {
+      "supported": true,
+      "layout": "factor-list-start",
+      "anchorFound": true,
+      "leftCount": 13,
+      "rightCount": 13,
+      "whiteCardCount": 23
+    },
+    "kitasan-black.png": {
+      "supported": true,
+      "layout": "factor-list-continuation",
+      "anchorFound": false,
+      "leftCount": 13,
+      "rightCount": 13,
+      "whiteCardCount": 25
+    },
+    "agnes-tachyon.png": {
+      "supported": true,
+      "layout": "factor-list-start",
+      "anchorFound": true,
+      "leftCount": 13,
+      "rightCount": 13,
+      "whiteCardCount": 23
+    }
+  }
+}

@@ -25,12 +25,22 @@ function inspectAnchorRow(ctx, width, y) {
   let greenPixels = 0;
   let currentRun = 0;
   let longestRun = 0;
+  let currentRunStart = 0;
+  let longestRunStart = 0;
+  let longestRunEnd = 0;
 
   for (let index = 0; index < data.length; index += 4) {
     if (isFactorHeaderGreen(data[index], data[index + 1], data[index + 2])) {
+      if (currentRun === 0) {
+        currentRunStart = index / 4;
+      }
       greenPixels++;
       currentRun++;
-      longestRun = Math.max(longestRun, currentRun);
+      if (currentRun > longestRun) {
+        longestRun = currentRun;
+        longestRunStart = currentRunStart;
+        longestRunEnd = index / 4 + 1;
+      }
     } else {
       currentRun = 0;
     }
@@ -38,7 +48,9 @@ function inspectAnchorRow(ctx, width, y) {
 
   return {
     greenCoverage: greenPixels / scanWidth,
-    continuousWidthRatio: longestRun / width
+    continuousWidthRatio: longestRun / width,
+    continuousStartRatio: (startX + longestRunStart) / width,
+    continuousEndRatio: (startX + longestRunEnd) / width
   };
 }
 
@@ -94,13 +106,23 @@ function detectFactorSectionAnchorCandidates(ctx, width, height) {
       (sum, row) => sum + row.continuousWidthRatio,
       0
     ) / group.length;
+    const averageContinuousStart = group.reduce(
+      (sum, row) => sum + row.continuousStartRatio,
+      0
+    ) / group.length;
+    const averageContinuousEnd = group.reduce(
+      (sum, row) => sum + row.continuousEndRatio,
+      0
+    ) / group.length;
 
     return {
       top: group[0].y,
       bottom: group[group.length - 1].y,
       centerY: Math.round((group[0].y + group[group.length - 1].y) / 2),
       greenCoverage: averageCoverage,
-      continuousWidthRatio: averageContinuousWidth
+      continuousWidthRatio: averageContinuousWidth,
+      continuousStartRatio: averageContinuousStart,
+      continuousEndRatio: averageContinuousEnd
     };
   });
 }
