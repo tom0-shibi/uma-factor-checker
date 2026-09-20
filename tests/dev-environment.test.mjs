@@ -17,6 +17,7 @@ async function setup(hostname, protocol = "http:") {
   };
   const input = makeElement();
   input.dataset.member = "parentA";
+  const documentHandlers = {};
   const revoked = [];
   let sequence = 0;
   class TestURL extends URL {
@@ -35,7 +36,7 @@ async function setup(hostname, protocol = "http:") {
       querySelectorAll: selector => selector === ".image-file-input" ? [input] : [],
       querySelector: () => null,
       createElement: makeElement,
-      addEventListener() {}
+      addEventListener(type, callback) { documentHandlers[type] = callback; }
     },
     fetch: async url => {
       if (String(url).includes(context.missing || "never-missing")) {
@@ -69,7 +70,9 @@ async function setup(hostname, protocol = "http:") {
   await fixtures.link((specifier, parent) => load(new URL(specifier, parent.identifier)));
   await fixtures.evaluate();
   const get = name => modules.get(new URL(`../assets/js/${name}`, import.meta.url).href).namespace;
-  return { context, element, input, revoked, fixtures: fixtures.namespace, config: get("config.js"),
+  return { context, element, input, revoked, documentHandlers,
+    resetBlobState() { sequence = 0; revoked.length = 0; },
+    fixtures: fixtures.namespace, config: get("config.js"),
     ui: get("ui/ui.js"), environment: get("environment.js") };
 }
 
@@ -93,6 +96,31 @@ for (const [host, protocol, expected] of [
 
 const app = await setup("localhost");
 const { members, MEMBER_ORDER, analysisProgress } = app.config;
+app.element("skill-check-workspace").hidden = false;
+const clipboardFile = new File(["paste"], "paste.png", { type: "image/png" });
+const clipboardItem = file => ({
+  kind: "file",
+  type: file.type,
+  getAsFile: () => file
+});
+const paste = files => app.documentHandlers.paste({
+  clipboardData: { items: files.map(clipboardItem) },
+  preventDefault() {}
+});
+
+paste([clipboardFile]);
+assert.equal(members.parentA.images.length, 1);
+paste([clipboardFile]);
+assert.equal(members.parentA.images.length, 2);
+
+members.parentA.images = [];
+paste([
+  new File(["first"], "first.png", { type: "image/png" }),
+  new File(["second"], "second.png", { type: "image/png" })
+]);
+assert.equal(members.parentA.images.length, 2);
+members.parentA.images = [];
+app.resetBlobState();
 // Exercise the normal file-selection listener before fixture replacement.
 app.input.handlers.change({ target: { files: [new File(["old"], "old.png", { type: "image/png" })] } });
 assert.equal(members.parentA.images.length, 1);

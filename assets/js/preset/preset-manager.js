@@ -12,7 +12,7 @@ import {
 import {
   markRequirementsDirty,
   clearRequirementApplyStatus
-} from "../ui/ui.js?v=20260919-dev-pro-01";
+} from "../ui/ui.js?v=20260921-duplicate-paste-01";
 
 const RANKS = ["S", "A", "B", "C"];
 const DEFAULT_LABELS = {

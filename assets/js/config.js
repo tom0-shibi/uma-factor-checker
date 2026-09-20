@@ -1,6 +1,6 @@
 import { IS_DEV } from "./environment.js";
 
-const APP_BUILD = "20260921-ui-screen-regression-01";
+const APP_BUILD = "20260921-duplicate-paste-01";
 
 /* =========================================================
   アプリ内データ
