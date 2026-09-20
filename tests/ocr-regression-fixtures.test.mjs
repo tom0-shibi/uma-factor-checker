@@ -9,7 +9,7 @@ const fixtureDirectory = path.join(
   "fixtures/factor-images/regression-20260916"
 );
 const manifest = JSON.parse(
-  fs.readFileSync(path.join(fixtureDirectory, "expected.json"), "utf8")
+  fs.readFileSync(path.join(fixtureDirectory, "legacy-expected.json"), "utf8")
 );
 
 assert.equal(Object.keys(manifest.fixtures).length, 10);

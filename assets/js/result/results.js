@@ -1,5 +1,7 @@
+import { IS_DEV } from "../environment.js";
+
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
-import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260917-factor-master-01";
+import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260919-dev-pro-01";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
@@ -141,6 +143,9 @@ function renderAnalysisDebug(
   canvas,
   analysis
 ) {
+  if (!IS_DEV) {
+    return;
+  }
   const container =
     document.getElementById(
       "analysis-debug"
@@ -734,6 +739,9 @@ function renderAnalysisError(
   imageIndex,
   error
 ) {
+  if (!IS_DEV) {
+    return;
+  }
   const container =
     document.getElementById(
       "analysis-debug"
@@ -2308,6 +2316,9 @@ function renderOverallSkillSummary() {
   ========================================================= */
 
 function appendSummaryToDebugLog() {
+  if (!IS_DEV) {
+    return;
+  }
   const model = buildResultModel();
   const summary = model.ranks;
   const recognitionSummary = buildRecognitionSummary();
@@ -2444,6 +2455,9 @@ function appendSummaryToDebugLog() {
   ========================================================= */
 
 async function copyDebugLog() {
+  if (!IS_DEV) {
+    return;
+  }
   const status =
     document.getElementById(
       "copy-debug-status"
@@ -2497,7 +2511,7 @@ const copyDebugButton =
     "copy-debug-log"
   );
 
-if (copyDebugButton) {
+if (IS_DEV && copyDebugButton) {
   copyDebugButton.addEventListener(
     "click",
     copyDebugLog
@@ -2510,7 +2524,7 @@ const debugModeToggle =
   );
 
 function updateDebugModeDisplay() {
-  const enabled = Boolean(debugModeToggle?.checked);
+  const enabled = IS_DEV && Boolean(debugModeToggle?.checked);
   const debugActions = document.getElementById("debug-actions");
   const debugContainer = document.getElementById("analysis-debug");
 

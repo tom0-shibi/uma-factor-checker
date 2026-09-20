@@ -3,7 +3,7 @@ import {
   analysisProgress
 } from "../config.js";
 import { getLuminance } from "../analysis/image-analysis.js";
-import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260917-factor-master-01";
+import { updateAnalysisProgressDisplay } from "../ui/ui.js?v=20260919-dev-pro-01";
 import {
   getRequirementRank,
   normalizeOcrText,
@@ -20,7 +20,7 @@ import {
 import {
   getShortSkillFallbackDecision,
   evaluateStrongShortSkillFallbackResult
-} from "../matching/fallback-policy.js";
+} from "../matching/fallback-policy.js?v=20260920-ocr-fallback-01";
 import {
   BLUE_FACTOR_NAMES,
   RED_FACTOR_NAMES,

@@ -1,3 +1,4 @@
+import { IS_DEV } from "./environment.js";
 import { APP_BUILD, members, MEMBER_ORDER, debugLogLines, analysisProgress } from "./config.js";
 import { drawOriginalImage, analyzeFactorImage } from "./analysis/image-analysis.js?v=20260917-factor-master-01";
 import {
@@ -6,9 +7,9 @@ import {
   runOcrForWhiteCards,
   resetOcrPerformanceMetrics,
   getOcrPerformanceMetrics
-} from "./ocr/ocr.js?v=20260919-factor-master-data-03";
-import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260919-factor-master-data-03";
-import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260917-factor-master-01";
+} from "./ocr/ocr.js?v=20260920-ocr-fallback-01";
+import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, renderOverallSkillSummary, appendSummaryToDebugLog, resetReviewAccordionState, resetUnsupportedLayouts } from "./result/results.js?v=20260919-dev-pro-01";
+import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260919-dev-pro-01";
 import { initializePresetManager } from "./preset/preset-manager.js";
 import { initializeTheme } from "./ui/theme.js";
 import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-factor-master-01";
@@ -16,6 +17,16 @@ import { initializeRepresentativeCheck } from "./representative/representative-c
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
 );
+
+if (IS_DEV) {
+  import("./dev/fixtures.js").then(({ initializeFixtureControls }) => {
+    initializeFixtureControls();
+  }).catch(error => console.error("Dev操作の初期化に失敗しました", error));
+} else {
+  ["dev-controls", "debug-actions", "analysis-debug"].forEach(id => {
+    document.getElementById(id)?.remove();
+  });
+}
 
 initializeTheme();
 initializePageScrollPosition();
@@ -86,6 +97,11 @@ if (analyzeImagesButton) {
         totalImages === 0
       ) {
         return;
+      }
+
+      if (IS_DEV) {
+        const { resetFixtureRegression } = await import("./dev/fixture-regression.js");
+        resetFixtureRegression();
       }
 
       const analysisStartedAt = performance.now();
@@ -508,6 +524,15 @@ if (analyzeImagesButton) {
       );
 
       appendSummaryToDebugLog();
+
+      if (IS_DEV) {
+        try {
+          const { completeFixtureRegression } = await import("./dev/fixture-regression.js");
+          await completeFixtureRegression();
+        } catch (error) {
+          console.error("Fixture比較に失敗しました", error);
+        }
+      }
 
       if (ocrStatus) {
         ocrStatus.textContent =
