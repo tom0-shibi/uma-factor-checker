@@ -23,11 +23,11 @@
     </script>
     <link
       rel="stylesheet"
-      href="./assets/css/tokens.css?v=20260922-series-ui-01"
+      href="./assets/css/tokens.css?v=20260922-series-ui-02"
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260922-series-ui-01"
+      href="./assets/css/style.css?v=20260922-series-ui-02"
     />
   </head>
   <body>
@@ -40,14 +40,27 @@
           </div>
           <p>ウマ娘 因子画像解析・スキル要件チェッカー</p>
         </div>
-        <label class="theme-control" for="theme-select">
-          <span>表示</span>
-          <select id="theme-select" aria-label="表示テーマ">
-            <option value="system">システム</option>
-            <option value="light">ライト</option>
-            <option value="dark">ダーク</option>
-          </select>
-        </label>
+        <div class="header-utilities">
+          <button
+            id="usage-open"
+            class="header-usage-button"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="usage-modal"
+            aria-expanded="false"
+          >
+            <span aria-hidden="true">?</span>
+            使い方
+          </button>
+          <label class="theme-control" for="theme-select">
+            <span>表示</span>
+            <select id="theme-select" aria-label="表示テーマ">
+              <option value="system">システム</option>
+              <option value="light">ライト</option>
+              <option value="dark">ダーク</option>
+            </select>
+          </label>
+        </div>
       </div>
     </header>
 
@@ -59,24 +72,6 @@
         <button class="tab-button" data-tab="results">判定結果</button>
       </div>
     </nav>
-
-    <div class="usage-entry-wrap">
-      <button
-        id="usage-open"
-        class="usage-entry"
-        type="button"
-        aria-haspopup="dialog"
-        aria-controls="usage-modal"
-        aria-expanded="false"
-      >
-        <span class="usage-entry-icon" aria-hidden="true">?</span>
-        <span class="usage-entry-copy">
-          <strong>使い方</strong>
-          <span>初めての方はこちら。基本的な使い方や判定の流れを確認できます。</span>
-        </span>
-        <span class="usage-entry-arrow" aria-hidden="true">›</span>
-      </button>
-    </div>
 
     <main class="app-main">
       <section id="requirements" class="tab-content active">
@@ -466,16 +461,27 @@
         </header>
         <div class="usage-modal-body">
           <section>
-            <h3><span>1</span> プリセットを選択</h3>
-            <p>まず試す場合は「技能試験高効率用」を選ぶとすぐ利用できます。</p>
+            <h3><span>1</span> スキル要件を準備</h3>
+            <p>判定したいスキルをまとめるプリセットを準備します。「使用するプリセット」から既存プリセットを選ぶか、「新しいプリセットを作る」で自分用に作成できます。JSON形式のプリセットは「JSONインポート」から読み込めます。</p>
+            <p class="usage-modal-detail">初めて試す場合は、固定プリセット「技能試験高効率用」も利用できます。</p>
           </section>
           <section>
-            <h3><span>2</span> スキル要件を調整</h3>
-            <p>各ランクを開き、必要なスキルを追加・削除します。調整した内容は新しいプリセットとして保存できます。固定プリセットは上書き・削除されません。</p>
+            <h3><span>2</span> 必要なスキルを設定</h3>
+            <p>S / A / B / Cの各優先度へ、判定したいスキルを登録します。プリセットを選んだ後も、必要に応じてスキルを追加・削除できます。</p>
+            <p class="usage-modal-detail">準備ができたら「スキル要件を反映」を押します。正常に反映されると画像登録画面へ進みます。</p>
           </section>
           <section>
-            <h3><span>3</span> 画像を登録して解析</h3>
-            <p>各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。</p>
+            <h3><span>3</span> 因子一覧画像を登録</h3>
+            <p>親A / 親A-祖1 / 親A-祖2 / 親B / 親B-祖1 / 親B-祖2のうち、判定したい対象へ因子一覧画像を登録します。6枠すべては必須ではなく、1枠以上で解析できます。</p>
+            <p class="usage-modal-detail">因子一覧が複数枚に分かれている場合は、同じ対象へ複数画像を登録できます。</p>
+          </section>
+          <section>
+            <h3><span>4</span> 画像を解析</h3>
+            <p>必要な画像を登録したら「画像を解析」を押します。登録した因子一覧を読み取り、設定したスキル要件と照合します。解析完了後は判定結果画面へ進みます。</p>
+          </section>
+          <section>
+            <h3><span>5</span> 判定結果を確認</h3>
+            <p>判定結果画面で、対象スキルの所持状況を確認できます。OCR結果に誤りがある場合は、要確認項目で元画像を確認し、表示される修正操作を利用できます。</p>
           </section>
           <aside class="usage-modal-note">
             <strong>公開テスト中</strong>
@@ -566,7 +572,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260922-series-ui-01"
+      src="./assets/js/app.js?v=20260922-series-ui-02"
     ></script>
   </body>
 </html>

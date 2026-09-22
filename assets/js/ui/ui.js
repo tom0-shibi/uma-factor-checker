@@ -826,7 +826,7 @@ document.querySelectorAll(
 if (applyRequirementsButton) {
   applyRequirementsButton.addEventListener(
     "click",
-    () => {
+    event => {
       requirements.S =
         parseSkillInput(
           document.getElementById(
@@ -868,7 +868,15 @@ if (applyRequirementsButton) {
       );
 
       document.dispatchEvent(
-        new CustomEvent("requirements-applied")
+        new CustomEvent(
+          "requirements-applied",
+          {
+            detail: {
+              navigateToImages:
+                event.isTrusted
+            }
+          }
+        )
       );
     }
   );

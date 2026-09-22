@@ -1,12 +1,12 @@
 :root {
   color-scheme: light;
-  --color-bg: #edf3fa;
+  --color-bg: #e7eef7;
   --color-surface: #ffffff;
-  --color-surface-soft: #f3f7fc;
+  --color-surface-soft: #eef3f9;
   --color-surface-raised: #ffffff;
-  --color-header: #e7f0ff;
-  --color-header-deep: #d7e7ff;
-  --color-usage: #eef6ff;
+  --color-header: #dfeafb;
+  --color-header-deep: #cedef3;
+  --color-usage: #e7f0fb;
   --color-text: #10233f;
   --color-text-secondary: #40536e;
   --color-text-muted: #667892;

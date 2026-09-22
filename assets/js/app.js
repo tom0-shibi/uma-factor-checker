@@ -12,7 +12,8 @@ import { renderAnalysisDebug, renderAnalysisError, renderUnsupportedLayouts, ren
 import { ensureDynamicStyles, ensureAnalysisProgressOverlay, ensureResultSummaryContainer, updateAnalysisProgressDisplay, showAnalysisProgress, hideAnalysisProgress, showAnalysisCompleteProgress, scrollToResultsTop, initializePageScrollPosition, setPasteTarget, updateImageSummary } from "./ui/ui.js?v=20260921-duplicate-paste-01";
 import { initializePresetManager } from "./preset/preset-manager.js?v=20260921-duplicate-paste-01";
 import { initializeTheme } from "./ui/theme.js";
-import { initializeUsageModal } from "./ui/usage-modal.js?v=20260922-series-ui-01";
+import { initializeUsageModal } from "./ui/usage-modal.js?v=20260922-series-ui-02";
+import { initializeRequirementsAppliedNavigation } from "./ui/requirements-navigation.js?v=20260922-series-ui-02";
 import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-factor-master-01";
 
 console.info(
@@ -31,6 +32,7 @@ if (IS_DEV) {
 
 initializeTheme();
 initializeUsageModal();
+initializeRequirementsAppliedNavigation();
 initializePageScrollPosition();
 initializePresetManager();
 initializeRepresentativeCheck();
