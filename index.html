@@ -23,19 +23,19 @@
     </script>
     <link
       rel="stylesheet"
-      href="./assets/css/tokens.css?v=20260917-factor-master-01"
+      href="./assets/css/tokens.css?v=20260922-series-ui-01"
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260917-factor-master-01"
+      href="./assets/css/style.css?v=20260922-series-ui-01"
     />
   </head>
   <body>
     <header class="app-header">
       <div class="app-header-inner">
-        <div>
+        <div class="app-brand">
           <div class="app-title-row">
-            <h1>Uma Factor Checker</h1>
+            <h1><span>Uma Factor</span> <strong>Checker</strong></h1>
             <span class="beta-badge">β・公開テスト中</span>
           </div>
           <p>ウマ娘 因子画像解析・スキル要件チェッカー</p>
@@ -52,11 +52,31 @@
     </header>
 
     <div id="skill-check-workspace">
-    <nav class="tabs">
-      <button class="tab-button active" data-tab="requirements">スキル要件</button>
-      <button class="tab-button" data-tab="images">画像登録</button>
-      <button class="tab-button" data-tab="results">判定結果</button>
+    <nav class="tabs" aria-label="メイン画面">
+      <div class="tabs-inner">
+        <button class="tab-button active" data-tab="requirements">スキル要件</button>
+        <button class="tab-button" data-tab="images">画像登録</button>
+        <button class="tab-button" data-tab="results">判定結果</button>
+      </div>
     </nav>
+
+    <div class="usage-entry-wrap">
+      <button
+        id="usage-open"
+        class="usage-entry"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="usage-modal"
+        aria-expanded="false"
+      >
+        <span class="usage-entry-icon" aria-hidden="true">?</span>
+        <span class="usage-entry-copy">
+          <strong>使い方</strong>
+          <span>初めての方はこちら。基本的な使い方や判定の流れを確認できます。</span>
+        </span>
+        <span class="usage-entry-arrow" aria-hidden="true">›</span>
+      </button>
+    </div>
 
     <main class="app-main">
       <section id="requirements" class="tab-content active">
@@ -67,17 +87,6 @@
               優先度ごとに、1行につき1スキルを入力してください。
             </p>
           </div>
-          <details class="inline-help">
-            <summary>？ 使い方</summary>
-            <div class="inline-help-content">
-              <p><strong>1. プリセットを選択</strong><br />まず試す場合は「技能試験高効率用」を選ぶとすぐ利用できます。</p>
-              <p><strong>2. スキル要件を調整</strong><br />各ランクを開き、必要なスキルを追加・削除します。</p>
-              <p><strong>3. 自分用として保存</strong><br />調整した内容は新しいプリセットとして保存できます。固定プリセットは上書き・削除されません。</p>
-              <p><strong>画像について</strong><br />各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。</p>
-              <p><strong>公開テスト中</strong><br />OCRは誤認識する場合があります。要確認項目は元画像を見ながら補正できます。Factor Master未登録の因子は低優先度の未確定として表示される場合があります。</p>
-              <p><strong>現在の対応状況</strong><br />スキル要件チェックは公開テスト対象です。代表ウマ娘チェックは開発中のため、公開テスト対象外です。</p>
-            </div>
-          </details>
         </div>
 
         <section class="preset-panel" aria-labelledby="preset-panel-title">
@@ -438,6 +447,45 @@
     </main>
     </div>
 
+    <div id="usage-modal" class="usage-modal-backdrop" hidden>
+      <section
+        class="usage-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="usage-modal-title"
+        tabindex="-1"
+      >
+        <button id="usage-close" class="usage-modal-close" type="button" aria-label="使い方を閉じる">×</button>
+        <header class="usage-modal-header">
+          <span class="usage-modal-icon" aria-hidden="true">?</span>
+          <div>
+            <p class="usage-modal-kicker">Uma Factor Checker</p>
+            <h2 id="usage-modal-title">使い方</h2>
+            <p>スキル要件を準備し、因子一覧画像を登録して判定します。</p>
+          </div>
+        </header>
+        <div class="usage-modal-body">
+          <section>
+            <h3><span>1</span> プリセットを選択</h3>
+            <p>まず試す場合は「技能試験高効率用」を選ぶとすぐ利用できます。</p>
+          </section>
+          <section>
+            <h3><span>2</span> スキル要件を調整</h3>
+            <p>各ランクを開き、必要なスキルを追加・削除します。調整した内容は新しいプリセットとして保存できます。固定プリセットは上書き・削除されません。</p>
+          </section>
+          <section>
+            <h3><span>3</span> 画像を登録して解析</h3>
+            <p>各ウマ娘1人分の「因子一覧」画像を登録してください。親と継承元がまとめて表示される縦長画像には現在対応していません。</p>
+          </section>
+          <aside class="usage-modal-note">
+            <strong>公開テスト中</strong>
+            <p>OCRは誤認識する場合があります。要確認項目は元画像を見ながら補正できます。Factor Master未登録の因子は低優先度の未確定として表示される場合があります。</p>
+            <p>スキル要件チェックは公開テスト対象です。代表ウマ娘チェックは開発中のため、公開テスト対象外です。</p>
+          </aside>
+        </div>
+      </section>
+    </div>
+
     <main id="representative-check-workspace" class="app-main" hidden>
       <section class="representative-check">
         <div class="section-heading">
@@ -518,7 +566,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
     <script
       type="module"
-      src="./assets/js/app.js?v=20260921-duplicate-paste-01"
+      src="./assets/js/app.js?v=20260922-series-ui-01"
     ></script>
   </body>
 </html>
