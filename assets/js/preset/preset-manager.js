@@ -1,4 +1,4 @@
-import { SKILL_EXAM_HIGH_EFFICIENCY_PRESET } from "./skill-exam-high-efficiency.js";
+import { EVENT_PRESETS } from "./event-presets.js";
 import {
   loadUserPresets,
   saveUserPresets,
@@ -21,12 +21,180 @@ const DEFAULT_LABELS = {
   B: "優先度: B",
   C: "優先度: C"
 };
-const BUILTIN_PRESETS = [SKILL_EXAM_HIGH_EFFICIENCY_PRESET];
+const BUILTIN_PRESETS = [];
 
 let userPresets = [];
 let selectedPresetId = "";
 let deletePendingId = "";
 let manualCreationStarted = false;
+let selectedEventPresetId = "";
+let selectedEventStyle = "all";
+
+
+const EVENT_STYLES = ["all", "逃げ", "先行", "差し", "追込"];
+const EVENT_STYLE_LABELS = { all: "すべて", 逃げ: "逃げ", 先行: "先行", 差し: "差し", 追込: "追込" };
+
+function isPastEvent(preset, now = new Date()) {
+  if (preset.persistent) return false;
+  const currentMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return preset.eventMonth < currentMonth;
+}
+
+function getSelectedEventPreset() {
+  return EVENT_PRESETS.find(preset => preset.id === selectedEventPresetId) || null;
+}
+
+function getEventCandidateCount(preset) {
+  if (!preset) return 0;
+  if (preset.candidates?.length) return preset.candidates.length;
+  return RANKS.reduce((sum, rank) => sum + (preset.skills?.[rank]?.length || 0), 0);
+}
+
+function getFilteredEventCandidates(preset) {
+  if (!preset?.candidates?.length) return [];
+  if (selectedEventStyle === "all") return preset.candidates;
+  return preset.candidates.filter(candidate =>
+    candidate.styles.includes("all") || candidate.styles.includes(selectedEventStyle)
+  );
+}
+
+function renderEventPresetList() {
+  const select = document.getElementById("event-preset-select");
+  if (!select) return;
+  const showPast = document.getElementById("event-show-past")?.checked === true;
+  const visible = EVENT_PRESETS.filter(preset => showPast || !isPastEvent(preset));
+  const previous = selectedEventPresetId;
+  select.innerHTML = '<option value="">イベントプリセットを選択してください</option>';
+
+  const appendOption = (parent, preset) => {
+    const option = document.createElement("option");
+    option.value = preset.id;
+    option.textContent = `${preset.name}${preset.sample ? "（画面確認用サンプル）" : ""}`;
+    parent.appendChild(option);
+  };
+
+  const persistent = visible.filter(preset => preset.persistent);
+  const dated = visible
+    .filter(preset => !preset.persistent)
+    .sort((a, b) => b.eventMonth.localeCompare(a.eventMonth));
+
+  if (persistent.length) {
+    const group = document.createElement("optgroup");
+    group.label = "常設・特殊";
+    persistent.forEach(preset => appendOption(group, preset));
+    select.appendChild(group);
+  }
+
+  const byYear = new Map();
+  dated.forEach(preset => {
+    const year = preset.eventMonth.slice(0, 4);
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year).push(preset);
+  });
+  byYear.forEach((presets, year) => {
+    const group = document.createElement("optgroup");
+    group.label = `${year}年`;
+    presets.forEach(preset => appendOption(group, preset));
+    select.appendChild(group);
+  });
+  if (visible.some(preset => preset.id === previous)) {
+    select.value = previous;
+  } else {
+    selectedEventPresetId = "";
+    select.value = "";
+  }
+  renderEventPresetDetail();
+}
+
+function renderEventPresetDetail() {
+  const detail = document.getElementById("event-preset-detail");
+  const preset = getSelectedEventPreset();
+  if (!detail) return;
+  detail.hidden = !preset;
+  if (!preset) return;
+  document.getElementById("event-detail-name").textContent = preset.name;
+  document.getElementById("event-detail-note").textContent = preset.sample
+    ? "画面確認用のサンプル候補です。本番の候補スキルは後から差し替えます。"
+    : preset.candidates?.length
+      ? "イベント候補スキルを脚質で絞り込めます。"
+      : "あらかじめS/A/B/Cへ分類されたイベントプリセットです。";
+
+  const styleFilter = document.querySelector(".event-style-filter");
+  const candidateSummary = document.querySelector(".event-candidate-summary");
+  const candidateList = document.getElementById("event-candidate-list");
+  const phaseNote = document.querySelector(".event-phase-note");
+  const hasCandidates = Boolean(preset.candidates?.length);
+  if (styleFilter) styleFilter.hidden = !hasCandidates;
+  if (candidateSummary) candidateSummary.hidden = !hasCandidates;
+  if (candidateList) candidateList.hidden = !hasCandidates;
+  if (phaseNote) phaseNote.hidden = !hasCandidates;
+
+  if (hasCandidates) {
+    const styleButtons = document.getElementById("event-style-buttons");
+    styleButtons.innerHTML = "";
+    EVENT_STYLES.forEach(style => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "event-style-button";
+      button.classList.toggle("is-active", style === selectedEventStyle);
+      button.textContent = EVENT_STYLE_LABELS[style];
+      button.addEventListener("click", () => {
+        selectedEventStyle = style;
+        renderEventPresetDetail();
+      });
+      styleButtons.appendChild(button);
+    });
+    const candidates = getFilteredEventCandidates(preset);
+    document.getElementById("event-candidate-count").textContent = `${candidates.length}件`;
+    candidateList.innerHTML = "";
+    candidates.forEach(candidate => {
+      const item = document.createElement("div");
+      item.className = "event-candidate-item";
+      const styles = candidate.styles.includes("all") ? ["全脚質"] : candidate.styles;
+      item.innerHTML = `<strong>${candidate.name}</strong><span>${styles.map(style => `<small>${style}</small>`).join("")}</span>`;
+      candidateList.appendChild(item);
+    });
+  }
+}
+
+function closeEventPresetDetail() {
+  selectedEventPresetId = "";
+  selectedEventStyle = "all";
+  const select = document.getElementById("event-preset-select");
+  if (select) select.value = "";
+  renderEventPresetDetail();
+}
+
+function copySelectedEventPreset() {
+  const preset = getSelectedEventPreset();
+  if (!preset) return;
+  const suggestedName = `${preset.name} 自分用`;
+  const input = window.prompt("コピー後のプリセット名を入力してください。", suggestedName);
+  if (input === null) return;
+  const name = input.trim();
+  if (!name) {
+    setStatus("プリセット名を入力してください。", true);
+    return;
+  }
+  const copied = {
+    id: createUserPresetId(),
+    name: createUniqueName(name),
+    readonly: false,
+    labels: preset.labels ? { ...preset.labels } : null,
+    skills: preset.skills
+      ? Object.fromEntries(RANKS.map(rank => [rank, [...preset.skills[rank]]]))
+      : createEmptySkills(),
+    unclassified: (preset.candidates || []).map(candidate => ({ ...candidate, styles: [...candidate.styles] })),
+    sourceEventId: preset.id
+  };
+  userPresets.push(copied);
+  saveUserPresets(userPresets);
+  selectPreset(copied.id);
+  const unclassifiedCount = copied.unclassified.length;
+  setStatus(unclassifiedCount
+    ? `${copied.name}を作成しました。候補${unclassifiedCount}件は未分類として保持しています。`
+    : `${copied.name}を作成しました。S/A/B/Cの分類を引き継いでいます。`);
+}
 
 function getAllPresets() {
   return [...BUILTIN_PRESETS, ...userPresets];
@@ -252,6 +420,8 @@ function initializePresetManager() {
   selectedPresetId = "";
   renderPresetOptions();
   clearWorkingRequirements();
+  renderEventPresetList();
+  renderEventPresetDetail();
 
   RANKS.forEach(rank => {
     document.getElementById(`input-${rank.toLowerCase()}`)?.addEventListener(
@@ -262,7 +432,14 @@ function initializePresetManager() {
 
   document.getElementById("empty-use-builtin")?.addEventListener(
     "click",
-    () => selectPreset(SKILL_EXAM_HIGH_EFFICIENCY_PRESET.id)
+    () => {
+      selectedEventPresetId = "event:skill-exam-high-efficiency";
+      selectedEventStyle = "all";
+      const select = document.getElementById("event-preset-select");
+      if (select) select.value = selectedEventPresetId;
+      renderEventPresetDetail();
+      document.getElementById("event-preset-detail")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   );
   document.getElementById("empty-create-own")?.addEventListener(
     "click",
@@ -278,6 +455,15 @@ function initializePresetManager() {
       document.getElementById("input-s")?.focus();
     }
   );
+  document.getElementById("event-show-past")?.addEventListener("change", renderEventPresetList);
+  document.getElementById("event-preset-select")?.addEventListener("change", event => {
+    selectedEventPresetId = event.target.value;
+    selectedEventStyle = "all";
+    renderEventPresetDetail();
+  });
+  document.getElementById("event-copy-preset")?.addEventListener("click", copySelectedEventPreset);
+  document.getElementById("event-close-detail")?.addEventListener("click", closeEventPresetDetail);
+
   document.getElementById("preset-create-toggle")?.addEventListener(
     "click",
     event => {
