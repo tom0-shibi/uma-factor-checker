@@ -27,7 +27,7 @@
     />
     <link
       rel="stylesheet"
-      href="./assets/css/style.css?v=20260922-series-ui-02"
+      href="./assets/css/style.css?v=20260925-event-preset-03"
     />
   </head>
   <body>
@@ -93,6 +93,41 @@
 
         <section class="preset-panel" aria-labelledby="preset-panel-title">
           <h3 id="preset-panel-title">プリセット</h3>
+          <section class="event-preset-browser" aria-labelledby="event-preset-title">
+            <div class="event-preset-heading">
+              <div>
+                <h4 id="event-preset-title">イベントプリセット</h4>
+                <p>イベントごとの候補スキルを確認し、自分用プリセットの土台として利用できます。</p>
+              </div>
+              <label class="event-past-toggle"><input id="event-show-past" type="checkbox" /> 過去のイベントを表示</label>
+            </div>
+            <div class="event-preset-select-row">
+              <label for="event-preset-select">イベントを選択</label>
+              <select id="event-preset-select">
+                <option value="">イベントプリセットを選択してください</option>
+              </select>
+            </div>
+            <div id="event-preset-detail" class="event-preset-detail" hidden>
+              <div class="event-detail-heading">
+                <div>
+                  <span class="event-preset-badge">イベント</span>
+                  <h4 id="event-detail-name"></h4>
+                  <p id="event-detail-note"></p>
+                </div>
+                <div class="event-detail-actions">
+                  <button id="event-copy-preset" type="button" class="primary-button">マイプリセットにコピー</button>
+                  <button id="event-close-detail" type="button" class="ghost-button">閉じる</button>
+                </div>
+              </div>
+              <div class="event-style-filter" aria-label="脚質フィルター">
+                <span>脚質</span>
+                <div id="event-style-buttons" class="event-style-buttons"></div>
+              </div>
+              <div class="event-candidate-summary"><strong id="event-candidate-count">0件</strong><span>の候補スキル</span></div>
+              <div id="event-candidate-list" class="event-candidate-list"></div>
+              <p class="event-phase-note">※ 現在は候補確認用です。未分類からS/A/B/Cへ振り分ける操作は次のPhaseで追加します。</p>
+            </div>
+          </section>
           <div class="preset-select-row">
             <label for="preset-select">使用するプリセット</label>
             <select id="preset-select"></select>
@@ -470,7 +505,7 @@
           <section>
             <h3><span>1</span> スキル要件を準備</h3>
             <p>判定したいスキルをまとめるプリセットを準備します。「使用するプリセット」から既存プリセットを選ぶか、「新しいプリセットを作る」で自分用に作成できます。JSON形式のプリセットは「JSONインポート」から読み込めます。</p>
-            <p class="usage-modal-detail">初めて試す場合は、固定プリセット「技能試験高効率用」も利用できます。</p>
+            <p class="usage-modal-detail">初めて試す場合は、イベントプリセット「技能試験 高効率用」も利用できます。</p>
           </section>
           <section>
             <h3><span>2</span> 必要なスキルを設定</h3>

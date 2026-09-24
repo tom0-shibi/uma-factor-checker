@@ -3154,3 +3154,244 @@ textarea {
     padding: 18px;
   }
 }
+
+/* =========================================================
+  Event preset browser — Phase 1 preview
+  ========================================================= */
+.event-preset-browser {
+  margin: 0 0 20px;
+  padding: 16px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.event-preset-heading,
+.event-detail-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.event-preset-heading h4,
+.event-detail-heading h4 {
+  margin: 0 0 4px;
+  color: var(--color-text);
+  font-size: 16px;
+}
+
+.event-preset-heading p,
+.event-detail-heading p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.event-past-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.event-preset-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.event-preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 14px;
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.event-preset-card:hover,
+.event-preset-card.is-selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 13%, transparent);
+}
+
+.event-preset-card small,
+.event-candidate-item small {
+  color: var(--color-text-muted);
+}
+
+.event-preset-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 8px;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.event-preset-detail {
+  margin-top: 14px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.event-detail-heading h4 {
+  margin-top: 7px;
+}
+
+.event-style-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.event-style-filter > span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.event-style-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-style-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.event-style-button.is-active {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  font-weight: 700;
+}
+
+.event-candidate-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 16px 0 8px;
+}
+
+.event-candidate-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.event-candidate-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+
+.event-candidate-item > span {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.event-candidate-item small {
+  padding: 2px 6px;
+  background: var(--color-surface);
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.event-phase-note,
+.event-empty {
+  margin: 12px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .event-preset-heading,
+  .event-detail-heading {
+    flex-direction: column;
+  }
+
+  .event-detail-heading .primary-button {
+    width: 100%;
+  }
+
+  .event-style-filter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* =========================================================
+  Event preset browser — Phase 1 final adjustments
+  ========================================================= */
+.event-preset-select-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.event-preset-select-row label {
+  flex: 0 0 auto;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.event-preset-select-row select {
+  min-width: 280px;
+  max-width: 100%;
+  width: min(100%, 520px);
+  padding: 10px;
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.event-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .event-preset-select-row,
+  .event-detail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .event-preset-select-row select,
+  .event-detail-actions button {
+    width: 100%;
+  }
+}
