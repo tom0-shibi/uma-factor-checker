@@ -2411,7 +2411,7 @@ body {
 .app-header {
   position: relative;
   min-height: 210px;
-  overflow: hidden;
+  overflow: visible;
   padding: 0 var(--page-padding);
   background:
     linear-gradient(118deg, var(--color-header) 0%, var(--color-header) 54%, var(--color-header-deep) 100%);
@@ -2452,7 +2452,7 @@ body {
 
 .app-header-inner {
   position: relative;
-  z-index: 1;
+  z-index: 30;
   width: 100%;
   max-width: var(--page-max-width);
   min-height: 210px;
@@ -2508,6 +2508,75 @@ body {
   align-self: flex-start;
   align-items: center;
   gap: 12px;
+}
+
+.tool-switcher {
+  position: relative;
+}
+
+#tool-open {
+  min-height: 46px;
+  padding: 9px 14px;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+#tool-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(330px, calc(100vw - 32px));
+  padding: 6px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 1000;
+}
+
+#tool-menu > * {
+  display: block;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+#tool-menu small {
+  display: block;
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+#tool-menu strong {
+  font-size: 14px;
+}
+
+#tool-menu strong span {
+  display: block;
+  color: var(--color-primary);
+  font-size: 11px;
+}
+
+#tool-menu [aria-current] {
+  background: var(--color-primary-soft);
+}
+
+#tool-menu a:hover {
+  background: var(--color-surface-soft);
+}
+
+#tool-open:focus-visible,
+#tool-menu a:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .header-usage-button {
@@ -2989,6 +3058,16 @@ textarea {
     top: 16px;
     right: 0;
     gap: 8px;
+  }
+
+  #tool-open {
+    min-height: 42px;
+    padding: 8px 10px;
+  }
+
+  #tool-menu {
+    left: 0;
+    right: auto;
   }
 
   .header-usage-button {

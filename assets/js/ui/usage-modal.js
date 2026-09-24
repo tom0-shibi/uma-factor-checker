@@ -3,12 +3,24 @@ function initializeUsageModal() {
   const backdrop = document.getElementById("usage-modal");
   const dialog = backdrop?.querySelector(".usage-modal");
   const closeButton = document.getElementById("usage-close");
+  const toolButton = document.getElementById("tool-open");
+  const toolMenu = document.getElementById("tool-menu");
+  const toolSwitcher = toolButton?.parentElement;
 
   if (!openButton || !backdrop || !dialog || !closeButton) {
     return;
   }
 
   let returnFocus = null;
+
+  const closeToolMenu = () => {
+    if (!toolButton || !toolMenu) {
+      return;
+    }
+
+    toolMenu.hidden = true;
+    toolButton.setAttribute("aria-expanded", "false");
+  };
 
   const close = () => {
     if (backdrop.hidden) {
@@ -22,6 +34,7 @@ function initializeUsageModal() {
   };
 
   const open = () => {
+    closeToolMenu();
     returnFocus = document.activeElement;
     backdrop.hidden = false;
     document.body.classList.add("usage-modal-open");
@@ -36,9 +49,39 @@ function initializeUsageModal() {
       close();
     }
   });
+
+  if (toolButton && toolMenu && toolSwitcher) {
+    toolButton.addEventListener("click", () => {
+      toolMenu.hidden = !toolMenu.hidden;
+      toolButton.setAttribute("aria-expanded", String(!toolMenu.hidden));
+    });
+
+    document.addEventListener("click", event => {
+      if (!toolSwitcher.contains(event.target)) {
+        closeToolMenu();
+      }
+    });
+
+    document.addEventListener("focusin", event => {
+      if (!toolSwitcher.contains(event.target)) {
+        closeToolMenu();
+      }
+    });
+  }
+
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && !backdrop.hidden) {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    if (!backdrop.hidden) {
       close();
+      return;
+    }
+
+    if (toolButton && toolMenu && !toolMenu.hidden) {
+      closeToolMenu();
+      toolButton.focus();
     }
   });
 }
