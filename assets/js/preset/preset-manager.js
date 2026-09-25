@@ -29,6 +29,8 @@ let deletePendingId = "";
 let manualCreationStarted = false;
 let selectedEventPresetId = "";
 let selectedEventStyle = "all";
+let workingUnclassified = [];
+let classificationSelection = new Set();
 
 
 const EVENT_STYLES = ["all", "逃げ", "先行", "差し", "追込"];
@@ -235,8 +237,125 @@ function createEmptySkills() {
   return Object.fromEntries(RANKS.map(rank => [rank, []]));
 }
 
+function normalizeUnclassified(items) {
+  if (!Array.isArray(items)) return [];
+  const seen = new Set();
+  return items.map(item => {
+    if (typeof item === "string") return { name: item, styles: ["all"] };
+    if (!item || typeof item.name !== "string") return null;
+    return {
+      name: item.name.trim(),
+      styles: Array.isArray(item.styles) && item.styles.length ? [...item.styles] : ["all"]
+    };
+  }).filter(item => item?.name && !seen.has(item.name) && seen.add(item.name));
+}
+
+function getClassificationItems() {
+  const items = [];
+  const occupied = new Set();
+  workingUnclassified.forEach(item => {
+    if (occupied.has(item.name)) return;
+    occupied.add(item.name);
+    items.push({ name: item.name, rank: "U", styles: item.styles || ["all"] });
+  });
+  const skills = readTextareaSkills();
+  RANKS.forEach(rank => {
+    skills[rank].forEach(name => {
+      if (occupied.has(name)) return;
+      occupied.add(name);
+      items.push({ name, rank, styles: ["all"] });
+    });
+  });
+  return items;
+}
+
+function renderClassificationEditor() {
+  const editor = document.getElementById("classification-editor");
+  if (!editor) return;
+  const items = getClassificationItems();
+  editor.hidden = !selectedPresetId || items.length === 0;
+  if (editor.hidden) {
+    classificationSelection.clear();
+    return;
+  }
+  const validNames = new Set(items.map(item => item.name));
+  classificationSelection.forEach(name => {
+    if (!validNames.has(name)) classificationSelection.delete(name);
+  });
+  const query = document.getElementById("classification-search")?.value.trim().toLowerCase() || "";
+  const filter = document.getElementById("classification-filter")?.value || "all";
+  const visible = items.filter(item =>
+    (filter === "all" || item.rank === filter) &&
+    (!query || item.name.toLowerCase().includes(query))
+  );
+  const counts = Object.fromEntries(["U", ...RANKS].map(rank => [rank, items.filter(item => item.rank === rank).length]));
+  document.getElementById("classification-total-count").textContent = `${items.length}件`;
+  document.getElementById("classification-selected-count").textContent = `${classificationSelection.size}件選択`;
+  const summary = document.getElementById("classification-summary");
+  summary.innerHTML = [
+    ["U", "未分類"], ["S", "S"], ["A", "A"], ["B", "B"], ["C", "C"]
+  ].map(([rank, label]) => `<span class="classification-count-chip classification-rank-${rank.toLowerCase()}">${label} <strong>${counts[rank]}</strong></span>`).join("");
+  const list = document.getElementById("classification-skill-list");
+  list.innerHTML = "";
+  if (!visible.length) {
+    list.innerHTML = '<p class="classification-empty">条件に一致するスキルはありません。</p>';
+  } else {
+    visible.forEach(item => {
+      const label = document.createElement("label");
+      label.className = "classification-skill-item";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = classificationSelection.has(item.name);
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) classificationSelection.add(item.name);
+        else classificationSelection.delete(item.name);
+        renderClassificationEditor();
+      });
+      const name = document.createElement("span");
+      name.className = "classification-skill-name";
+      name.textContent = item.name;
+      const badge = document.createElement("span");
+      badge.className = `classification-rank-badge classification-rank-${item.rank.toLowerCase()}`;
+      badge.textContent = item.rank === "U" ? "未分類" : item.rank;
+      label.append(checkbox, name, badge);
+      list.appendChild(label);
+    });
+  }
+  document.querySelectorAll(".classification-move-button").forEach(button => {
+    button.disabled = classificationSelection.size === 0;
+  });
+}
+
+function moveSelectedSkills(targetRank) {
+  if (!classificationSelection.size) return;
+  const items = getClassificationItems();
+  const selected = items.filter(item => classificationSelection.has(item.name));
+  const selectedNames = new Set(selected.map(item => item.name));
+  const skills = readTextareaSkills();
+  RANKS.forEach(rank => {
+    skills[rank] = skills[rank].filter(name => !selectedNames.has(name));
+  });
+  workingUnclassified = workingUnclassified.filter(item => !selectedNames.has(item.name));
+  if (targetRank === "U") {
+    selected.forEach(item => {
+      workingUnclassified.push({ name: item.name, styles: item.styles?.length ? [...item.styles] : ["all"] });
+    });
+  } else if (RANKS.includes(targetRank)) {
+    selected.forEach(item => skills[targetRank].push(item.name));
+  }
+  RANKS.forEach(rank => {
+    const textarea = document.getElementById(`input-${rank.toLowerCase()}`);
+    if (textarea) textarea.value = [...new Set(skills[rank])].join("\n");
+  });
+  classificationSelection.clear();
+  markRequirementsDirty();
+  updateRequirementEmptyState();
+  renderClassificationEditor();
+  setStatus(`選択した${selected.length}件を${targetRank === "U" ? "未分類" : targetRank}へ移動しました。保存する場合は「上書き保存」を押してください。`);
+}
+
 function hasWorkingRequirements() {
-  return Object.values(readTextareaSkills()).some(skills => skills.length > 0);
+  return workingUnclassified.length > 0 || Object.values(readTextareaSkills()).some(skills => skills.length > 0);
 }
 
 function updateRequirementEmptyState() {
@@ -262,6 +381,8 @@ function updateLabels() {
 
 function applyPreset(preset) {
   manualCreationStarted = false;
+  workingUnclassified = normalizeUnclassified(preset.unclassified);
+  classificationSelection.clear();
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
       `input-${rank.toLowerCase()}`
@@ -274,6 +395,7 @@ function applyPreset(preset) {
   markRequirementsDirty();
   closeRequirementAccordions();
   updateRequirementEmptyState();
+  renderClassificationEditor();
 }
 
 function closeRequirementAccordions() {
@@ -289,6 +411,8 @@ function clearWorkingRequirements() {
   deletePendingId = "";
   manualCreationStarted = false;
   saveSelectedPresetId("");
+  workingUnclassified = [];
+  classificationSelection.clear();
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
       `input-${rank.toLowerCase()}`
@@ -309,6 +433,7 @@ function clearWorkingRequirements() {
   closeRequirementAccordions();
   renderPresetOptions();
   updateRequirementEmptyState();
+  renderClassificationEditor();
 }
 
 function setStatus(message, isError = false) {
@@ -335,7 +460,7 @@ function createUniqueName(name) {
   return `${name} (${suffix})`;
 }
 
-function saveNewPreset(skills) {
+function saveNewPreset(skills, unclassified = workingUnclassified) {
   const nameInput = document.getElementById("preset-name");
   const name = nameInput?.value.trim();
   if (!name) {
@@ -348,7 +473,8 @@ function saveNewPreset(skills) {
     name: createUniqueName(name),
     readonly: false,
     labels: null,
-    skills
+    skills,
+    unclassified: normalizeUnclassified(unclassified)
   };
   userPresets.push(preset);
   saveUserPresets(userPresets);
@@ -426,7 +552,10 @@ function initializePresetManager() {
   RANKS.forEach(rank => {
     document.getElementById(`input-${rank.toLowerCase()}`)?.addEventListener(
       "input",
-      updateRequirementEmptyState
+      () => {
+        updateRequirementEmptyState();
+        renderClassificationEditor();
+      }
     );
   });
 
@@ -464,6 +593,24 @@ function initializePresetManager() {
   document.getElementById("event-copy-preset")?.addEventListener("click", copySelectedEventPreset);
   document.getElementById("event-close-detail")?.addEventListener("click", closeEventPresetDetail);
 
+  document.getElementById("classification-search")?.addEventListener("input", renderClassificationEditor);
+  document.getElementById("classification-filter")?.addEventListener("change", renderClassificationEditor);
+  document.getElementById("classification-select-visible")?.addEventListener("click", () => {
+    const query = document.getElementById("classification-search")?.value.trim().toLowerCase() || "";
+    const filter = document.getElementById("classification-filter")?.value || "all";
+    getClassificationItems().filter(item =>
+      (filter === "all" || item.rank === filter) && (!query || item.name.toLowerCase().includes(query))
+    ).forEach(item => classificationSelection.add(item.name));
+    renderClassificationEditor();
+  });
+  document.getElementById("classification-clear-selection")?.addEventListener("click", () => {
+    classificationSelection.clear();
+    renderClassificationEditor();
+  });
+  document.querySelectorAll(".classification-move-button").forEach(button => {
+    button.addEventListener("click", () => moveSelectedSkills(button.dataset.moveRank));
+  });
+
   document.getElementById("preset-create-toggle")?.addEventListener(
     "click",
     event => {
@@ -480,7 +627,7 @@ function initializePresetManager() {
   );
   document.getElementById("preset-create-empty")?.addEventListener(
     "click",
-    () => saveNewPreset(createEmptySkills())
+    () => saveNewPreset(createEmptySkills(), [])
   );
 
   document.getElementById("preset-select")?.addEventListener(
@@ -500,6 +647,7 @@ function initializePresetManager() {
         return;
       }
       preset.skills = readTextareaSkills();
+      preset.unclassified = normalizeUnclassified(workingUnclassified);
       saveUserPresets(userPresets);
       setStatus(`${preset.name}を上書きしました。`);
     }
@@ -556,8 +704,9 @@ function initializePresetManager() {
             id: createUserPresetId(),
             name: createUniqueName(item.name.trim()),
             readonly: false,
-            labels: null,
-            skills: item.skills
+            labels: item.labels || null,
+            skills: item.skills,
+            unclassified: normalizeUnclassified(item.unclassified)
           });
         });
         saveUserPresets(userPresets);
