@@ -3395,3 +3395,222 @@ textarea {
     width: 100%;
   }
 }
+
+/* =========================================================
+  Skill classification editor — Phase 2
+  ========================================================= */
+.classification-editor {
+  margin: 20px 0;
+  padding: 18px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.classification-editor-heading,
+.classification-toolbar,
+.classification-selection-bar,
+.classification-move-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.classification-editor-heading {
+  align-items: flex-start;
+}
+
+.classification-editor-heading h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.classification-editor-heading p,
+.classification-save-note,
+.classification-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.classification-total-count {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.classification-toolbar {
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+
+.classification-search,
+.classification-filter {
+  display: grid;
+  gap: 5px;
+}
+
+.classification-search {
+  flex: 1 1 320px;
+}
+
+.classification-filter {
+  flex: 0 1 190px;
+}
+
+.classification-search span,
+.classification-filter span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.classification-search input,
+.classification-filter select {
+  min-height: 42px;
+  padding: 9px 11px;
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.classification-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.classification-count-chip,
+.classification-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.classification-selection-bar {
+  margin-top: 14px;
+}
+
+.classification-selection-bar > div,
+.classification-move-bar > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.classification-selected-count {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.classification-skill-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 340px;
+  margin-top: 10px;
+  padding: 2px;
+  overflow: auto;
+}
+
+.classification-skill-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 9px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.classification-skill-item:hover {
+  border-color: var(--color-border-strong);
+}
+
+.classification-skill-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.classification-rank-u {
+  color: var(--color-text-muted);
+}
+
+.classification-rank-s {
+  color: var(--color-primary);
+}
+
+.classification-move-bar {
+  align-items: flex-start;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.classification-move-bar > span {
+  padding-top: 7px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.classification-move-button {
+  min-width: 56px;
+  min-height: 36px;
+  padding: 7px 11px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.classification-move-button:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.classification-move-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.classification-save-note {
+  margin-top: 12px;
+}
+
+@media (max-width: 720px) {
+  .classification-editor-heading,
+  .classification-toolbar,
+  .classification-selection-bar,
+  .classification-move-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .classification-search,
+  .classification-filter {
+    flex-basis: auto;
+  }
+
+  .classification-skill-list {
+    grid-template-columns: 1fr;
+    max-height: 420px;
+  }
+}
