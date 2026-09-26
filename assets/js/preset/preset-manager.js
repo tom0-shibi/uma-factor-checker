@@ -1,4 +1,5 @@
 import { EVENT_PRESETS } from "./event-presets.js";
+import { FACTOR_MASTER } from "../data/factor-master.js";
 import {
   loadUserPresets,
   saveUserPresets,
@@ -31,6 +32,14 @@ let selectedEventPresetId = "";
 let selectedEventStyle = "all";
 let workingUnclassified = [];
 let classificationSelection = new Set();
+let selectedFactorCandidate = "";
+
+const ADDABLE_FACTOR_TYPES = new Set(["skill", "awakening", "gene"]);
+const FACTOR_TYPE_ORDER = { skill: 0, awakening: 1, gene: 2 };
+const ADDABLE_FACTORS = FACTOR_MASTER
+  .filter(factor => ADDABLE_FACTOR_TYPES.has(factor.type))
+  .slice()
+  .sort((a, b) => (FACTOR_TYPE_ORDER[a.type] ?? 99) - (FACTOR_TYPE_ORDER[b.type] ?? 99) || a.name.localeCompare(b.name, "ja"));
 
 
 const EVENT_STYLES = ["all", "逃げ", "先行", "差し", "追込"];
@@ -269,13 +278,123 @@ function getClassificationItems() {
   return items;
 }
 
+function getRankDisplayLabel(rank) {
+  if (rank === "U") return "未分類";
+  const custom = getSelectedPreset()?.labels?.[rank];
+  return custom || rank;
+}
+
+function writeRankSkills(skills) {
+  RANKS.forEach(rank => {
+    const textarea = document.getElementById(`input-${rank.toLowerCase()}`);
+    if (textarea) textarea.value = [...new Set(skills[rank])].join("\n");
+  });
+}
+
+function renderRequirementBoard() {
+  const items = getClassificationItems();
+  ["U", ...RANKS].forEach(rank => {
+    const list = document.getElementById(`board-${rank.toLowerCase()}`);
+    if (!list) return;
+    const rankItems = items.filter(item => item.rank === rank);
+    const count = rank === "U"
+      ? document.getElementById("board-count-u")
+      : document.querySelector(`[data-rank-count="${rank}"]`);
+    if (count) count.textContent = `${rankItems.length}件`;
+    list.innerHTML = "";
+    if (!rankItems.length) {
+      const empty = document.createElement("span");
+      empty.className = "requirement-board-empty";
+      empty.textContent = "ここにスキルを移動できます";
+      list.appendChild(empty);
+      return;
+    }
+    rankItems.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "requirement-mini-card";
+      card.draggable = true;
+      card.dataset.skillName = item.name;
+      card.dataset.sourceRank = item.rank;
+      card.title = "ドラッグして分類を移動";
+      card.textContent = item.name;
+      card.addEventListener("dragstart", event => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", item.name);
+        event.dataTransfer.setData("application/x-uma-source-rank", item.rank);
+        card.classList.add("is-dragging");
+      });
+      card.addEventListener("dragend", () => card.classList.remove("is-dragging"));
+      list.appendChild(card);
+    });
+  });
+}
+
+function renderAddCandidates() {
+  const input = document.getElementById("classification-add-name");
+  const container = document.getElementById("classification-add-candidates");
+  const selection = document.getElementById("classification-add-selection");
+  const addButton = document.getElementById("classification-add-button");
+  if (!input || !container || !selection || !addButton) return;
+
+  const query = input.value.trim().toLowerCase();
+  const registered = new Set(getClassificationItems().map(item => item.name));
+  if (selectedFactorCandidate && !ADDABLE_FACTORS.some(factor => factor.name === selectedFactorCandidate)) {
+    selectedFactorCandidate = "";
+  }
+  if (selectedFactorCandidate && registered.has(selectedFactorCandidate)) selectedFactorCandidate = "";
+
+  container.innerHTML = "";
+  if (!query) {
+    container.hidden = true;
+    selection.textContent = selectedFactorCandidate ? `選択中：${selectedFactorCandidate}` : "候補を選択してください。";
+    addButton.disabled = !selectedFactorCandidate;
+    return;
+  }
+
+  const matches = ADDABLE_FACTORS
+    .filter(factor => factor.name.toLowerCase().includes(query))
+    .slice(0, 20);
+  container.hidden = false;
+  if (!matches.length) {
+    container.innerHTML = '<p class="classification-candidate-empty">Factor Masterに一致する候補がありません。</p>';
+  } else {
+    matches.forEach(factor => {
+      const isRegistered = registered.has(factor.name);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "classification-candidate";
+      if (selectedFactorCandidate === factor.name) button.classList.add("is-selected");
+      button.disabled = isRegistered;
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", String(selectedFactorCandidate === factor.name));
+      const name = document.createElement("span");
+      name.textContent = factor.name;
+      button.appendChild(name);
+      if (isRegistered) {
+        const state = document.createElement("small");
+        state.textContent = "登録済み";
+        button.appendChild(state);
+      }
+      button.addEventListener("click", () => {
+        selectedFactorCandidate = factor.name;
+        input.value = factor.name;
+        renderAddCandidates();
+      });
+      container.appendChild(button);
+    });
+  }
+  selection.textContent = selectedFactorCandidate ? `選択中：${selectedFactorCandidate}` : "候補を選択してください。";
+  addButton.disabled = !selectedFactorCandidate;
+}
+
 function renderClassificationEditor() {
   const editor = document.getElementById("classification-editor");
   if (!editor) return;
   const items = getClassificationItems();
-  editor.hidden = !selectedPresetId || items.length === 0;
+  editor.hidden = !(selectedPresetId || manualCreationStarted);
   if (editor.hidden) {
     classificationSelection.clear();
+    renderRequirementBoard();
     return;
   }
   const validNames = new Set(items.map(item => item.name));
@@ -292,9 +411,7 @@ function renderClassificationEditor() {
   document.getElementById("classification-total-count").textContent = `${items.length}件`;
   document.getElementById("classification-selected-count").textContent = `${classificationSelection.size}件選択`;
   const summary = document.getElementById("classification-summary");
-  summary.innerHTML = [
-    ["U", "未分類"], ["S", "S"], ["A", "A"], ["B", "B"], ["C", "C"]
-  ].map(([rank, label]) => `<span class="classification-count-chip classification-rank-${rank.toLowerCase()}">${label} <strong>${counts[rank]}</strong></span>`).join("");
+  summary.innerHTML = ["U", ...RANKS].map(rank => `<span class="classification-count-chip classification-rank-${rank.toLowerCase()}">${getRankDisplayLabel(rank)} <strong>${counts[rank]}</strong></span>`).join("");
   const list = document.getElementById("classification-skill-list");
   list.innerHTML = "";
   if (!visible.length) {
@@ -316,42 +433,124 @@ function renderClassificationEditor() {
       name.textContent = item.name;
       const badge = document.createElement("span");
       badge.className = `classification-rank-badge classification-rank-${item.rank.toLowerCase()}`;
-      badge.textContent = item.rank === "U" ? "未分類" : item.rank;
+      badge.textContent = getRankDisplayLabel(item.rank);
       label.append(checkbox, name, badge);
       list.appendChild(label);
     });
   }
   document.querySelectorAll(".classification-move-button").forEach(button => {
     button.disabled = classificationSelection.size === 0;
+    const rank = button.dataset.moveRank;
+    if (rank) button.textContent = getRankDisplayLabel(rank);
   });
+  const deleteButton = document.getElementById("classification-delete-selected");
+  if (deleteButton) deleteButton.disabled = classificationSelection.size === 0;
+  renderAddCandidates();
+  renderRequirementBoard();
 }
 
-function moveSelectedSkills(targetRank) {
-  if (!classificationSelection.size) return;
+function addClassificationSkill() {
+  const input = document.getElementById("classification-add-name");
+  const rankSelect = document.getElementById("classification-add-rank");
+  const name = selectedFactorCandidate;
+  const targetRank = rankSelect?.value || "U";
+  if (!name || !ADDABLE_FACTORS.some(factor => factor.name === name)) {
+    setStatus("Factor Masterの候補から追加する因子を選択してください。", true);
+    input?.focus();
+    return;
+  }
+  if (getClassificationItems().some(item => item.name === name)) {
+    setStatus(`「${name}」はすでに登録されています。`, true);
+    selectedFactorCandidate = "";
+    renderAddCandidates();
+    return;
+  }
+  if (targetRank === "U") {
+    workingUnclassified.push({ name, styles: ["all"] });
+  } else if (RANKS.includes(targetRank)) {
+    const skills = readTextareaSkills();
+    skills[targetRank].push(name);
+    writeRankSkills(skills);
+  } else {
+    return;
+  }
+  selectedFactorCandidate = "";
+  if (input) input.value = "";
+  markRequirementsDirty();
+  updateRequirementEmptyState();
+  renderClassificationEditor();
+  setStatus(`「${name}」を${getRankDisplayLabel(targetRank)}へ追加しました。保存する場合は「上書き保存」を押してください。`);
+  input?.focus();
+}
+
+function moveSkillNames(skillNames, targetRank) {
   const items = getClassificationItems();
-  const selected = items.filter(item => classificationSelection.has(item.name));
-  const selectedNames = new Set(selected.map(item => item.name));
+  const selectedNames = new Set(skillNames);
+  const selected = items.filter(item => selectedNames.has(item.name));
+  if (!selected.length) return 0;
   const skills = readTextareaSkills();
   RANKS.forEach(rank => {
     skills[rank] = skills[rank].filter(name => !selectedNames.has(name));
   });
   workingUnclassified = workingUnclassified.filter(item => !selectedNames.has(item.name));
   if (targetRank === "U") {
-    selected.forEach(item => {
-      workingUnclassified.push({ name: item.name, styles: item.styles?.length ? [...item.styles] : ["all"] });
-    });
+    selected.forEach(item => workingUnclassified.push({ name: item.name, styles: item.styles?.length ? [...item.styles] : ["all"] }));
   } else if (RANKS.includes(targetRank)) {
     selected.forEach(item => skills[targetRank].push(item.name));
   }
+  writeRankSkills(skills);
+  markRequirementsDirty();
+  updateRequirementEmptyState();
+  return selected.length;
+}
+
+function moveSelectedSkills(targetRank) {
+  if (!classificationSelection.size) return;
+  const moved = moveSkillNames([...classificationSelection], targetRank);
+  classificationSelection.clear();
+  renderClassificationEditor();
+  setStatus(`選択した${moved}件を${getRankDisplayLabel(targetRank)}へ移動しました。保存する場合は「上書き保存」を押してください。`);
+}
+
+function deleteSelectedSkills() {
+  if (!classificationSelection.size) return;
+  const selectedNames = new Set(classificationSelection);
+  const skills = readTextareaSkills();
   RANKS.forEach(rank => {
-    const textarea = document.getElementById(`input-${rank.toLowerCase()}`);
-    if (textarea) textarea.value = [...new Set(skills[rank])].join("\n");
+    skills[rank] = skills[rank].filter(name => !selectedNames.has(name));
   });
+  workingUnclassified = workingUnclassified.filter(item => !selectedNames.has(item.name));
+  writeRankSkills(skills);
+  const deleted = selectedNames.size;
   classificationSelection.clear();
   markRequirementsDirty();
   updateRequirementEmptyState();
   renderClassificationEditor();
-  setStatus(`選択した${selected.length}件を${targetRank === "U" ? "未分類" : targetRank}へ移動しました。保存する場合は「上書き保存」を押してください。`);
+  setStatus(`選択した${deleted}件を削除しました。保存する場合は「上書き保存」を押してください。`);
+}
+
+function setupRequirementBoardDragAndDrop() {
+  document.querySelectorAll(".requirement-board-list[data-drop-rank]").forEach(list => {
+    list.addEventListener("dragover", event => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      list.classList.add("is-drag-over");
+    });
+    list.addEventListener("dragleave", () => list.classList.remove("is-drag-over"));
+    list.addEventListener("drop", event => {
+      event.preventDefault();
+      list.classList.remove("is-drag-over");
+      const name = event.dataTransfer.getData("text/plain");
+      const targetRank = list.dataset.dropRank;
+      const sourceRank = event.dataTransfer.getData("application/x-uma-source-rank");
+      if (!name || !targetRank || sourceRank === targetRank) return;
+      const moved = moveSkillNames([name], targetRank);
+      if (!moved) return;
+      classificationSelection.clear();
+      renderClassificationEditor();
+      setStatus(`「${name}」を${getRankDisplayLabel(targetRank)}へ移動しました。保存する場合は「上書き保存」を押してください。`);
+    });
+  });
 }
 
 function hasWorkingRequirements() {
@@ -377,12 +576,27 @@ function updateLabels() {
       label.textContent = getRequirementRankLabel(rank);
     }
   });
+  const preset = getSelectedPreset();
+  const hasCustomLabels = Boolean(preset?.labels && RANKS.some(rank => preset.labels[rank]));
+  const priorityNote = document.getElementById("priority-share-note");
+  if (priorityNote) priorityNote.hidden = hasCustomLabels;
+
+  const filter = document.getElementById("classification-filter");
+  const addRank = document.getElementById("classification-add-rank");
+  RANKS.forEach(rank => {
+    const filterOption = filter?.querySelector(`option[value="${rank}"]`);
+    const addOption = addRank?.querySelector(`option[value="${rank}"]`);
+    const text = getRankDisplayLabel(rank);
+    if (filterOption) filterOption.textContent = text;
+    if (addOption) addOption.textContent = text;
+  });
 }
 
 function applyPreset(preset) {
   manualCreationStarted = false;
   workingUnclassified = normalizeUnclassified(preset.unclassified);
   classificationSelection.clear();
+  selectedFactorCandidate = "";
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
       `input-${rank.toLowerCase()}`
@@ -413,6 +627,7 @@ function clearWorkingRequirements() {
   saveSelectedPresetId("");
   workingUnclassified = [];
   classificationSelection.clear();
+  selectedFactorCandidate = "";
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
       `input-${rank.toLowerCase()}`
@@ -581,7 +796,7 @@ function initializePresetManager() {
       if (firstAccordion) {
         firstAccordion.open = true;
       }
-      document.getElementById("input-s")?.focus();
+      document.getElementById("classification-add-name")?.focus();
     }
   );
   document.getElementById("event-show-past")?.addEventListener("change", renderEventPresetList);
@@ -593,6 +808,15 @@ function initializePresetManager() {
   document.getElementById("event-copy-preset")?.addEventListener("click", copySelectedEventPreset);
   document.getElementById("event-close-detail")?.addEventListener("click", closeEventPresetDetail);
 
+  document.getElementById("classification-add-button")?.addEventListener("click", addClassificationSkill);
+  document.getElementById("classification-add-name")?.addEventListener("input", () => {
+    selectedFactorCandidate = "";
+    renderAddCandidates();
+  });
+  document.getElementById("classification-add-name")?.addEventListener("keydown", event => {
+    if (event.key === "Enter") event.preventDefault();
+  });
+  document.getElementById("classification-add-rank")?.addEventListener("change", renderAddCandidates);
   document.getElementById("classification-search")?.addEventListener("input", renderClassificationEditor);
   document.getElementById("classification-filter")?.addEventListener("change", renderClassificationEditor);
   document.getElementById("classification-select-visible")?.addEventListener("click", () => {
@@ -610,6 +834,8 @@ function initializePresetManager() {
   document.querySelectorAll(".classification-move-button").forEach(button => {
     button.addEventListener("click", () => moveSelectedSkills(button.dataset.moveRank));
   });
+  document.getElementById("classification-delete-selected")?.addEventListener("click", deleteSelectedSkills);
+  setupRequirementBoardDragAndDrop();
 
   document.getElementById("preset-create-toggle")?.addEventListener(
     "click",
