@@ -45,7 +45,7 @@
             <button id="tool-open" type="button" aria-expanded="false" aria-controls="tool-menu">UmaTool <span aria-hidden="true">▾</span></button>
             <nav id="tool-menu" aria-label="UmaTool ツール一覧" hidden>
               <div aria-current="page"><strong>Uma Factor Checker <span>現在のツール</span></strong><small>因子画像解析・スキル要件チェック</small></div>
-              <a href="https://tom0-shibi.github.io/uma-factor-stitcher/"><strong>Uma Factor Stitcher</strong><small>親・祖の因子一覧を1枚の画像に</small></a>
+              <a href="https://tom0-shibi.github.io/uma-factor-stitcher/" target="_blank" rel="noopener noreferrer"><strong>Uma Factor Stitcher</strong><small>親・祖の因子一覧を1枚の画像に</small></a>
             </nav>
           </div>
           <button
@@ -205,50 +205,86 @@
           <div class="classification-editor-heading">
             <div>
               <h3 id="classification-editor-title">スキル振り分け</h3>
-              <p>未分類とS/A/B/Cをまとめて確認し、複数選択して一括で振り分け直せます。既存のテキスト入力もそのまま利用できます。</p>
+              <p>登録済みの因子を検索し、複数選択してまとめて分類を変更できます。</p>
             </div>
             <span id="classification-total-count" class="classification-total-count">0件</span>
           </div>
-          <div class="classification-toolbar">
-            <label class="classification-search">
-              <span>検索</span>
-              <input id="classification-search" type="search" placeholder="スキル名で絞り込み" />
-            </label>
-            <label class="classification-filter">
-              <span>現在の分類</span>
-              <select id="classification-filter">
-                <option value="all">すべて</option>
-                <option value="U">未分類</option>
-                <option value="S">S</option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
-              </select>
-            </label>
-          </div>
-          <div class="classification-summary" id="classification-summary"></div>
-          <div class="classification-selection-bar">
-            <div>
-              <button id="classification-select-visible" type="button" class="ghost-button">表示中を全選択</button>
-              <button id="classification-clear-selection" type="button" class="ghost-button">選択解除</button>
+
+          <section class="classification-add-panel" aria-labelledby="classification-add-title">
+            <div class="classification-add-heading">
+              <div>
+                <h4 id="classification-add-title">因子を追加</h4>
+                <p>Factor Masterから候補を検索して追加します。入力した文字列そのものは登録されません。</p>
+              </div>
             </div>
-            <strong id="classification-selected-count">0件選択</strong>
-          </div>
-          <div id="classification-skill-list" class="classification-skill-list"></div>
-          <div class="classification-move-bar" aria-label="選択したスキルの移動先">
-            <span>選択したスキルを移動</span>
-            <div>
-              <button type="button" class="classification-move-button" data-move-rank="U">未分類</button>
-              <button type="button" class="classification-move-button" data-move-rank="S">S</button>
-              <button type="button" class="classification-move-button" data-move-rank="A">A</button>
-              <button type="button" class="classification-move-button" data-move-rank="B">B</button>
-              <button type="button" class="classification-move-button" data-move-rank="C">C</button>
+            <div class="classification-add-row">
+              <label class="classification-add-name">
+                <span>因子名を検索</span>
+                <input id="classification-add-name" type="search" placeholder="因子名を入力" autocomplete="off" aria-controls="classification-add-candidates" />
+              </label>
+              <label class="classification-add-rank">
+                <span>追加先</span>
+                <select id="classification-add-rank">
+                  <option value="U">未分類</option>
+                  <option value="S">S</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                </select>
+              </label>
+              <button id="classification-add-button" type="button" class="secondary-button" disabled>選択した因子を追加</button>
             </div>
+            <div id="classification-add-candidates" class="classification-add-candidates" role="listbox" aria-label="追加候補" hidden></div>
+            <p id="classification-add-selection" class="classification-add-selection">候補を選択してください。</p>
+          </section>
+
+          <div class="classification-manage-panel">
+            <div class="classification-manage-heading">
+              <h4>登録済みスキルを整理</h4>
+              <p>ここでは登録済み項目だけを検索・選択します。</p>
+            </div>
+            <div class="classification-toolbar">
+              <label class="classification-search">
+                <span>登録済みスキルを検索</span>
+                <input id="classification-search" type="search" placeholder="スキル名で絞り込み" />
+              </label>
+              <label class="classification-filter">
+                <span>現在の分類</span>
+                <select id="classification-filter">
+                  <option value="all">すべて</option>
+                  <option value="U">未分類</option>
+                  <option value="S">S</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                </select>
+              </label>
+            </div>
+            <div class="classification-summary" id="classification-summary"></div>
+            <div class="classification-selection-bar">
+              <div>
+                <button id="classification-select-visible" type="button" class="ghost-button">表示中を全選択</button>
+                <button id="classification-clear-selection" type="button" class="ghost-button">選択解除</button>
+              </div>
+              <strong id="classification-selected-count">0件選択</strong>
+            </div>
+            <div id="classification-skill-list" class="classification-skill-list"></div>
+            <div class="classification-move-bar" aria-label="選択したスキルの操作">
+              <span>選択したスキルを移動</span>
+              <div>
+                <button type="button" class="classification-move-button" data-move-rank="U">未分類</button>
+                <button type="button" class="classification-move-button" data-move-rank="S">S</button>
+                <button type="button" class="classification-move-button" data-move-rank="A">A</button>
+                <button type="button" class="classification-move-button" data-move-rank="B">B</button>
+                <button type="button" class="classification-move-button" data-move-rank="C">C</button>
+                <button id="classification-delete-selected" type="button" class="classification-delete-button">削除</button>
+              </div>
+            </div>
+            <p class="classification-save-note">変更内容をプリセットへ保存する場合は「上書き保存」を押してください。</p>
           </div>
-          <p class="classification-save-note">振り分け結果は下のS/A/B/C入力欄にも反映されます。保存する場合は「上書き保存」を押してください。</p>
         </section>
 
-        <aside class="priority-share-note" aria-label="優先度Sについて">
+        <aside id="priority-share-note" class="priority-share-note" aria-label="優先度Sについて">
           <span aria-hidden="true">ⓘ</span>
           <p>
             <strong>Sは最優先スキルです。</strong><br />
@@ -256,64 +292,55 @@
           </p>
         </aside>
 
-        <section id="requirements-empty-state" class="empty-state" aria-labelledby="requirements-empty-title">
-          <div class="empty-state-icon" aria-hidden="true">✦</div>
-          <h3 id="requirements-empty-title">スキル要件を準備しましょう</h3>
-          <p>固定プリセットを使うか、空の状態から自分用の要件を作成できます。</p>
-          <div class="empty-state-actions">
-            <button id="empty-use-builtin" type="button" class="primary-button">技能試験高効率用を使う</button>
-            <button id="empty-create-own" type="button" class="secondary-button">自分で要件を作成する</button>
+        <section class="requirement-board" aria-labelledby="requirement-board-title">
+          <div class="requirement-board-heading">
+            <div>
+              <h3 id="requirement-board-title">分類ボード</h3>
+              <p>現在の分類を一覧で確認できます。PCではカードをドラッグして分類を移動できます。</p>
+            </div>
           </div>
-        </section>
-
-        <div class="priority-grid">
-          <div class="priority-panel">
-            <details class="requirement-accordion" data-rank="S">
-              <summary>
+          <div class="requirement-unclassified-panel" data-board-rank="U">
+            <div class="requirement-board-label-row">
+              <strong>未分類</strong>
+              <span id="board-count-u">0件</span>
+            </div>
+            <div id="board-u" class="requirement-board-list" data-drop-rank="U"></div>
+          </div>
+          <div class="priority-grid requirement-ranked-board">
+            <div class="priority-panel" data-board-rank="S">
+              <div class="requirement-board-label-row">
                 <span class="priority-header" data-rank="S">優先度: S</span>
                 <span class="requirement-count" data-rank-count="S">0件</span>
-              </summary>
-              <textarea
-                id="input-s"
-                placeholder="垂れウマ回避&#10;仕掛け抜群"
-              ></textarea>
-              <div id="cards-s" class="skill-cards"></div>
-            </details>
-          </div>
-
-          <div class="priority-panel">
-            <details class="requirement-accordion" data-rank="A">
-              <summary>
+              </div>
+              <textarea id="input-s" class="requirement-data-input" tabindex="-1" aria-hidden="true"></textarea>
+              <div id="board-s" class="requirement-board-list" data-drop-rank="S"></div>
+            </div>
+            <div class="priority-panel" data-board-rank="A">
+              <div class="requirement-board-label-row">
                 <span class="priority-header" data-rank="A">優先度: A</span>
                 <span class="requirement-count" data-rank-count="A">0件</span>
-              </summary>
-              <textarea id="input-a" placeholder="布石&#10;切れ味"></textarea>
-              <div id="cards-a" class="skill-cards"></div>
-            </details>
-          </div>
-
-          <div class="priority-panel">
-            <details class="requirement-accordion" data-rank="B">
-              <summary>
+              </div>
+              <textarea id="input-a" class="requirement-data-input" tabindex="-1" aria-hidden="true"></textarea>
+              <div id="board-a" class="requirement-board-list" data-drop-rank="A"></div>
+            </div>
+            <div class="priority-panel" data-board-rank="B">
+              <div class="requirement-board-label-row">
                 <span class="priority-header" data-rank="B">優先度: B</span>
                 <span class="requirement-count" data-rank-count="B">0件</span>
-              </summary>
-              <textarea id="input-b" placeholder="影踏み"></textarea>
-              <div id="cards-b" class="skill-cards"></div>
-            </details>
-          </div>
-
-          <div class="priority-panel">
-            <details class="requirement-accordion" data-rank="C">
-              <summary>
+              </div>
+              <textarea id="input-b" class="requirement-data-input" tabindex="-1" aria-hidden="true"></textarea>
+              <div id="board-b" class="requirement-board-list" data-drop-rank="B"></div>
+            </div>
+            <div class="priority-panel" data-board-rank="C">
+              <div class="requirement-board-label-row">
                 <span class="priority-header" data-rank="C">優先度: C</span>
                 <span class="requirement-count" data-rank-count="C">0件</span>
-              </summary>
-              <textarea id="input-c" placeholder="その他のスキル"></textarea>
-              <div id="cards-c" class="skill-cards"></div>
-            </details>
+              </div>
+              <textarea id="input-c" class="requirement-data-input" tabindex="-1" aria-hidden="true"></textarea>
+              <div id="board-c" class="requirement-board-list" data-drop-rank="C"></div>
+            </div>
           </div>
-        </div>
+        </section>
 
         <div class="action-area requirement-apply-area">
           <button id="apply-requirements" class="primary-button">

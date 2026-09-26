@@ -2326,7 +2326,6 @@ input[type="checkbox"] {
   .tabs {
     justify-content: stretch;
     padding-inline: 10px;
-    overflow-x: auto;
   }
 
   .tab-button {
@@ -2410,6 +2409,7 @@ body {
 
 .app-header {
   position: relative;
+  z-index: 10;
   min-height: 210px;
   overflow: visible;
   padding: 0 var(--page-padding);
@@ -2452,7 +2452,7 @@ body {
 
 .app-header-inner {
   position: relative;
-  z-index: 30;
+  z-index: 1;
   width: 100%;
   max-width: var(--page-max-width);
   min-height: 210px;
@@ -2573,6 +2573,17 @@ body {
   background: var(--color-surface-soft);
 }
 
+/* When open, JS temporarily portals only the UmaTool dropdown to <body>.
+   This lets the menu clear the header stacking context without moving the
+   header itself above the overlapping tab strip. */
+#tool-menu.tool-menu-portal {
+  position: fixed;
+  top: var(--tool-menu-top);
+  left: var(--tool-menu-left);
+  right: auto;
+  z-index: 10000;
+}
+
 #tool-open:focus-visible,
 #tool-menu a:focus-visible {
   outline: 3px solid var(--color-focus);
@@ -2637,6 +2648,7 @@ body {
 
 .tabs {
   position: relative;
+  z-index: 20;
   top: auto;
   padding: 14px var(--page-padding) 0;
   background: transparent;
@@ -3480,6 +3492,46 @@ textarea {
   font: inherit;
 }
 
+.classification-add-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 150px auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+}
+
+.classification-add-name,
+.classification-add-rank {
+  display: grid;
+  gap: 5px;
+}
+
+.classification-add-name span,
+.classification-add-rank span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.classification-add-name input,
+.classification-add-rank select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.classification-add-row .secondary-button {
+  min-height: 42px;
+}
+
 .classification-summary {
   display: flex;
   flex-wrap: wrap;
@@ -3598,6 +3650,7 @@ textarea {
 @media (max-width: 720px) {
   .classification-editor-heading,
   .classification-toolbar,
+  .classification-add-row,
   .classification-selection-bar,
   .classification-move-bar {
     align-items: stretch;
@@ -3609,8 +3662,270 @@ textarea {
     flex-basis: auto;
   }
 
+  .classification-add-row {
+    grid-template-columns: 1fr;
+  }
+
+  .classification-add-row .secondary-button {
+    width: 100%;
+  }
+
   .classification-skill-list {
     grid-template-columns: 1fr;
     max-height: 420px;
+  }
+}
+
+/* =========================================================
+  Phase 3-1 preview: Factor Master picker + classification board
+  ========================================================= */
+.classification-add-panel,
+.classification-manage-panel {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.classification-add-panel {
+  border-left: 4px solid var(--color-primary);
+}
+
+.classification-add-heading h4,
+.classification-manage-heading h4,
+.requirement-board-heading h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.classification-add-heading p,
+.classification-manage-heading p,
+.requirement-board-heading p,
+.classification-add-selection,
+.classification-candidate-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.classification-add-row {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.classification-add-candidates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 230px;
+  margin-top: 8px;
+  padding: 8px;
+  overflow: auto;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.classification-add-candidates[hidden] {
+  display: none;
+}
+
+.classification-candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+  padding: 7px 9px;
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.classification-candidate:hover:not(:disabled),
+.classification-candidate.is-selected {
+  border-color: var(--color-primary);
+}
+
+.classification-candidate.is-selected {
+  background: var(--color-primary-soft);
+}
+
+.classification-candidate:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.classification-candidate small {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.classification-add-selection {
+  min-height: 18px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.classification-manage-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.classification-delete-button {
+  min-height: 36px;
+  padding: 7px 11px;
+  color: #b42318;
+  background: var(--color-surface);
+  border: 1px solid #d92d20;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.classification-delete-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.requirement-board {
+  margin-top: 20px;
+}
+
+.requirement-board-heading {
+  margin-bottom: 10px;
+}
+
+.requirement-data-input {
+  display: none !important;
+}
+
+.requirement-unclassified-panel {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--color-surface-soft);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 10px;
+}
+
+.requirement-ranked-board {
+  gap: 12px;
+}
+
+.requirement-ranked-board .priority-panel {
+  padding: 12px;
+  overflow: visible;
+}
+
+.requirement-board-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.requirement-ranked-board .priority-header {
+  min-width: 0;
+  height: auto;
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 14px;
+  text-align: left;
+}
+
+.requirement-board-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  min-height: 54px;
+  padding: 8px;
+  background: var(--color-surface-soft);
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.requirement-board-list.is-drag-over {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.requirement-mini-card {
+  max-width: 100%;
+  padding: 5px 8px;
+  overflow-wrap: anywhere;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 7px;
+  cursor: grab;
+  font-size: 12px;
+  line-height: 1.35;
+  user-select: none;
+}
+
+.requirement-mini-card:active {
+  cursor: grabbing;
+}
+
+.requirement-mini-card.is-dragging {
+  opacity: 0.45;
+}
+
+.requirement-board-empty {
+  align-self: center;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .classification-add-candidates {
+    grid-template-columns: 1fr;
+  }
+
+  .requirement-mini-card {
+    cursor: default;
+  }
+}
+
+
+/* Phase 3-1: mobile shell parity with Uma Factor Stitcher.
+   Keep tabs at margin-top:-30px; let the header height be driven by its mobile content
+   instead of absolutely positioning utilities inside a fixed 210px shell. */
+@media (max-width: 700px) {
+  .app-header-inner {
+    flex-direction: column;
+    padding: 24px 0;
+    gap: 20px;
+  }
+
+  .app-brand {
+    flex: none;
+  }
+
+  .header-utilities {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    gap: 8px;
+  }
+
+  #tool-menu {
+    left: 0;
+    right: auto;
+  }
+
+  #tool-open {
+    min-height: 42px;
+    padding: 8px 10px;
   }
 }

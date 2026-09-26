@@ -13,13 +13,49 @@ function initializeUsageModal() {
 
   let returnFocus = null;
 
+  const positionToolMenu = () => {
+    if (!toolButton || !toolMenu || toolMenu.hidden) {
+      return;
+    }
+
+    const buttonRect = toolButton.getBoundingClientRect();
+    const menuWidth = Math.min(330, Math.max(0, window.innerWidth - 32));
+    const left = Math.min(
+      Math.max(16, buttonRect.left),
+      Math.max(16, window.innerWidth - menuWidth - 16),
+    );
+
+    toolMenu.style.setProperty("--tool-menu-top", `${buttonRect.bottom + 8}px`);
+    toolMenu.style.setProperty("--tool-menu-left", `${left}px`);
+  };
+
   const closeToolMenu = () => {
     if (!toolButton || !toolMenu) {
       return;
     }
 
     toolMenu.hidden = true;
+    toolMenu.classList.remove("tool-menu-portal");
+    toolMenu.style.removeProperty("--tool-menu-top");
+    toolMenu.style.removeProperty("--tool-menu-left");
+
+    if (toolSwitcher && toolMenu.parentElement !== toolSwitcher) {
+      toolSwitcher.appendChild(toolMenu);
+    }
+
     toolButton.setAttribute("aria-expanded", "false");
+  };
+
+  const openToolMenu = () => {
+    if (!toolButton || !toolMenu) {
+      return;
+    }
+
+    document.body.appendChild(toolMenu);
+    toolMenu.classList.add("tool-menu-portal");
+    toolMenu.hidden = false;
+    toolButton.setAttribute("aria-expanded", "true");
+    positionToolMenu();
   };
 
   const close = () => {
@@ -51,22 +87,44 @@ function initializeUsageModal() {
   });
 
   if (toolButton && toolMenu && toolSwitcher) {
-    toolButton.addEventListener("click", () => {
-      toolMenu.hidden = !toolMenu.hidden;
-      toolButton.setAttribute("aria-expanded", String(!toolMenu.hidden));
+    toolButton.addEventListener("click", event => {
+      event.stopPropagation();
+
+      if (toolMenu.hidden) {
+        openToolMenu();
+      } else {
+        closeToolMenu();
+      }
+    });
+
+    toolMenu.addEventListener("click", event => {
+      const link = event.target.closest("a[href]");
+      if (!link) {
+        return;
+      }
+
+      event.preventDefault();
+      const opened = window.open(link.href, "_blank", "noopener,noreferrer");
+      if (opened) {
+        opened.opener = null;
+      }
+      closeToolMenu();
     });
 
     document.addEventListener("click", event => {
-      if (!toolSwitcher.contains(event.target)) {
+      if (!toolSwitcher.contains(event.target) && !toolMenu.contains(event.target)) {
         closeToolMenu();
       }
     });
 
     document.addEventListener("focusin", event => {
-      if (!toolSwitcher.contains(event.target)) {
+      if (!toolSwitcher.contains(event.target) && !toolMenu.contains(event.target)) {
         closeToolMenu();
       }
     });
+
+    window.addEventListener("resize", positionToolMenu);
+    window.addEventListener("scroll", positionToolMenu, { passive: true });
   }
 
   document.addEventListener("keydown", event => {
