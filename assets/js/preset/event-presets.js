@@ -8,14 +8,14 @@ const EVENT_PRESETS = [
     eventType: "チャンピオンズミーティング",
     readonly: true,
     candidates: [
-      { name: "右回り〇", styles: ["all"] },
-      { name: "秋ウマ娘〇", styles: ["all"] },
-      { name: "地固め", styles: ["逃げ"] },
-      { name: "先駆け", styles: ["逃げ"] },
-      { name: "巧みなステップ", styles: ["先行"] },
-      { name: "十万バリキ", styles: ["差し"] },
-      { name: "お見通し", styles: ["追込"] },
-      { name: "尻尾上がり", styles: ["先行", "差し", "追込"] }
+      { name: "右回り〇" },
+      { name: "秋ウマ娘〇" },
+      { name: "地固め" },
+      { name: "先駆け" },
+      { name: "巧みなステップ" },
+      { name: "十万バリキ" },
+      { name: "お見通し" },
+      { name: "尻尾上がり" }
     ],
     skills: null,
     labels: null,
