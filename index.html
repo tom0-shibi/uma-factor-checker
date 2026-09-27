@@ -119,13 +119,9 @@
                   <button id="event-close-detail" type="button" class="ghost-button">閉じる</button>
                 </div>
               </div>
-              <div class="event-style-filter" aria-label="脚質フィルター">
-                <span>脚質</span>
-                <div id="event-style-buttons" class="event-style-buttons"></div>
-              </div>
               <div class="event-candidate-summary"><strong id="event-candidate-count">0件</strong><span>の候補スキル</span></div>
               <div id="event-candidate-list" class="event-candidate-list"></div>
-              <p class="event-phase-note">※ 現在は候補確認用です。未分類からS/A/B/Cへ振り分ける操作は次のPhaseで追加します。</p>
+              <p class="event-phase-note">※ 候補はマイプリセットへコピー後、未分類からS/A/B/Cへ振り分けられます。</p>
             </div>
           </section>
           <div class="preset-select-row">
@@ -222,20 +218,8 @@
                 <span>因子名を検索</span>
                 <input id="classification-add-name" type="search" placeholder="因子名を入力" autocomplete="off" aria-controls="classification-add-candidates" />
               </label>
-              <label class="classification-add-rank">
-                <span>追加先</span>
-                <select id="classification-add-rank">
-                  <option value="U">未分類</option>
-                  <option value="S">S</option>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                </select>
-              </label>
-              <button id="classification-add-button" type="button" class="secondary-button" disabled>選択した因子を追加</button>
             </div>
-            <div id="classification-add-candidates" class="classification-add-candidates" role="listbox" aria-label="追加候補" hidden></div>
-            <p id="classification-add-selection" class="classification-add-selection">候補を選択してください。</p>
+            <div id="classification-add-candidates" class="classification-add-candidates" aria-label="追加候補" hidden></div>
           </section>
 
           <div class="classification-manage-panel">
@@ -247,17 +231,6 @@
               <label class="classification-search">
                 <span>登録済みスキルを検索</span>
                 <input id="classification-search" type="search" placeholder="スキル名で絞り込み" />
-              </label>
-              <label class="classification-filter">
-                <span>現在の分類</span>
-                <select id="classification-filter">
-                  <option value="all">すべて</option>
-                  <option value="U">未分類</option>
-                  <option value="S">S</option>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                </select>
               </label>
             </div>
             <div class="classification-summary" id="classification-summary"></div>

@@ -3929,3 +3929,62 @@ textarea {
     padding: 8px 10px;
   }
 }
+
+/* Phase 3-1.1: direct factor classification + registered-factor filters */
+.classification-add-row {
+  grid-template-columns: minmax(220px, 1fr);
+}
+
+.classification-add-candidates {
+  grid-template-columns: 1fr;
+}
+
+.classification-candidate {
+  cursor: default;
+}
+
+.classification-candidate:hover:not(:disabled) {
+  border-color: var(--color-border);
+}
+
+.classification-candidate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.classification-candidate-rank,
+.classification-count-chip {
+  min-height: 30px;
+  padding: 4px 9px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.classification-candidate-rank:hover,
+.classification-count-chip:hover,
+.classification-count-chip.is-active {
+  border-color: var(--color-primary);
+}
+
+.classification-count-chip.is-active {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+@media (max-width: 720px) {
+  .classification-candidate {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .classification-candidate-actions {
+    justify-content: flex-start;
+  }
+}

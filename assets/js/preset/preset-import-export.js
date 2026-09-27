@@ -1,13 +1,17 @@
+import { FACTOR_MASTER } from "../data/factor-master.js";
+
 const PRESET_EXPORT_FORMAT = "uma-factor-checker-requirement-presets";
 const PRESET_EXPORT_VERSION = 2;
 const SUPPORTED_VERSIONS = new Set([1, 2]);
 const RANKS = ["S", "A", "B", "C"];
+const ADDABLE_FACTOR_TYPES = new Set(["skill", "awakening", "gene"]);
+const VALID_FACTOR_NAMES = new Set(
+  FACTOR_MASTER.filter(factor => ADDABLE_FACTOR_TYPES.has(factor.type)).map(factor => factor.name)
+);
 
 function isValidSkills(skills) {
   return skills && RANKS.every(
-    rank =>
-      Array.isArray(skills[rank]) &&
-      skills[rank].every(skill => typeof skill === "string")
+    rank => Array.isArray(skills[rank]) && skills[rank].every(skill => typeof skill === "string")
   );
 }
 
@@ -21,6 +25,10 @@ function isValidUnclassified(items) {
   );
 }
 
+function getUnclassifiedName(item) {
+  return typeof item === "string" ? item : item.name;
+}
+
 function parsePresetImport(text) {
   const data = JSON.parse(text);
   if (
@@ -31,16 +39,31 @@ function parsePresetImport(text) {
     throw new Error("対応していないプリセット形式です。");
   }
   if (!data.presets.every(
-    preset =>
-      preset &&
-      typeof preset.name === "string" &&
-      preset.name.trim() !== "" &&
-      isValidSkills(preset.skills) &&
-      isValidUnclassified(preset.unclassified)
+    preset => preset && typeof preset.name === "string" && preset.name.trim() !== "" &&
+      isValidSkills(preset.skills) && isValidUnclassified(preset.unclassified)
   )) {
     throw new Error("プリセットの内容が正しくありません。");
   }
-  return data.presets.map(preset => ({ ...preset }));
+
+  const excluded = [];
+  const presets = data.presets.map(preset => {
+    const skills = Object.fromEntries(RANKS.map(rank => [rank, preset.skills[rank].filter(name => {
+      if (VALID_FACTOR_NAMES.has(name)) return true;
+      excluded.push(name);
+      return false;
+    })]));
+    const unclassified = (preset.unclassified || []).map(getUnclassifiedName).filter(name => {
+      if (VALID_FACTOR_NAMES.has(name)) return true;
+      excluded.push(name);
+      return false;
+    });
+    return {
+      ...preset,
+      skills,
+      ...(preset.unclassified === undefined ? {} : { unclassified })
+    };
+  });
+  return { presets, excluded: [...new Set(excluded)] };
 }
 
 function createPresetExportData(presets) {
@@ -51,7 +74,7 @@ function createPresetExportData(presets) {
       const exported = { name: preset.name, skills: preset.skills };
       if (preset.labels) exported.labels = preset.labels;
       if (Array.isArray(preset.unclassified) && preset.unclassified.length) {
-        exported.unclassified = preset.unclassified;
+        exported.unclassified = preset.unclassified.map(item => typeof item === "string" ? item : item.name);
       }
       return exported;
     })
@@ -60,10 +83,7 @@ function createPresetExportData(presets) {
 
 function exportUserPresets(presets) {
   const data = createPresetExportData(presets);
-  const blob = new Blob(
-    [JSON.stringify(data, null, 2)],
-    { type: "application/json" }
-  );
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -74,15 +94,8 @@ function exportUserPresets(presets) {
 
 function createTsv(skills) {
   const lines = ["ランク\tスキル名"];
-  RANKS.forEach(rank => {
-    skills[rank].forEach(skill => lines.push(`${rank}\t${skill}`));
-  });
+  RANKS.forEach(rank => skills[rank].forEach(skill => lines.push(`${rank}\t${skill}`)));
   return lines.join("\n");
 }
 
-export {
-  parsePresetImport,
-  createPresetExportData,
-  exportUserPresets,
-  createTsv
-};
+export { parsePresetImport, createPresetExportData, exportUserPresets, createTsv };

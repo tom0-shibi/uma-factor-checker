@@ -222,8 +222,18 @@ assert.equal(exported.presets[0].name, "A");
 assert.doesNotMatch(JSON.stringify(exported), /"name":"B"/);
 assert.deepEqual(
   parsePresetImport(JSON.stringify(exported)),
-  [presetA]
+  { presets: [presetA], excluded: [] }
 );
 assert.equal(createPresetExportData([presetB]).presets[0].name, "B");
 
 console.log("result export tests: OK");
+
+const importWithUnknown = createPresetExportData([{
+  name: "unknown-filter",
+  skills: { S: ["左回り○", "存在しない因子"], A: [], B: [], C: [] },
+  unclassified: ["風切り", "存在しない未分類因子"]
+}]);
+const filteredImport = parsePresetImport(JSON.stringify(importWithUnknown));
+assert.deepEqual(filteredImport.presets[0].skills.S, ["左回り○"]);
+assert.deepEqual(filteredImport.presets[0].unclassified, ["風切り"]);
+assert.deepEqual(filteredImport.excluded, ["存在しない因子", "存在しない未分類因子"]);

@@ -29,10 +29,9 @@ let selectedPresetId = "";
 let deletePendingId = "";
 let manualCreationStarted = false;
 let selectedEventPresetId = "";
-let selectedEventStyle = "all";
 let workingUnclassified = [];
 let classificationSelection = new Set();
-let selectedFactorCandidate = "";
+let classificationFilter = "all";
 
 const ADDABLE_FACTOR_TYPES = new Set(["skill", "awakening", "gene"]);
 const FACTOR_TYPE_ORDER = { skill: 0, awakening: 1, gene: 2 };
@@ -41,9 +40,6 @@ const ADDABLE_FACTORS = FACTOR_MASTER
   .slice()
   .sort((a, b) => (FACTOR_TYPE_ORDER[a.type] ?? 99) - (FACTOR_TYPE_ORDER[b.type] ?? 99) || a.name.localeCompare(b.name, "ja"));
 
-
-const EVENT_STYLES = ["all", "逃げ", "先行", "差し", "追込"];
-const EVENT_STYLE_LABELS = { all: "すべて", 逃げ: "逃げ", 先行: "先行", 差し: "差し", 追込: "追込" };
 
 function isPastEvent(preset, now = new Date()) {
   if (preset.persistent) return false;
@@ -59,14 +55,6 @@ function getEventCandidateCount(preset) {
   if (!preset) return 0;
   if (preset.candidates?.length) return preset.candidates.length;
   return RANKS.reduce((sum, rank) => sum + (preset.skills?.[rank]?.length || 0), 0);
-}
-
-function getFilteredEventCandidates(preset) {
-  if (!preset?.candidates?.length) return [];
-  if (selectedEventStyle === "all") return preset.candidates;
-  return preset.candidates.filter(candidate =>
-    candidate.styles.includes("all") || candidate.styles.includes(selectedEventStyle)
-  );
 }
 
 function renderEventPresetList() {
@@ -127,42 +115,26 @@ function renderEventPresetDetail() {
   document.getElementById("event-detail-note").textContent = preset.sample
     ? "画面確認用のサンプル候補です。本番の候補スキルは後から差し替えます。"
     : preset.candidates?.length
-      ? "イベント候補スキルを脚質で絞り込めます。"
+      ? "イベント候補スキルです。"
       : "あらかじめS/A/B/Cへ分類されたイベントプリセットです。";
 
-  const styleFilter = document.querySelector(".event-style-filter");
   const candidateSummary = document.querySelector(".event-candidate-summary");
   const candidateList = document.getElementById("event-candidate-list");
   const phaseNote = document.querySelector(".event-phase-note");
   const hasCandidates = Boolean(preset.candidates?.length);
-  if (styleFilter) styleFilter.hidden = !hasCandidates;
   if (candidateSummary) candidateSummary.hidden = !hasCandidates;
   if (candidateList) candidateList.hidden = !hasCandidates;
   if (phaseNote) phaseNote.hidden = !hasCandidates;
 
   if (hasCandidates) {
-    const styleButtons = document.getElementById("event-style-buttons");
-    styleButtons.innerHTML = "";
-    EVENT_STYLES.forEach(style => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "event-style-button";
-      button.classList.toggle("is-active", style === selectedEventStyle);
-      button.textContent = EVENT_STYLE_LABELS[style];
-      button.addEventListener("click", () => {
-        selectedEventStyle = style;
-        renderEventPresetDetail();
-      });
-      styleButtons.appendChild(button);
-    });
-    const candidates = getFilteredEventCandidates(preset);
-    document.getElementById("event-candidate-count").textContent = `${candidates.length}件`;
+    document.getElementById("event-candidate-count").textContent = `${preset.candidates.length}件`;
     candidateList.innerHTML = "";
-    candidates.forEach(candidate => {
+    preset.candidates.forEach(candidate => {
       const item = document.createElement("div");
       item.className = "event-candidate-item";
-      const styles = candidate.styles.includes("all") ? ["全脚質"] : candidate.styles;
-      item.innerHTML = `<strong>${candidate.name}</strong><span>${styles.map(style => `<small>${style}</small>`).join("")}</span>`;
+      const name = document.createElement("strong");
+      name.textContent = candidate.name;
+      item.appendChild(name);
       candidateList.appendChild(item);
     });
   }
@@ -170,7 +142,6 @@ function renderEventPresetDetail() {
 
 function closeEventPresetDetail() {
   selectedEventPresetId = "";
-  selectedEventStyle = "all";
   const select = document.getElementById("event-preset-select");
   if (select) select.value = "";
   renderEventPresetDetail();
@@ -195,7 +166,7 @@ function copySelectedEventPreset() {
     skills: preset.skills
       ? Object.fromEntries(RANKS.map(rank => [rank, [...preset.skills[rank]]]))
       : createEmptySkills(),
-    unclassified: (preset.candidates || []).map(candidate => ({ ...candidate, styles: [...candidate.styles] })),
+    unclassified: (preset.candidates || []).map(candidate => ({ name: candidate.name })),
     sourceEventId: preset.id
   };
   userPresets.push(copied);
@@ -250,12 +221,9 @@ function normalizeUnclassified(items) {
   if (!Array.isArray(items)) return [];
   const seen = new Set();
   return items.map(item => {
-    if (typeof item === "string") return { name: item, styles: ["all"] };
+    if (typeof item === "string") return { name: item };
     if (!item || typeof item.name !== "string") return null;
-    return {
-      name: item.name.trim(),
-      styles: Array.isArray(item.styles) && item.styles.length ? [...item.styles] : ["all"]
-    };
+    return { name: item.name.trim() };
   }).filter(item => item?.name && !seen.has(item.name) && seen.add(item.name));
 }
 
@@ -265,14 +233,14 @@ function getClassificationItems() {
   workingUnclassified.forEach(item => {
     if (occupied.has(item.name)) return;
     occupied.add(item.name);
-    items.push({ name: item.name, rank: "U", styles: item.styles || ["all"] });
+    items.push({ name: item.name, rank: "U" });
   });
   const skills = readTextareaSkills();
   RANKS.forEach(rank => {
     skills[rank].forEach(name => {
       if (occupied.has(name)) return;
       occupied.add(name);
-      items.push({ name, rank, styles: ["all"] });
+      items.push({ name, rank });
     });
   });
   return items;
@@ -332,59 +300,48 @@ function renderRequirementBoard() {
 function renderAddCandidates() {
   const input = document.getElementById("classification-add-name");
   const container = document.getElementById("classification-add-candidates");
-  const selection = document.getElementById("classification-add-selection");
-  const addButton = document.getElementById("classification-add-button");
-  if (!input || !container || !selection || !addButton) return;
+  if (!input || !container) return;
 
   const query = input.value.trim().toLowerCase();
-  const registered = new Set(getClassificationItems().map(item => item.name));
-  if (selectedFactorCandidate && !ADDABLE_FACTORS.some(factor => factor.name === selectedFactorCandidate)) {
-    selectedFactorCandidate = "";
-  }
-  if (selectedFactorCandidate && registered.has(selectedFactorCandidate)) selectedFactorCandidate = "";
-
+  const registered = new Map(getClassificationItems().map(item => [item.name, item.rank]));
   container.innerHTML = "";
   if (!query) {
     container.hidden = true;
-    selection.textContent = selectedFactorCandidate ? `選択中：${selectedFactorCandidate}` : "候補を選択してください。";
-    addButton.disabled = !selectedFactorCandidate;
     return;
   }
 
-  const matches = ADDABLE_FACTORS
-    .filter(factor => factor.name.toLowerCase().includes(query))
-    .slice(0, 20);
+  const matches = ADDABLE_FACTORS.filter(factor => factor.name.toLowerCase().includes(query)).slice(0, 20);
   container.hidden = false;
   if (!matches.length) {
     container.innerHTML = '<p class="classification-candidate-empty">Factor Masterに一致する候補がありません。</p>';
-  } else {
-    matches.forEach(factor => {
-      const isRegistered = registered.has(factor.name);
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "classification-candidate";
-      if (selectedFactorCandidate === factor.name) button.classList.add("is-selected");
-      button.disabled = isRegistered;
-      button.setAttribute("role", "option");
-      button.setAttribute("aria-selected", String(selectedFactorCandidate === factor.name));
-      const name = document.createElement("span");
-      name.textContent = factor.name;
-      button.appendChild(name);
-      if (isRegistered) {
-        const state = document.createElement("small");
-        state.textContent = "登録済み";
-        button.appendChild(state);
-      }
-      button.addEventListener("click", () => {
-        selectedFactorCandidate = factor.name;
-        input.value = factor.name;
-        renderAddCandidates();
-      });
-      container.appendChild(button);
-    });
+    return;
   }
-  selection.textContent = selectedFactorCandidate ? `選択中：${selectedFactorCandidate}` : "候補を選択してください。";
-  addButton.disabled = !selectedFactorCandidate;
+  matches.forEach(factor => {
+    const row = document.createElement("div");
+    row.className = "classification-candidate";
+    const name = document.createElement("strong");
+    name.textContent = factor.name;
+    row.appendChild(name);
+    const registeredRank = registered.get(factor.name);
+    if (registeredRank) {
+      const state = document.createElement("small");
+      state.textContent = `登録済み：${getRankDisplayLabel(registeredRank)}`;
+      row.appendChild(state);
+    } else {
+      const actions = document.createElement("div");
+      actions.className = "classification-candidate-actions";
+      ["U", ...RANKS].forEach(rank => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "classification-candidate-rank";
+        button.textContent = getRankDisplayLabel(rank);
+        button.addEventListener("click", () => addClassificationSkill(factor.name, rank));
+        actions.appendChild(button);
+      });
+      row.appendChild(actions);
+    }
+    container.appendChild(row);
+  });
 }
 
 function renderClassificationEditor() {
@@ -402,7 +359,7 @@ function renderClassificationEditor() {
     if (!validNames.has(name)) classificationSelection.delete(name);
   });
   const query = document.getElementById("classification-search")?.value.trim().toLowerCase() || "";
-  const filter = document.getElementById("classification-filter")?.value || "all";
+  const filter = classificationFilter;
   const visible = items.filter(item =>
     (filter === "all" || item.rank === filter) &&
     (!query || item.name.toLowerCase().includes(query))
@@ -411,7 +368,17 @@ function renderClassificationEditor() {
   document.getElementById("classification-total-count").textContent = `${items.length}件`;
   document.getElementById("classification-selected-count").textContent = `${classificationSelection.size}件選択`;
   const summary = document.getElementById("classification-summary");
-  summary.innerHTML = ["U", ...RANKS].map(rank => `<span class="classification-count-chip classification-rank-${rank.toLowerCase()}">${getRankDisplayLabel(rank)} <strong>${counts[rank]}</strong></span>`).join("");
+  summary.innerHTML = "";
+  [{ rank: "all", label: "すべて", count: items.length }, ...["U", ...RANKS].map(rank => ({ rank, label: getRankDisplayLabel(rank), count: counts[rank] }))].forEach(({ rank, label, count }) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `classification-count-chip${rank === "all" ? "" : ` classification-rank-${rank.toLowerCase()}`}`;
+    button.classList.toggle("is-active", classificationFilter === rank);
+    button.setAttribute("aria-pressed", String(classificationFilter === rank));
+    button.innerHTML = `${label} <strong>${count}</strong>`;
+    button.addEventListener("click", () => { classificationFilter = rank; renderClassificationEditor(); });
+    summary.appendChild(button);
+  });
   const list = document.getElementById("classification-skill-list");
   list.innerHTML = "";
   if (!visible.length) {
@@ -449,33 +416,24 @@ function renderClassificationEditor() {
   renderRequirementBoard();
 }
 
-function addClassificationSkill() {
+function addClassificationSkill(name, targetRank) {
   const input = document.getElementById("classification-add-name");
-  const rankSelect = document.getElementById("classification-add-rank");
-  const name = selectedFactorCandidate;
-  const targetRank = rankSelect?.value || "U";
   if (!name || !ADDABLE_FACTORS.some(factor => factor.name === name)) {
     setStatus("Factor Masterの候補から追加する因子を選択してください。", true);
-    input?.focus();
     return;
   }
   if (getClassificationItems().some(item => item.name === name)) {
     setStatus(`「${name}」はすでに登録されています。`, true);
-    selectedFactorCandidate = "";
     renderAddCandidates();
     return;
   }
   if (targetRank === "U") {
-    workingUnclassified.push({ name, styles: ["all"] });
+    workingUnclassified.push({ name });
   } else if (RANKS.includes(targetRank)) {
     const skills = readTextareaSkills();
     skills[targetRank].push(name);
     writeRankSkills(skills);
-  } else {
-    return;
-  }
-  selectedFactorCandidate = "";
-  if (input) input.value = "";
+  } else return;
   markRequirementsDirty();
   updateRequirementEmptyState();
   renderClassificationEditor();
@@ -494,7 +452,7 @@ function moveSkillNames(skillNames, targetRank) {
   });
   workingUnclassified = workingUnclassified.filter(item => !selectedNames.has(item.name));
   if (targetRank === "U") {
-    selected.forEach(item => workingUnclassified.push({ name: item.name, styles: item.styles?.length ? [...item.styles] : ["all"] }));
+    selected.forEach(item => workingUnclassified.push({ name: item.name }));
   } else if (RANKS.includes(targetRank)) {
     selected.forEach(item => skills[targetRank].push(item.name));
   }
@@ -581,22 +539,12 @@ function updateLabels() {
   const priorityNote = document.getElementById("priority-share-note");
   if (priorityNote) priorityNote.hidden = hasCustomLabels;
 
-  const filter = document.getElementById("classification-filter");
-  const addRank = document.getElementById("classification-add-rank");
-  RANKS.forEach(rank => {
-    const filterOption = filter?.querySelector(`option[value="${rank}"]`);
-    const addOption = addRank?.querySelector(`option[value="${rank}"]`);
-    const text = getRankDisplayLabel(rank);
-    if (filterOption) filterOption.textContent = text;
-    if (addOption) addOption.textContent = text;
-  });
 }
 
 function applyPreset(preset) {
   manualCreationStarted = false;
   workingUnclassified = normalizeUnclassified(preset.unclassified);
   classificationSelection.clear();
-  selectedFactorCandidate = "";
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
       `input-${rank.toLowerCase()}`
@@ -627,7 +575,6 @@ function clearWorkingRequirements() {
   saveSelectedPresetId("");
   workingUnclassified = [];
   classificationSelection.clear();
-  selectedFactorCandidate = "";
   RANKS.forEach(rank => {
     const textarea = document.getElementById(
       `input-${rank.toLowerCase()}`
@@ -778,8 +725,7 @@ function initializePresetManager() {
     "click",
     () => {
       selectedEventPresetId = "event:skill-exam-high-efficiency";
-      selectedEventStyle = "all";
-      const select = document.getElementById("event-preset-select");
+          const select = document.getElementById("event-preset-select");
       if (select) select.value = selectedEventPresetId;
       renderEventPresetDetail();
       document.getElementById("event-preset-detail")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -802,26 +748,21 @@ function initializePresetManager() {
   document.getElementById("event-show-past")?.addEventListener("change", renderEventPresetList);
   document.getElementById("event-preset-select")?.addEventListener("change", event => {
     selectedEventPresetId = event.target.value;
-    selectedEventStyle = "all";
-    renderEventPresetDetail();
+      renderEventPresetDetail();
   });
   document.getElementById("event-copy-preset")?.addEventListener("click", copySelectedEventPreset);
   document.getElementById("event-close-detail")?.addEventListener("click", closeEventPresetDetail);
 
-  document.getElementById("classification-add-button")?.addEventListener("click", addClassificationSkill);
   document.getElementById("classification-add-name")?.addEventListener("input", () => {
-    selectedFactorCandidate = "";
     renderAddCandidates();
   });
   document.getElementById("classification-add-name")?.addEventListener("keydown", event => {
     if (event.key === "Enter") event.preventDefault();
   });
-  document.getElementById("classification-add-rank")?.addEventListener("change", renderAddCandidates);
   document.getElementById("classification-search")?.addEventListener("input", renderClassificationEditor);
-  document.getElementById("classification-filter")?.addEventListener("change", renderClassificationEditor);
   document.getElementById("classification-select-visible")?.addEventListener("click", () => {
     const query = document.getElementById("classification-search")?.value.trim().toLowerCase() || "";
-    const filter = document.getElementById("classification-filter")?.value || "all";
+    const filter = classificationFilter;
     getClassificationItems().filter(item =>
       (filter === "all" || item.rank === filter) && (!query || item.name.toLowerCase().includes(query))
     ).forEach(item => classificationSelection.add(item.name));
@@ -924,7 +865,7 @@ function initializePresetManager() {
         return;
       }
       try {
-        const imported = parsePresetImport(await file.text());
+        const { presets: imported, excluded } = parsePresetImport(await file.text());
         imported.forEach(item => {
           userPresets.push({
             id: createUserPresetId(),
@@ -937,7 +878,9 @@ function initializePresetManager() {
         });
         saveUserPresets(userPresets);
         renderPresetOptions();
-        setStatus(`${imported.length}件をインポートしました。`);
+        setStatus(excluded.length
+          ? `${imported.length}件をインポートしました。Factor Masterに存在しない${excluded.length}件を除外しました：${excluded.join("、")}`
+          : `${imported.length}件をインポートしました。`, excluded.length > 0);
       } catch (error) {
         setStatus(error.message || "インポートに失敗しました。", true);
       } finally {
