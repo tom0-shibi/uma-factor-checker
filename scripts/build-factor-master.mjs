@@ -15,7 +15,8 @@ const defaultOutputPath = path.join(
   "assets/js/data/factor-master.js"
 );
 
-const EXPECTED_HEADERS = ["No.", "因子名", "因子色", "分類", "備考"];
+const EXPECTED_HEADERS = ["No.", "factorId", "因子名", "因子色", "分類", "備考", "skillId"];
+const FACTOR_MASTER_VERSION = "2026-10-05.1";
 const ALLOWED_COLORS = ["blue", "red", "green", "white"];
 const ALLOWED_TYPES = [
   "status",
@@ -86,6 +87,7 @@ function readAndValidateFactorMaster(csvPath = defaultCsvPath) {
 
   const errors = [];
   const names = new Map();
+  const ids = new Map();
   const entries = [];
   rows.forEach((columns, index) => {
     const rowNumber = index + 2;
@@ -98,11 +100,23 @@ function readAndValidateFactorMaster(csvPath = defaultCsvPath) {
       );
       return;
     }
-    const [, rawName, rawColor, rawType, rawNote] = columns;
+    const [, rawFactorId, rawName, rawColor, rawType, rawNote, rawSkillId] = columns;
+    const factorId = rawFactorId.trim();
     const name = rawName;
     const color = rawColor;
     const type = rawType;
     const note = rawNote;
+    const skillId = rawSkillId.trim() || null;
+    if (!/^factor_[0-9]{6}$/.test(factorId)) {
+      errors.push(`行${rowNumber}: factorId「${factorId}」が不正です。`);
+    } else if (ids.has(factorId)) {
+      errors.push(`行${rowNumber}: factorId「${factorId}」が行${ids.get(factorId)}と重複しています。`);
+    } else {
+      ids.set(factorId, rowNumber);
+    }
+    if (skillId && !/^skill_[0-9]{6}$/.test(skillId)) {
+      errors.push(`行${rowNumber}: skillId「${skillId}」が不正です。`);
+    }
     if (!name.trim()) {
       errors.push(`行${rowNumber}: 因子名が空です。`);
     }
@@ -121,7 +135,7 @@ function readAndValidateFactorMaster(csvPath = defaultCsvPath) {
         names.set(name, rowNumber);
       }
     }
-    entries.push({ name, color, type, note });
+    entries.push({ factorId, name, color, type, note, skillId });
   });
 
   if (errors.length > 0) {
@@ -147,6 +161,8 @@ function renderFactorMasterModule(entries) {
   このファイルを直接編集せず、CSV更新後に生成スクリプトを実行する。
   ========================================================= */
 
+const FACTOR_MASTER_VERSION = ${JSON.stringify(FACTOR_MASTER_VERSION)};
+
 const FACTOR_COLORS = Object.freeze({
 ${colorLines.join(",\n")}
 });
@@ -159,7 +175,7 @@ const FACTOR_MASTER = Object.freeze([
 ${entryLines.join(",\n")}
 ]);
 
-export { FACTOR_COLORS, FACTOR_TYPES, FACTOR_MASTER };
+export { FACTOR_MASTER_VERSION, FACTOR_COLORS, FACTOR_TYPES, FACTOR_MASTER };
 `;
 }
 
@@ -186,6 +202,7 @@ if (
 
 export {
   EXPECTED_HEADERS,
+  FACTOR_MASTER_VERSION,
   ALLOWED_COLORS,
   ALLOWED_TYPES,
   parseCsv,

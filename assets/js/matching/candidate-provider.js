@@ -8,6 +8,10 @@ let cachedSignature = null;
 let cachedCandidates = [];
 let cachedEntriesByKey = new Map();
 
+const factorMasterEntriesById = new Map(
+  FACTOR_MASTER.map(entry => [entry.factorId, entry])
+);
+
 function normalizeCandidateKey(name) {
   return name
     .normalize("NFKC")
@@ -78,6 +82,10 @@ function getFactorMasterEntry(name) {
   return factorMasterEntriesByKey.get(key) ?? cachedEntriesByKey.get(key) ?? null;
 }
 
+function getFactorMasterEntryById(factorId) {
+  return factorMasterEntriesById.get(factorId) ?? null;
+}
+
 function getFactorMasterStats() {
   const byColor = {};
   const byType = Object.fromEntries(
@@ -102,6 +110,7 @@ export {
   getCanonicalSkillCandidates,
   getCurrentRequirementNames,
   getFactorMasterEntry,
+  getFactorMasterEntryById,
   getFactorMasterStats,
   getFactorMasterCandidateCount
 };

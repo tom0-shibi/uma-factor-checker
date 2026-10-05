@@ -29,6 +29,7 @@ function getOriginalRecognition(card) {
   return {
     ocrText: card.ocrText || "",
     confidence: card.ocrConfidence ?? null,
+    stars: card.stars ?? null,
     status: card.finalStatus || "unresolved",
     factorStatus: card.factorFinalStatus || card.finalStatus || "unresolved",
     canonicalName: card.canonicalName || null,
@@ -67,6 +68,7 @@ function getEffectiveRecognition(card) {
       status: "ignored",
       canonicalName: null,
       requirementRank: null,
+      stars: manual.stars ?? original.stars,
       resolutionSource: "manual",
       manualCorrection: manual
     };
@@ -87,6 +89,7 @@ function getEffectiveRecognition(card) {
       canonicalName: manual.canonicalName,
       factorType,
       requirementRank,
+      stars: manual.stars ?? original.stars,
       resolutionSource: "manual",
       manualCorrection: manual
     };
@@ -106,6 +109,7 @@ function getEffectiveRecognition(card) {
     ...original,
     factorType,
     requirementRank,
+    stars: original.stars,
     factorStatus:
       original.status === "confirmed"
         ? requirementRank
@@ -172,11 +176,15 @@ function buildRecognitionSummary() {
   return summary;
 }
 
-function setManualCorrection(card, canonicalName) {
+function setManualCorrection(card, canonicalName, { stars = null } = {}) {
   ensureOriginalRecognition(card);
+  if (stars !== null && (!Number.isInteger(stars) || stars < 1 || stars > 3)) {
+    throw new Error("stars must be an integer from 1 to 3");
+  }
   card.manualCorrection = {
     canonicalName,
-    ignored: false
+    ignored: false,
+    ...(stars === null ? {} : { stars })
   };
 }
 
@@ -235,10 +243,10 @@ function aggregateMemberSkills(memberId) {
 
       const key = normalizeSkillText(effective.canonicalName);
       const existing = skillMap.get(key);
-      if (!existing || card.stars > existing.stars) {
+      if (!existing || effective.stars > existing.stars) {
         skillMap.set(key, {
           skillName: effective.canonicalName,
-          stars: card.stars,
+          stars: effective.stars,
           rank: effective.requirementRank,
           matchStatus: card.matchStatus,
           ocrText: effective.ocrText,

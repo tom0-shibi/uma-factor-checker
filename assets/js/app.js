@@ -15,6 +15,7 @@ import { initializeTheme } from "./ui/theme.js";
 import { initializeUsageModal } from "./ui/usage-modal.js?v=20260922-series-ui-02";
 import { initializeRequirementsAppliedNavigation } from "./ui/requirements-navigation.js?v=20260922-series-ui-02";
 import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-factor-master-01";
+import { initializeFactorLibraryUi } from "./library/factor-library-ui.js";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
@@ -36,6 +37,7 @@ initializeRequirementsAppliedNavigation();
 initializePageScrollPosition();
 initializePresetManager();
 initializeRepresentativeCheck();
+initializeFactorLibraryUi();
 
 /* =========================================================
   全人物の保存済み解析結果初期化処理
@@ -548,6 +550,8 @@ if (analyzeImagesButton) {
           debugLogLines.length ===
           0;
       }
+
+      document.dispatchEvent(new CustomEvent("uma:analysis-complete"));
 
       await showAnalysisCompleteProgress();
 
