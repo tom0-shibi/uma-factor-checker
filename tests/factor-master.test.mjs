@@ -4,11 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import {
   FACTOR_MASTER,
+  FACTOR_MASTER_VERSION,
   FACTOR_TYPES
 } from "../assets/js/data/factor-master.js";
 import {
   getCanonicalSkillCandidates,
   getFactorMasterEntry,
+  getFactorMasterEntryById,
   getFactorMasterStats
 } from "../assets/js/matching/candidate-provider.js";
 import {
@@ -25,9 +27,13 @@ import {
   renderFactorMasterModule
 } from "../scripts/build-factor-master.mjs";
 
+assert.ok(FACTOR_MASTER_VERSION);
 const names = FACTOR_MASTER.map(entry => entry.name);
+const ids = FACTOR_MASTER.map(entry => entry.factorId);
+assert.equal(new Set(ids).size, ids.length, "Factor Master IDは重複しない");
 assert.equal(new Set(names).size, names.length, "Factor Master名称は重複しない");
 FACTOR_MASTER.forEach(entry => {
+  assert.match(entry.factorId, /^factor_[0-9]{6}$/);
   assert.ok(entry.name);
   assert.ok(entry.color);
   assert.ok(Object.values(FACTOR_TYPES).includes(entry.type));
@@ -51,7 +57,7 @@ function assertCsvValidationError(row, expectedMessage) {
   const csvPath = path.join(temporaryDirectory, "invalid.csv");
   fs.writeFileSync(
     csvPath,
-    `No.,因子名,因子色,分類,備考\n${row}\n`,
+    `No.,factorId,因子名,因子色,分類,備考,skillId\n${row}\n`,
     "utf8"
   );
   assert.throws(
@@ -59,13 +65,14 @@ function assertCsvValidationError(row, expectedMessage) {
     error => error.message.includes("行2") && error.message.includes(expectedMessage)
   );
 }
-assertCsvValidationError("1,,white,skill,", "因子名が空");
-assertCsvValidationError("1,末脚,purple,skill,", "不正な因子色");
-assertCsvValidationError("1,末脚,white,unknown,", "不正な分類");
+assertCsvValidationError("1,factor_000001,,white,skill,,", "因子名が空");
+assertCsvValidationError("1,factor_000001,末脚,purple,skill,,", "不正な因子色");
+assertCsvValidationError("1,factor_000001,末脚,white,unknown,,", "不正な分類");
+assertCsvValidationError("1,bad-id,末脚,white,skill,,", "factorId");
 const duplicateCsvPath = path.join(temporaryDirectory, "duplicate.csv");
 fs.writeFileSync(
   duplicateCsvPath,
-  "No.,因子名,因子色,分類,備考\n1,末脚,white,skill,\n2,末脚,white,skill,\n",
+  "No.,factorId,因子名,因子色,分類,備考,skillId\n1,factor_000001,末脚,white,skill,,\n2,factor_000002,末脚,white,skill,,\n",
   "utf8"
 );
 assert.throws(
@@ -73,6 +80,11 @@ assert.throws(
   error => error.message.includes("行3") && error.message.includes("重複")
 );
 fs.rmSync(temporaryDirectory, { recursive: true });
+
+assert.equal(getFactorMasterEntryById(FACTOR_MASTER[0].factorId)?.name, FACTOR_MASTER[0].name);
+assert.ok(FACTOR_MASTER.findIndex(entry => entry.name === "怯むことなく") < FACTOR_MASTER.findIndex(entry => entry.type === "awakening"), "新しい通常スキル因子は目覚め因子より前に並ぶ");
+assert.ok(FACTOR_MASTER.findIndex(entry => entry.name === "遊び心") < FACTOR_MASTER.findIndex(entry => entry.type === "awakening"), "新しい通常スキル因子は目覚め因子より前に並ぶ");
+
 
 const stats = getFactorMasterStats();
 assert.equal(stats.total, FACTOR_MASTER.length);

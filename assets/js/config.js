@@ -18,32 +18,38 @@ const members = {
   parentA: {
     label: "親A",
     images: [],
-    analysisResults: []
+    analysisResults: [],
+    selectedVariantId: null
   },
   grandA1: {
     label: "親A-祖1",
     images: [],
-    analysisResults: []
+    analysisResults: [],
+    selectedVariantId: null
   },
   grandA2: {
     label: "親A-祖2",
     images: [],
-    analysisResults: []
+    analysisResults: [],
+    selectedVariantId: null
   },
   parentB: {
     label: "親B",
     images: [],
-    analysisResults: []
+    analysisResults: [],
+    selectedVariantId: null
   },
   grandB1: {
     label: "親B-祖1",
     images: [],
-    analysisResults: []
+    analysisResults: [],
+    selectedVariantId: null
   },
   grandB2: {
     label: "親B-祖2",
     images: [],
-    analysisResults: []
+    analysisResults: [],
+    selectedVariantId: null
   }
 };
 

@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { CHARACTER_MASTER, CHARACTER_VARIANT_MASTER, searchCharacterVariants } from "../assets/js/data/character-master.js";
+assert.equal(CHARACTER_MASTER.length, 135);
+assert.equal(CHARACTER_VARIANT_MASTER.length, 270);
+assert.equal(new Set(CHARACTER_MASTER.map(x => x.characterId)).size, 135);
+assert.equal(new Set(CHARACTER_VARIANT_MASTER.map(x => x.variantId)).size, 270);
+assert.ok(CHARACTER_MASTER.some(x => x.name === "エピファネイア"));
+assert.ok(!CHARACTER_MASTER.some(x => x.name === "エピファネイア_"));
+const blackMc = searchCharacterVariants("黒マック", 20);
+assert.ok(blackMc.some(x => x.characterName === "メジロマックイーン" && x.variantName === "エレガンス・ライン"));
+const formal = searchCharacterVariants("エレガンス・ライン", 20);
+assert.ok(formal.some(x => x.characterName === "メジロマックイーン"));
+console.log("character master tests: OK");
+assert.ok(searchCharacterVariants("すぺ", 20).some(item => item.characterName === "スペシャルウィーク"), "カタカナ名をひらがな入力で検索できる");

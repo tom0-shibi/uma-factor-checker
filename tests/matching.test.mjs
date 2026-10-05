@@ -33,7 +33,7 @@ assert.deepEqual(SKILL_MATCH_CONFIG, {
   defaultThreshold: 0.60,
   minimumMargin: 0.15
 });
-assert.equal(getFactorMasterCandidateCount(), 582);
+assert.equal(getFactorMasterCandidateCount(), 584);
 
 requirements.S = ["連綿", "負けん気", "いざ我が道へ！"];
 requirements.A = ["向こう見ず", "マイルコーナー〇"];
