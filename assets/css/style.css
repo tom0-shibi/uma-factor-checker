@@ -4281,3 +4281,40 @@ textarea {
 .factor-set-saved-filters{grid-template-columns:repeat(2,minmax(220px,1fr))}
 .factor-set-editor-actions{flex-wrap:wrap}
 @media(max-width:720px){.factor-set-slots{grid-template-columns:1fr;grid-template-rows:auto}.factor-set-slot:nth-child(n){grid-column:1;grid-row:auto}.factor-set-saved-filters{grid-template-columns:1fr}}
+
+/* Planner navigation: common saved-data actions live in the shared header, not a workflow tab. */
+.header-common-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.header-common-action {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.header-common-action:hover {
+  background: var(--color-surface);
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
+}
+.header-common-action:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .header-common-actions { margin-top: 12px; }
+  .header-common-action { min-height: 36px; padding: 6px 10px; font-size: 12px; }
+}
