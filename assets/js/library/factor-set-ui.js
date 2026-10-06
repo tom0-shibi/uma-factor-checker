@@ -1,0 +1,3 @@
+import { createFactorSetDialog } from "./factor-set-dialog.js";
+function initializeFactorSetUi(){const results=document.getElementById("results");if(!results)return;const library=results.querySelector(".factor-library-entry");if(!library)return;const dialog=createFactorSetDialog();const entry=document.createElement("div");entry.className="factor-set-entry";entry.innerHTML='<button type="button" class="secondary-button factor-set-open"><span aria-hidden="true">▦</span><span>因子編成</span></button><span>保存した因子を6枠へ設定</span>';entry.querySelector("button").onclick=()=>dialog.open().catch(e=>console.error("因子編成の読込に失敗しました",e));library.insertAdjacentElement("afterend",entry);}
+export { initializeFactorSetUi };
