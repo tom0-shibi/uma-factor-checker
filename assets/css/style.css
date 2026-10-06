@@ -4337,3 +4337,74 @@ textarea {
 .workflow-navigation-notice[hidden] {
   display: none;
 }
+
+
+/* Keep the Factor Library chooser anchored while filtering changes result count. */
+.factor-set-picker-backdrop{place-items:start center;overflow:auto}
+.factor-set-picker-backdrop>.factor-set-picker{margin-top:clamp(24px,8vh,72px);height:min(620px,calc(100% - 48px));max-height:calc(100% - 48px)}
+.factor-set-picker-backdrop>.factor-set-picker .factor-set-picker-list{min-height:0;flex:1}
+@media(max-width:720px){.factor-set-picker-backdrop>.factor-set-picker{margin-top:16px;height:calc(100% - 32px);max-height:calc(100% - 32px)}}
+
+/* FactorSet nested pickers: use one stable modal geometry for both chooser dialogs. */
+.factor-set-picker-backdrop,
+.factor-set-trainee-backdrop {
+  place-items: start center;
+  overflow: auto;
+}
+.factor-set-picker-backdrop > .factor-set-picker,
+.factor-set-trainee-backdrop > .factor-set-picker {
+  margin-top: clamp(24px, 8vh, 72px);
+  height: min(620px, calc(100% - 48px));
+  max-height: calc(100% - 48px);
+}
+.factor-set-picker-backdrop > .factor-set-picker .factor-set-picker-list,
+.factor-set-trainee-backdrop > .factor-set-picker .factor-set-trainee-list {
+  min-height: 0;
+  flex: 1 1 auto;
+  align-content: start;
+  grid-auto-rows: max-content;
+}
+.factor-set-picker-item {
+  align-self: start;
+  height: auto;
+  min-height: 0;
+}
+@media(max-width:720px) {
+  .factor-set-picker-backdrop > .factor-set-picker,
+  .factor-set-trainee-backdrop > .factor-set-picker {
+    margin-top: 16px;
+    height: calc(100% - 32px);
+    max-height: calc(100% - 32px);
+  }
+}
+
+/* Nested FactorSet picker: only the active inner list scrolls. */
+.factor-set-backdrop.factor-set-nested-picker-open .factor-set-dialog {
+  overflow: hidden;
+}
+.factor-set-backdrop.factor-set-nested-picker-open .factor-set-body {
+  overflow: hidden;
+}
+.factor-set-picker-backdrop:not([hidden]),
+.factor-set-trainee-backdrop:not([hidden]) {
+  overscroll-behavior: contain;
+}
+.factor-set-picker-list,
+.factor-set-trainee-list {
+  overscroll-behavior: contain;
+}
+
+/* FactorSet modal scroll ownership: backdrops never scroll; only dialog/list panes do. */
+.factor-set-backdrop {
+  overflow: hidden;
+}
+.factor-set-picker-backdrop,
+.factor-set-trainee-backdrop {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.factor-set-picker-list,
+.factor-set-trainee-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

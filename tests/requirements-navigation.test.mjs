@@ -9,6 +9,11 @@ const tabButtons = {
   results: { dataset: { tab: "results" }, click() {} }
 };
 
+globalThis.window = {
+  scrollTo() {}
+};
+globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+
 globalThis.document = {
   addEventListener(type, callback) {
     if (type === "requirements-applied") requirementsAppliedHandler = callback;

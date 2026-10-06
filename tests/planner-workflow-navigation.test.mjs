@@ -15,3 +15,7 @@ test("Planner workflow guards later steps and guides the owner back to prerequis
   assert.match(source, /addEventListener\("click", guardWorkflowTabClick, true\)/);
   assert.match(css, /\.workflow-navigation-notice/);
 });
+
+test('requirements applied navigation returns 継承設定 to the top',()=>{
+  assert.match(source,/requestAnimationFrame\(\(\) => window\.scrollTo\(\{ top: 0, behavior: "auto" \}\)\)/);
+});

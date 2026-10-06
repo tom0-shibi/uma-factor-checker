@@ -88,6 +88,7 @@ export function initializeRequirementsAppliedNavigation() {
       if (!event.detail?.navigateToImages) return;
       clearWorkflowNotice();
       openTab("images");
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
     }
   );
 }
