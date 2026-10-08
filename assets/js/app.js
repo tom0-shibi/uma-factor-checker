@@ -16,6 +16,8 @@ import { initializeUsageModal } from "./ui/usage-modal.js?v=20260922-series-ui-0
 import { initializeRequirementsAppliedNavigation } from "./ui/requirements-navigation.js?v=20260922-series-ui-02";
 import { initializeRepresentativeCheck } from "./representative/representative-check.js?v=20260917-factor-master-01";
 import { initializeFactorLibraryUi } from "./library/factor-library-ui.js";
+import { initializeFactorSetUi } from "./library/factor-set-ui.js";
+import { initializeInheritanceSourceUi } from "./library/inheritance-source-ui.js";
 
 console.info(
   `[Uma Factor Checker] build: ${APP_BUILD}`
@@ -38,6 +40,8 @@ initializePageScrollPosition();
 initializePresetManager();
 initializeRepresentativeCheck();
 initializeFactorLibraryUi();
+initializeFactorSetUi();
+initializeInheritanceSourceUi();
 
 /* =========================================================
   全人物の保存済み解析結果初期化処理
@@ -99,9 +103,13 @@ if (analyzeImagesButton) {
       const totalImages =
         getTotalImageCount();
 
-      if (
-        totalImages === 0
-      ) {
+      const hasConfiguredData = MEMBER_ORDER.some(memberId => Boolean(members[memberId].libraryEntry || members[memberId].analysisResults.length || members[memberId].images.length));
+      if (!hasConfiguredData) return;
+      if (totalImages === 0) {
+        renderOverallSkillSummary();
+        document.dispatchEvent(new CustomEvent("uma:analysis-complete"));
+        document.querySelector('[data-tab="results"]')?.click();
+        scrollToResultsTop();
         return;
       }
 

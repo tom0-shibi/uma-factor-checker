@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Uma Factor Checker</title>
+    <title>Uma Factor Planner</title>
     <script>
       (() => {
         const storageKey = "uma-factor-checker:theme:v1";
@@ -35,16 +35,17 @@
       <div class="app-header-inner">
         <div class="app-brand">
           <div class="app-title-row">
-            <h1><span>Uma Factor</span> <strong>Checker</strong></h1>
+            <h1><span>Uma Factor</span> <strong>Planner</strong></h1>
             <span class="beta-badge">β・公開テスト中</span>
           </div>
-          <p>ウマ娘 因子画像解析・スキル要件チェッカー</p>
+          <p>スキル要件から継承ウマ娘を組み、因子構成を確認・比較</p>
+          <div id="common-data-actions" class="header-common-actions" aria-label="保存データの共通機能"></div>
         </div>
         <div class="header-utilities">
           <div class="tool-switcher">
             <button id="tool-open" type="button" aria-expanded="false" aria-controls="tool-menu">UmaTool <span aria-hidden="true">▾</span></button>
             <nav id="tool-menu" aria-label="UmaTool ツール一覧" hidden>
-              <div aria-current="page"><strong>Uma Factor Checker <span>現在のツール</span></strong><small>因子画像解析・スキル要件チェック</small></div>
+              <div aria-current="page"><strong>Uma Factor Planner <span>現在のツール</span></strong><small>継承因子の設定・比較・確認</small></div>
               <a href="https://tom0-shibi.github.io/uma-factor-stitcher/" target="_blank" rel="noopener noreferrer"><strong>Uma Factor Stitcher</strong><small>親・祖の因子一覧を1枚の画像に</small></a>
             </nav>
           </div>
@@ -75,8 +76,8 @@
     <nav class="tabs" aria-label="メイン画面">
       <div class="tabs-inner">
         <button class="tab-button active" data-tab="requirements">スキル要件</button>
-        <button class="tab-button" data-tab="images">画像登録</button>
-        <button class="tab-button" data-tab="results">判定結果</button>
+        <button class="tab-button" data-tab="images">継承設定</button>
+        <button class="tab-button" data-tab="results">継承プラン確認</button>
       </div>
     </nav>
 
@@ -328,7 +329,7 @@
         </div>
       </section>
       <section id="images" class="tab-content">
-        <h2>画像登録</h2>
+        <h2>継承設定</h2>
 
         <nav class="mode-switch" aria-label="チェック方法">
           <span class="mode-switch-label">チェック方法</span>
@@ -497,18 +498,18 @@
 
         <div class="action-area">
           <button id="analyze-images" class="primary-button" disabled>
-            画像を解析
+            継承プランを確認
           </button>
-          <p id="skill-analysis-disabled-reason" class="disabled-reason">ⓘ 解析する因子一覧画像を1つ以上登録してください。</p>
+          <p id="skill-analysis-disabled-reason" class="disabled-reason">ⓘ 画像または保存データから継承ウマ娘を1枠以上設定してください。</p>
         </div>
       </section>
 
       <section id="results" class="tab-content">
         <div class="section-heading">
           <div>
-            <h2>判定結果</h2>
+            <h2>継承プラン確認</h2>
             <p class="description">
-              解析結果の確認、要確認項目の手動訂正、スキル要件ごとの集計ができます。
+              設定した継承情報をスキル要件と照合し、因子の保有状況を一覧で確認できます。
             </p>
           </div>
           <details id="result-share-entry" class="inline-help result-share-entry" hidden>
@@ -543,9 +544,9 @@
         <header class="usage-modal-header">
           <span class="usage-modal-icon" aria-hidden="true">?</span>
           <div>
-            <p class="usage-modal-kicker">Uma Factor Checker</p>
+            <p class="usage-modal-kicker">Uma Factor Planner</p>
             <h2 id="usage-modal-title">使い方</h2>
-            <p>スキル要件を準備し、因子一覧画像を登録して判定します。</p>
+            <p>スキル要件を準備し、継承ウマ娘を設定して、継承プランを確認します。</p>
           </div>
         </header>
         <div class="usage-modal-body">
@@ -557,20 +558,20 @@
           <section>
             <h3><span>2</span> 必要なスキルを設定</h3>
             <p>S / A / B / Cの各優先度へ、判定したいスキルを登録します。プリセットを選んだ後も、必要に応じてスキルを追加・削除できます。</p>
-            <p class="usage-modal-detail">準備ができたら「スキル要件を反映」を押します。正常に反映されると画像登録画面へ進みます。</p>
+            <p class="usage-modal-detail">準備ができたら「スキル要件を反映」を押します。正常に反映されると継承設定画面へ進みます。</p>
           </section>
           <section>
-            <h3><span>3</span> 因子一覧画像を登録</h3>
-            <p>親A / 親A-祖1 / 親A-祖2 / 親B / 親B-祖1 / 親B-祖2のうち、判定したい対象へ因子一覧画像を登録します。6枠すべては必須ではなく、1枠以上で解析できます。</p>
+            <h3><span>3</span> 継承ウマ娘を設定</h3>
+            <p>親A / 親A-祖1 / 親A-祖2 / 親B / 親B-祖1 / 親B-祖2へ、現在の代表・レンタルなどの因子一覧画像を登録します。今後は因子ライブラリの保存データから設定する方法にも対応します。</p>
             <p class="usage-modal-detail">因子一覧が複数枚に分かれている場合は、同じ対象へ複数画像を登録できます。</p>
           </section>
           <section>
             <h3><span>4</span> 画像を解析</h3>
-            <p>必要な画像を登録したら「画像を解析」を押します。登録した因子一覧を読み取り、設定したスキル要件と照合します。解析完了後は判定結果画面へ進みます。</p>
+            <p>必要な画像を登録したら「画像を解析」を押します。登録した因子一覧を読み取り、設定したスキル要件と照合します。解析完了後は継承プラン確認画面へ進みます。</p>
           </section>
           <section>
-            <h3><span>5</span> 判定結果を確認</h3>
-            <p>判定結果画面で、対象スキルの所持状況を確認できます。OCR結果に誤りがある場合は、要確認項目で元画像を確認し、表示される修正操作を利用できます。</p>
+            <h3><span>5</span> 継承プランを確認</h3>
+            <p>継承プラン確認画面で、設定したスキル要件に対する因子の保有状況を確認できます。OCR結果に誤りがある場合は、要確認項目で元画像を確認し、表示される修正操作を利用できます。</p>
           </section>
           <aside class="usage-modal-note">
             <strong>公開テスト中</strong>

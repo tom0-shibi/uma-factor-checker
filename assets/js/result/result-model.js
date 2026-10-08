@@ -20,9 +20,14 @@ function getRequirementRankForFactor(canonicalName, factorType) {
 }
 
 function getRegisteredMemberIds() {
-  return MEMBER_ORDER.filter(
-    memberId => members[memberId].images.length > 0
-  );
+  return MEMBER_ORDER.filter(memberId => {
+    const member = members[memberId];
+    return member.images.length > 0 || member.analysisResults.length > 0 || Boolean(member.libraryEntry);
+  });
+}
+
+function getLibraryFactors(memberId) {
+  return members[memberId]?.libraryEntry?.factors ?? [];
 }
 
 function getOriginalRecognition(card) {
@@ -261,6 +266,19 @@ function aggregateMemberSkills(memberId) {
     });
   });
 
+  getLibraryFactors(memberId).forEach(factor => {
+    if (!["skill", "awakening"].includes(factor.type)) return;
+    const canonicalName = factor.nameSnapshot || getFactorMasterEntry(factor.factorId)?.name || null;
+    if (!canonicalName) return;
+    const rank = getRequirementRankForFactor(canonicalName, factor.type);
+    if (!rank) return;
+    const key = normalizeSkillText(canonicalName);
+    const existing = skillMap.get(key);
+    if (!existing || factor.stars > existing.stars) {
+      skillMap.set(key, { skillName: canonicalName, stars: factor.stars, rank, matchStatus: "library", ocrText: "", resolutionSource: "library", imageIndex: null, column: null, row: null, sourceThumbnail: null });
+    }
+  });
+
   return skillMap;
 }
 
@@ -323,6 +341,11 @@ function buildMemberFactorInfo() {
         }
       );
 
+      getLibraryFactors(memberId).forEach(factor => {
+        if (!Object.prototype.hasOwnProperty.call(factorInfo, factor.color) || factorInfo[factor.color]) return;
+        factorInfo[factor.color] = { name: factor.nameSnapshot || getFactorMasterEntry(factor.factorId)?.name || "", stars: factor.stars, status: "confirmed", source: "library", imageIndex: null };
+      });
+
       return [memberId, factorInfo];
     })
   );
@@ -348,6 +371,11 @@ function buildConfirmedCanonicalNamesByMember() {
             names.add(effective.canonicalName);
           }
         });
+      });
+      getLibraryFactors(memberId).forEach(factor => {
+        if (factor.color !== "white") return;
+        const name = factor.nameSnapshot || getFactorMasterEntry(factor.factorId)?.name;
+        if (name) names.add(name);
       });
       return [memberId, names];
     })

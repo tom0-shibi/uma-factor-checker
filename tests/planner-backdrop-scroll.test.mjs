@@ -1,0 +1,3 @@
+import test from "node:test"; import assert from "node:assert/strict"; import { readFile } from "node:fs/promises";
+const css=await readFile(new URL("../assets/css/style.css", import.meta.url),"utf8");
+test("FactorSet backdrops do not own scrolling",()=>{const tail=css.slice(css.lastIndexOf("/* FactorSet modal scroll ownership"));assert.match(tail,/\.factor-set-backdrop\s*\{[\s\S]*?overflow:\s*hidden/);assert.match(tail,/\.factor-set-picker-backdrop,[\s\S]*?\.factor-set-trainee-backdrop\s*\{[\s\S]*?overflow:\s*hidden/);assert.match(tail,/\.factor-set-picker-list,[\s\S]*?\.factor-set-trainee-list\s*\{[\s\S]*?overflow-y:\s*auto/);});

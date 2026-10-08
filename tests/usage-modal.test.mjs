@@ -92,7 +92,7 @@ assert.match(html, /<header class="app-header">[\s\S]*id="usage-open"/);
 assert.doesNotMatch(html, /class="usage-entry"/);
 assert.equal((html.match(/<h3><span>[1-5]<\/span>/g) ?? []).length, 5);
 assert.match(html, /スキル要件を反映/);
-assert.match(html, /正常に反映されると画像登録画面へ進みます/);
+assert.match(html, /正常に反映されると継承設定画面へ進みます/);
 
 for (const id of [
   "requirements",
