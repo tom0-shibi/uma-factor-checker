@@ -905,18 +905,31 @@ const memberPanels =
   画像追加処理
   ========================================================= */
 
+function normalizeImageFiles(files) {
+  const unique = new Map();
+  Array.from(files).forEach(file => {
+    if (!file?.type?.startsWith("image/")) return;
+    const key = `${file.name || "clipboard"}|${file.size}|${file.type}|${file.lastModified || 0}`;
+    if (!unique.has(key)) unique.set(key, file);
+  });
+  return [...unique.values()];
+}
+
 function addImages(
   memberId,
   files,
   { target = members[memberId].images, render = true } = {}
 ) {
-  const imageFiles =
-    Array.from(files).filter(
-      file =>
-        file.type.startsWith(
-          "image/"
-        )
-    );
+  const imageFiles = normalizeImageFiles(files);
+
+  if (imageFiles.length > 0) {
+    members[memberId].source = "ocr";
+    members[memberId].libraryEntry = null;
+    members[memberId].selectedVariantId = null;
+    if (typeof CustomEvent !== "undefined") {
+      document.dispatchEvent(new CustomEvent("inheritance-image-source-selected", { detail: { memberId } }));
+    }
+  }
 
   imageFiles.forEach(file => {
     target.push({
@@ -979,6 +992,20 @@ function renderImagePreviews(
 
       image.alt =
         `${members[memberId].label} 画像${index + 1}`;
+      image.tabIndex = 0;
+      image.setAttribute?.("role", "button");
+      image.setAttribute?.("aria-label", `${members[memberId].label} 画像${index + 1}を拡大表示`);
+      const openPreview = event => {
+        event.stopPropagation();
+        openMemberImagePreview(memberId, index);
+      };
+      image.addEventListener("click", openPreview);
+      image.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openPreview(event);
+        }
+      });
 
       const number =
         document.createElement(
@@ -1028,6 +1055,43 @@ function renderImagePreviews(
       );
     }
   );
+}
+
+
+function openMemberImagePreview(memberId, initialIndex) {
+  const images = members[memberId]?.images ?? [];
+  if (!images.length) return;
+  let index = Math.min(Math.max(initialIndex, 0), images.length - 1);
+  const overlay = document.createElement("div");
+  overlay.className = "member-image-preview-backdrop";
+  overlay.innerHTML = `<section class="member-image-preview-dialog" role="dialog" aria-modal="true" aria-label="${members[memberId].label}の画像プレビュー"><button type="button" class="member-image-preview-close" aria-label="閉じる">×</button><button type="button" class="member-image-preview-nav is-prev" aria-label="前の画像">‹</button><div class="member-image-preview-stage"><img alt=""><div class="member-image-preview-count"></div></div><button type="button" class="member-image-preview-nav is-next" aria-label="次の画像">›</button></section>`;
+  const previewImage = overlay.querySelector(".member-image-preview-stage img");
+  const count = overlay.querySelector(".member-image-preview-count");
+  const prev = overlay.querySelector(".is-prev");
+  const next = overlay.querySelector(".is-next");
+  const render = () => {
+    previewImage.src = images[index].url;
+    previewImage.alt = `${members[memberId].label} 画像${index + 1}`;
+    count.textContent = `${index + 1} / ${images.length}`;
+    prev.hidden = images.length < 2;
+    next.hidden = images.length < 2;
+    prev.disabled = index === 0;
+    next.disabled = index === images.length - 1;
+  };
+  const close = () => { document.removeEventListener("keydown", onKeydown); overlay.remove(); };
+  const onKeydown = event => {
+    if (event.key === "Escape") close();
+    else if (event.key === "ArrowLeft" && index > 0) { index -= 1; render(); }
+    else if (event.key === "ArrowRight" && index < images.length - 1) { index += 1; render(); }
+  };
+  overlay.querySelector(".member-image-preview-close").addEventListener("click", close);
+  prev.addEventListener("click", () => { if (index > 0) { index -= 1; render(); } });
+  next.addEventListener("click", () => { if (index < images.length - 1) { index += 1; render(); } });
+  overlay.addEventListener("pointerdown", event => { if (event.target === overlay) close(); });
+  document.addEventListener("keydown", onKeydown);
+  document.body.append(overlay);
+  render();
+  overlay.querySelector(".member-image-preview-close").focus();
 }
 
 /* =========================================================
@@ -1103,14 +1167,16 @@ function updateImageSummary() {
       "analyze-images"
     );
 
+  const configuredCount = Object.values(members).filter(member =>
+    member.images.length > 0 || member.analysisResults.length > 0 || member.libraryEntry
+  ).length;
+
   if (analyzeButton) {
-    analyzeButton.disabled =
-      total === 0;
+    analyzeButton.disabled = configuredCount === 0;
+    analyzeButton.textContent = "継承プランを確認";
   }
 
-  const registeredCount = Object.values(
-    members
-  ).filter(member => member.images.length > 0).length;
+  const registeredCount = configuredCount;
 
   const faceCount = document.getElementById(
     "skill-registered-face-count"
@@ -1125,7 +1191,7 @@ function updateImageSummary() {
   );
 
   if (disabledReason) {
-    disabledReason.hidden = total > 0;
+    disabledReason.hidden = configuredCount > 0;
   }
 }
 
@@ -1154,7 +1220,14 @@ fileInputs.forEach(input => {
 dropZones.forEach(zone => {
   zone.addEventListener(
     "click",
-    () => {
+    event => {
+      // The hidden file input lives inside the drop zone. Its programmatic
+      // click bubbles back to the zone, so ignore that bubbled click to
+      // prevent one user action from opening/processing the input twice.
+      if (event.target.closest?.(".image-file-input")) {
+        return;
+      }
+
       const memberId =
         zone.dataset.member;
 

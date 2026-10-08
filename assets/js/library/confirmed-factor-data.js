@@ -21,6 +21,13 @@ function collectConfirmedFactorData(memberId) {
   const confirmed = new Map();
   const unresolvedFactors = [];
 
+  if (member.libraryEntry) {
+    return {
+      factors: (member.libraryEntry.factors ?? []).map(factor => ({ ...factor, resolutionSource: factor.resolutionSource ?? "library" })),
+      unresolvedFactors: [...(member.libraryEntry.unresolvedFactors ?? [])]
+    };
+  }
+
   member.analysisResults.forEach(imageResult => {
     const metadata = imageResult.analysis.factorMetadata ?? {};
     for (const color of ["blue", "red", "green"]) {

@@ -63,7 +63,13 @@ assert.match(dialogSource, /新しいタグ名を入力してください/, "新
 assert.match(dialogSource, /全保存から削除/, "タグを全保存データから削除できる");
 assert.match(dialogSource, /青因子/, "詳細で青因子を分類表示する");
 assert.match(dialogSource, /遺伝子/, "白因子の主要分類を表示する");
-assert.match(dialogSource, /今回の解析結果/, "保存前の解析結果も詳細表示できる");
+assert.doesNotMatch(dialogSource, /今回の解析結果/, "因子ライブラリ画面は保存済みデータの管理に限定する");
+const registrationSource = await fs.readFile(new URL("../assets/js/library/factor-registration-dialog.js", import.meta.url), "utf8");
+const resultsSource = await fs.readFile(new URL("../assets/js/result/results.js", import.meta.url), "utf8");
+assert.match(registrationSource, /育成ウマ娘/, "確認画面からのLibrary登録で育成ウマ娘を設定できる");
+assert.match(registrationSource, /タグ/, "確認画面からのLibrary登録でタグを設定できる");
+assert.match(registrationSource, /メモ/, "確認画面からのLibrary登録でメモを設定できる");
+assert.match(resultsSource, /因子ライブラリに保存/, "継承プラン確認画面から個別にLibrary登録できる");
 
 assert.match(dialogSource, /検索できるFactor Master候補|searchableTypes/, "因子絞り込み候補を主要白因子に限定する");
 assert.match(dialogSource, /軽量バックアップ/, "軽量バックアップを保存できる");
@@ -93,3 +99,31 @@ assert.match(dialogSource, /requestAnimationFrame\(\(\)=>\{ detailBackdrop\.scro
 assert.match(dialogSource, /factor-library-filter-subaction/, "タグ削除とウマ娘指定解除を同一UIにする");
 
 assert.match(dialogSource, /factor-library-tag-delete-all/, "全保存から削除は専用の統一ボタンUIを使う");
+assert.match(registrationSource, /factor-library-tag-picker-field/, "確認画面からの登録もLibrary編集と同じタグ選択UIを使う");
+assert.match(registrationSource, /新しいタグ名を入力してください/, "確認画面からも既存Libraryと同じ新規タグ作成導線を使う");
+assert.match(resultsSource, /因子ライブラリ登録済/, "登録済み表示は正式名称に統一する");
+assert.match(dialogSource, /is-editing/, "編集中の因子カードを視覚的に識別できる状態クラスを付ける");
+
+assert.match(registrationSource, /input\.onfocus=render/, "育成ウマ娘欄へフォーカスしたら未入力でも候補を表示する");
+assert.doesNotMatch(registrationSource, /charHost\.querySelector\(\"input\"\)\?\.focus\(\)/, "登録ダイアログを開いただけでは育成ウマ娘候補を表示しない");
+assert.match(registrationSource, /<div class=\"factor-library-editor-field\"><span>タグ<\/span>/, "登録ダイアログのタグUIをlabelで包まず、タグ本体クリックによる×ボタンの代理クリックを防ぐ");
+assert.match(dialogSource, /<div class=\"factor-library-editor-field\"><span>タグ<\/span>/, "既存Library編集のタグUIもlabel代理クリックを起こさない構造にする");
+assert.match(resultsSource, /result-library-save-summary-content/, "確認画面の因子ライブラリ見出しと登録件数を二段表示できる構造にする");
+assert.match(resultsSource, /未登録 \${targets\.length - registeredCount}件 \/ 登録済 \${registeredCount}件/, "未登録・登録済件数を現在のLibrary状態から再計算する");
+assert.match(resultsSource, /FACTOR_LIBRARY_CHANGED_EVENT/, "Library変更時に確認画面の登録状態を再評価する");
+const storageSource = await fs.readFile(new URL("../assets/js/library/factor-library-storage.js", import.meta.url), "utf8");
+assert.match(storageSource, /factor-library-changed/, "Library保存・編集・削除を画面へ通知する変更イベントを定義する");
+assert.match(storageSource, /deleteFactorEntry[\s\S]{0,420}notifyFactorLibraryChanged\(\)/, "Library削除後も確認画面へ変更を通知する");
+assert.match(resultsSource, /document\.removeEventListener\(FACTOR_LIBRARY_CHANGED_EVENT/, "破棄済み確認画面のLibrary変更リスナーを残さない");
+
+// v5: registration metadata and tags must not be coupled to entry lifetime.
+const uiSource = await fs.readFile(new URL("../assets/js/library/factor-library-ui.js", import.meta.url), "utf8");
+assert.match(uiSource, /stillRegistered/, "削除済みLibrary登録の育成ウマ娘を再登録フォームへ持ち越さない");
+assert.match(uiSource, /selectedVariantId=null/, "Library登録が現存しない場合は育成ウマ娘を未選択で開く");
+assert.match(storageSource, /const TAG_STORE = "factorTags"/, "タグを因子Entryとは独立した永続ストアで管理する");
+assert.match(storageSource, /DB_VERSION = 2/, "既存IndexedDBへタグストアを安全に追加するためDBを更新する");
+assert.match(storageSource, /listFactorTags[\s\S]{0,900}entries\.flatMap\(entry=>entry\.tags\|\|\[\]\)/, "既存Entryのタグをタグストアへ移行できる");
+assert.match(storageSource, /saveFactorEntryWithImages[\s\S]{0,700}TAG_STORE/, "新規保存時にタグをEntryとは別に永続化する");
+assert.match(dialogSource, /persistentTags/, "因子削除後もタグ候補を独立して保持する");
+assert.match(dialogSource, /deleteFactorTag\(tag\)/, "タグ自体の削除は明示的なタグ削除操作だけで行う");
+assert.match(dialogSource, /entries:backupEntries,tags,images:imageData/, "バックアップに独立タグを含める");

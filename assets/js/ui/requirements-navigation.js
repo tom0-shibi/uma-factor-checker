@@ -12,7 +12,8 @@ function hasInheritanceData() {
     return Boolean(
       member && (
         (Array.isArray(member.images) && member.images.length > 0) ||
-        (Array.isArray(member.analysisResults) && member.analysisResults.length > 0)
+        (Array.isArray(member.analysisResults) && member.analysisResults.length > 0) ||
+        Boolean(member.libraryEntry)
       )
     );
   });

@@ -2,6 +2,11 @@ import { IS_DEV } from "../environment.js";
 
 import { APP_BUILD, requirements, members, MEMBER_ORDER, debugLogLines } from "../config.js";
 import { ensureResultSummaryContainer } from "../ui/ui.js?v=20260921-duplicate-paste-01";
+import { collectConfirmedFactorData } from "../library/confirmed-factor-data.js";
+import { listFactorEntries, FACTOR_LIBRARY_CHANGED_EVENT } from "../library/factor-library-storage.js";
+import { buildFactorFingerprint } from "../library/factor-entry.js";
+import { openFactorLibraryRegistration } from "../library/factor-library-ui.js";
+import { getCharacterVariant } from "../data/character-master.js";
 import {
   getRequirementRankLabel,
   getSelectedPresetName
@@ -1446,6 +1451,58 @@ function renderMemberSummary(container, model) {
   container.appendChild(section);
 }
 
+function renderFactorLibrarySaveActions(container) {
+  const details = document.createElement("details");
+  details.className = "factor-metadata-section result-library-save-section";
+  details.innerHTML = `<summary><span class="result-library-save-summary-content"><span class="result-library-save-summary-title">因子ライブラリ</span><span class="result-library-save-summary-status">確認中…</span></span></summary><div class="result-library-save-body"><p class="result-library-save-help">確認した因子のうち、今後も使いたい親・祖だけ保存できます。編成を保存しない場合でも個別に登録できます。</p><div class="result-library-save-list"></div></div>`;
+  const list = details.querySelector(".result-library-save-list");
+  const summaryStatus = details.querySelector(".result-library-save-summary-status");
+  container.appendChild(details);
+
+  let renderVersion = 0;
+  const render = async () => {
+    const version = ++renderVersion;
+    const entries = await listFactorEntries();
+    if (version !== renderVersion || !details.isConnected) return;
+    list.innerHTML = "";
+    const targets = MEMBER_ORDER.filter(memberId => members[memberId].analysisResults.length > 0);
+    if (!targets.length) {
+      summaryStatus.textContent = "対象なし";
+      list.innerHTML = '<p class="factor-library-empty">保存できる解析結果はありません。</p>';
+      return;
+    }
+    let registeredCount = 0;
+    targets.forEach(memberId => {
+      const member = members[memberId];
+      const confirmed = collectConfirmedFactorData(memberId);
+      const variant = member.selectedVariantId ? getCharacterVariant(member.selectedVariantId) : null;
+      const selectedEntry = variant
+        ? entries.find(entry => buildFactorFingerprint(entry) === buildFactorFingerprint({ characterId: variant.characterId, variantId: variant.variantId, factors: confirmed.factors }))
+        : null;
+      if (selectedEntry) registeredCount += 1;
+      const row = document.createElement("article");
+      row.className = `result-library-save-item ${selectedEntry ? "is-registered" : "is-unregistered"}`;
+      row.innerHTML = `<div><strong>${member.label}</strong><span>${confirmed.factors.length}因子${confirmed.unresolvedFactors.length ? ` / 要確認${confirmed.unresolvedFactors.length}件` : ""}</span></div><div class="result-library-save-actions"><span class="result-library-save-status">${selectedEntry ? "因子ライブラリ登録済" : "未登録"}</span><button type="button" class="ghost-button">${selectedEntry ? "登録済み" : "因子ライブラリに保存"}</button></div>`;
+      const button = row.querySelector("button");
+      button.disabled = Boolean(selectedEntry);
+      button.onclick = async () => { const result = await openFactorLibraryRegistration(memberId); if (result?.saved) await render(); };
+      list.appendChild(row);
+    });
+    summaryStatus.textContent = `未登録 ${targets.length - registeredCount}件 / 登録済 ${registeredCount}件`;
+    const unregisteredCount = targets.length - registeredCount;
+    details.classList.toggle("has-unregistered", unregisteredCount > 0);
+    details.classList.toggle("is-all-registered", unregisteredCount === 0);
+  };
+  const refreshOnLibraryChange = () => {
+    if (!details.isConnected) {
+      document.removeEventListener(FACTOR_LIBRARY_CHANGED_EVENT, refreshOnLibraryChange);
+      return;
+    }
+    render().catch(error => { summaryStatus.textContent = "状態確認エラー"; list.innerHTML = `<p class="factor-library-empty">因子ライブラリの状態を確認できませんでした: ${String(error.message || error)}</p>`; });
+  };
+  document.addEventListener(FACTOR_LIBRARY_CHANGED_EVENT, refreshOnLibraryChange);
+  render().catch(error => { summaryStatus.textContent = "状態確認エラー"; list.innerHTML = `<p class="factor-library-empty">因子ライブラリの状態を確認できませんでした: ${String(error.message || error)}</p>`; });
+}
 function formatCandidateButtonLabel(name, similarity) {
   return `${name} ${Math.round(similarity * 100)}%`;
 }
@@ -1987,6 +2044,7 @@ function renderOverallSkillSummary() {
   renderResultShareActions(model);
 
   renderMemberSummary(container, model);
+  renderFactorLibrarySaveActions(container);
   renderFactorInfo(container, model);
   renderReviewItems(container);
   renderManualResolutionDebug();
@@ -2548,7 +2606,7 @@ document.addEventListener(
   "requirements-applied",
   () => {
     const hasAnalysisResults = MEMBER_ORDER.some(
-      memberId => members[memberId].analysisResults.length > 0
+      memberId => members[memberId].analysisResults.length > 0 || Boolean(members[memberId].libraryEntry)
     );
     if (hasAnalysisResults) {
       renderOverallSkillSummary();

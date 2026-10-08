@@ -19,37 +19,49 @@ const members = {
     label: "親A",
     images: [],
     analysisResults: [],
-    selectedVariantId: null
+    selectedVariantId: null,
+    source: "unset",
+    libraryEntry: null
   },
   grandA1: {
     label: "親A-祖1",
     images: [],
     analysisResults: [],
-    selectedVariantId: null
+    selectedVariantId: null,
+    source: "unset",
+    libraryEntry: null
   },
   grandA2: {
     label: "親A-祖2",
     images: [],
     analysisResults: [],
-    selectedVariantId: null
+    selectedVariantId: null,
+    source: "unset",
+    libraryEntry: null
   },
   parentB: {
     label: "親B",
     images: [],
     analysisResults: [],
-    selectedVariantId: null
+    selectedVariantId: null,
+    source: "unset",
+    libraryEntry: null
   },
   grandB1: {
     label: "親B-祖1",
     images: [],
     analysisResults: [],
-    selectedVariantId: null
+    selectedVariantId: null,
+    source: "unset",
+    libraryEntry: null
   },
   grandB2: {
     label: "親B-祖2",
     images: [],
     analysisResults: [],
-    selectedVariantId: null
+    selectedVariantId: null,
+    source: "unset",
+    libraryEntry: null
   }
 };
 
