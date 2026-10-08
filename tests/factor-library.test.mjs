@@ -51,7 +51,7 @@ const dialogSource = await fs.readFile(new URL("../assets/js/library/factor-libr
 assert.match(dialogSource, /const PAGE_SIZE = 10/, "保存済み一覧は10件単位でページングする");
 assert.match(dialogSource, /変更を保存/, "編集は明示保存にする");
 assert.match(dialogSource, /factor-library-detail-dialog/, "因子一覧は別ダイアログで確認できる");
-assert.match(dialogSource, /factor-library-tag-filter/, "タグで絞り込める");
+assert.match(dialogSource, /factor-library-tag-chips/, "タグで絞り込める");
 assert.match(dialogSource, /factor-library-factor-mode/, "複数因子をany\/allで絞り込める");
 assert.match(dialogSource, /factor-library-uma-filter/, "ウマ娘で絞り込める");
 assert.match(dialogSource, /searchCharacterVariants\(input.value.trim\(\), 30\)/, "未入力フォーカス時も育成ウマ娘候補を表示できる");
@@ -60,7 +60,7 @@ assert.doesNotMatch(dialogSource, /よみで検索/, "検索欄に『よみで�
 assert.match(dialogSource, /FACTOR_MASTER/, "因子絞り込み候補はFactor Masterを使う");
 assert.match(dialogSource, /ids\.has\(factorId\)/, "因子絞り込みはfactorId完全一致で判定する");
 assert.match(dialogSource, /新しいタグ名を入力してください/, "新規タグは明示操作で追加する");
-assert.match(dialogSource, /全保存から削除/, "タグを全保存データから削除できる");
+assert.match(dialogSource, /renderTagChips/, "タグ絞り込みを個別解除できる");
 assert.match(dialogSource, /青因子/, "詳細で青因子を分類表示する");
 assert.match(dialogSource, /遺伝子/, "白因子の主要分類を表示する");
 assert.doesNotMatch(dialogSource, /今回の解析結果/, "因子ライブラリ画面は保存済みデータの管理に限定する");
@@ -96,9 +96,9 @@ assert.match(dialogSource, /現在のデータに追加/, "復元の追加動作
 assert.match(dialogSource, /同じIDのデータはバックアップ側の内容で更新/, "復元時の重複処理を説明する");
 assert.match(dialogSource, /保存画像なし/, "Entry詳細で保存画像の有無を確認できる");
 assert.match(dialogSource, /requestAnimationFrame\(\(\)=>\{ detailBackdrop\.scrollTop=0; detailDialog\.scrollTop=0; detailContent\.scrollTop=0;/, "詳細を開くたび実スクロール要素を先頭へ戻す");
-assert.match(dialogSource, /factor-library-filter-subaction/, "タグ削除とウマ娘指定解除を同一UIにする");
+assert.doesNotMatch(dialogSource, /factor-library-uma-clear/, "ウマ娘の重複した解除ボタンを表示しない");
 
-assert.match(dialogSource, /factor-library-tag-delete-all/, "全保存から削除は専用の統一ボタンUIを使う");
+assert.match(dialogSource, /factor-library-quick-search/, "通常検索を常時表示する");
 assert.match(registrationSource, /factor-library-tag-picker-field/, "確認画面からの登録もLibrary編集と同じタグ選択UIを使う");
 assert.match(registrationSource, /新しいタグ名を入力してください/, "確認画面からも既存Libraryと同じ新規タグ作成導線を使う");
 assert.match(resultsSource, /因子ライブラリ登録済/, "登録済み表示は正式名称に統一する");
@@ -125,5 +125,5 @@ assert.match(storageSource, /DB_VERSION = 2/, "既存IndexedDBへタグストア
 assert.match(storageSource, /listFactorTags[\s\S]{0,900}entries\.flatMap\(entry=>entry\.tags\|\|\[\]\)/, "既存Entryのタグをタグストアへ移行できる");
 assert.match(storageSource, /saveFactorEntryWithImages[\s\S]{0,700}TAG_STORE/, "新規保存時にタグをEntryとは別に永続化する");
 assert.match(dialogSource, /persistentTags/, "因子削除後もタグ候補を独立して保持する");
-assert.match(dialogSource, /deleteFactorTag\(tag\)/, "タグ自体の削除は明示的なタグ削除操作だけで行う");
+assert.doesNotMatch(dialogSource, /deleteFactorTag\(tag\)/, "今回の絞り込み操作では保存済みタグを削除しない");
 assert.match(dialogSource, /entries:backupEntries,tags,images:imageData/, "バックアップに独立タグを含める");

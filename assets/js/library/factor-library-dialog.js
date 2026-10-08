@@ -4,7 +4,7 @@ import { FACTOR_MASTER } from "../data/factor-master.js";
 
 const PAGE_SIZE = 10;
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const normalize = value => String(value ?? "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+const normalize = value => String(value ?? "").normalize("NFKC").toLowerCase().replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)).replace(/\s+/g, "");
 const formatDateTime = value => { if(!value) return ""; const d=new Date(value); if(Number.isNaN(d.getTime())) return ""; const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
 const blobToDataUrl = blob => new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=()=>reject(r.error); r.readAsDataURL(blob); });
 const dataUrlToBlob = data => { const [head,body]=String(data).split(",",2); const type=(head.match(/data:([^;]+)/)||[])[1]||"application/octet-stream"; const bytes=atob(body||""); const arr=new Uint8Array(bytes.length); for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i); return new Blob([arr],{type}); };
@@ -15,7 +15,7 @@ function characterSearch(onSelect, selectedVariantId = null) {
   root.innerHTML = `<input type="search" placeholder="名前・衣装・通称で検索" autocomplete="off"><div class="factor-library-character-candidates" hidden></div>`;
   const input = root.querySelector("input");
   const list = root.querySelector(".factor-library-character-candidates");
-  const selected = getCharacterVariant(selectedVariantId);
+  let selected = getCharacterVariant(selectedVariantId);
   if (selected) input.value = selected.displayName;
   const close = () => { list.hidden = true; };
   const render = () => {
@@ -25,17 +25,18 @@ function characterSearch(onSelect, selectedVariantId = null) {
       const button = document.createElement("button");
       button.type = "button";
       button.innerHTML = `<strong>${escapeHtml(item.displayName)}</strong>${item.aliases.length ? `<small>${escapeHtml(item.aliases.join(" / "))}</small>` : ""}`;
-      button.onclick = () => { input.value = item.displayName; close(); onSelect(item); };
+      button.onclick = () => { input.value = item.displayName; selected = item; close(); onSelect(item); };
       list.appendChild(button);
     });
     list.hidden = !items.length;
   };
-  input.addEventListener("input", render);
+  input.addEventListener("input", () => { if (!input.value.trim() && selected) { selected = null; close(); onSelect(null); return; } render(); });
   input.addEventListener("focus", render);
   input.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
   root.addEventListener("focusout", () => setTimeout(() => { if (!root.contains(document.activeElement)) close(); }, 0));
   document.addEventListener("pointerdown", event => { if (!root.contains(event.target)) close(); });
   root.closeCandidates = close;
+  root.resetSelection = () => { selected = null; input.value = ""; close(); };
   return root;
 }
 
@@ -47,11 +48,11 @@ function createFactorLibraryDialog() {
     <header><div><h2 id="factor-library-title">因子ライブラリ</h2><p>保存した因子データを共通で管理します。</p></div><button type="button" class="factor-library-close" aria-label="閉じる">×</button></header>
     <div class="factor-library-modal-body">
       <section>
-        <div class="factor-library-toolbar"><div><h3>保存済み</h3><span class="factor-library-count"></span></div><div class="factor-library-toolbar-actions"><button type="button" class="ghost-button factor-library-backup-toggle">バックアップ</button><button type="button" class="ghost-button factor-library-filter-toggle">絞り込み</button></div></div><div class="factor-library-backup-panel" hidden><div><strong>バックアップ</strong><span>ブラウザデータを削除しても復元できるファイルを保存します。</span></div><div class="factor-library-backup-actions"><button type="button" class="ghost-button backup-light">軽量バックアップ</button><button type="button" class="ghost-button backup-full">完全バックアップ（画像含む）</button><button type="button" class="ghost-button backup-restore">バックアップから復元</button><input type="file" class="backup-file" accept="application/json,.json" hidden></div></div>
-        <div class="factor-library-filters" hidden>
-          <label><span>タグ</span><select class="factor-library-tag-filter" multiple size="4"></select><button type="button" class="ghost-button factor-library-filter-subaction factor-library-tag-manage">タグを削除</button><div class="factor-library-tag-manager" hidden></div></label>
+        <div class="factor-library-toolbar"><div><h3>保存済み</h3><span class="factor-library-count"></span></div><div class="factor-library-toolbar-actions"><button type="button" class="ghost-button factor-library-backup-toggle">バックアップ</button></div></div><div class="factor-library-backup-panel" hidden><div><strong>バックアップ</strong><span>ブラウザデータを削除しても復元できるファイルを保存します。</span></div><div class="factor-library-backup-actions"><button type="button" class="ghost-button backup-light">軽量バックアップ</button><button type="button" class="ghost-button backup-full">完全バックアップ（画像含む）</button><button type="button" class="ghost-button backup-restore">バックアップから復元</button><input type="file" class="backup-file" accept="application/json,.json" hidden></div></div>
+        <div class="factor-library-searchbar"><input type="search" class="factor-library-quick-search" placeholder="ウマ娘名・タグ・メモで検索" aria-label="ウマ娘名・タグ・メモで検索"><button type="button" class="ghost-button factor-library-detail-toggle" aria-expanded="false">詳細条件 ▾</button></div><div class="factor-library-filters" hidden>
+          <label><span>タグ</span><div class="factor-library-tag-picker-filter"><input type="search" class="factor-library-tag-search" placeholder="タグを検索・追加" autocomplete="off"><div class="factor-library-tag-candidates" hidden></div></div><div class="factor-library-tag-chips"></div></label>
           <label><span>因子</span><div class="factor-library-factor-filter-row"><div class="factor-library-factor-search"><input class="factor-library-factor-filter-input" type="search" placeholder="因子マスタから検索" autocomplete="off"><div class="factor-library-factor-candidates" hidden></div></div></div><div class="factor-library-factor-chips"></div><select class="factor-library-factor-mode"><option value="any">選択した因子を1つでも含む</option><option value="all">選択した因子をすべて含む</option></select></label>
-          <label><span>ウマ娘</span><div class="factor-library-uma-filter"></div><button type="button" class="ghost-button factor-library-filter-subaction factor-library-uma-clear">指定を解除</button></label>
+          <label><span>ウマ娘</span><div class="factor-library-uma-filter"></div></label>
           <div class="factor-library-filter-actions"><button type="button" class="ghost-button factor-library-filter-reset">絞り込みを解除</button></div>
         </div>
         <div class="factor-library-list"></div><nav class="factor-library-pagination" aria-label="因子ライブラリのページ"></nav>
@@ -68,21 +69,24 @@ function createFactorLibraryDialog() {
   const pagination = backdrop.querySelector(".factor-library-pagination");
   const toast = backdrop.querySelector(".factor-library-toast");
   const filters = backdrop.querySelector(".factor-library-filters");
-  const tagFilter = backdrop.querySelector(".factor-library-tag-filter");
+  const quickSearch = backdrop.querySelector(".factor-library-quick-search");
+  const tagInput = backdrop.querySelector(".factor-library-tag-search");
+  const tagCandidates = backdrop.querySelector(".factor-library-tag-candidates");
+  const tagChips = backdrop.querySelector(".factor-library-tag-chips");
   const factorInput = backdrop.querySelector(".factor-library-factor-filter-input");
   const factorChips = backdrop.querySelector(".factor-library-factor-chips");
   const factorMode = backdrop.querySelector(".factor-library-factor-mode");
   const factorCandidates = backdrop.querySelector(".factor-library-factor-candidates");
-  const tagManager = backdrop.querySelector(".factor-library-tag-manager");
+
   const detailBackdrop = backdrop.querySelector(".factor-library-detail-backdrop");
   const restoreBackdrop = backdrop.querySelector(".factor-library-restore-backdrop");
-  let entries = [], persistentTags = [], page = 1, highlightId = null, toastTimer = null, selectedUma = null, factorFilters = [];
+  let entries = [], persistentTags = [], page = 1, highlightId = null, toastTimer = null, selectedUma = null, factorFilters = [], selectedTags = [], pickerMode = null;
   const allTags = () => [...new Set([...persistentTags, ...entries.flatMap(e => e.tags || [])])].sort((a,b) => a.localeCompare(b,"ja"));
   const factorById = new Map(FACTOR_MASTER.map(f => [f.factorId, f]));
 
   const showToast = message => { clearTimeout(toastTimer); toast.textContent = message; toast.hidden = false; toastTimer = setTimeout(() => { toast.hidden = true; }, 2200); };
   const closeDetail = () => { detailBackdrop.hidden = true; };
-  const close = () => { closeDetail(); backdrop.hidden = true; document.body.classList.remove("factor-library-modal-open"); };
+  const close = () => { closeDetail(); backdrop.hidden = true; pickerMode = null; resetFilters(); document.body.classList.remove("factor-library-modal-open"); };
   backdrop.querySelector(".factor-library-close").onclick = close;
   backdrop.addEventListener("pointerdown", event => { if (event.target === backdrop) close(); });
   detailBackdrop.addEventListener("pointerdown", event => { if (event.target === detailBackdrop) closeDetail(); });
@@ -91,10 +95,29 @@ function createFactorLibraryDialog() {
 
   const umaSearch = characterSearch(variant => { selectedUma = variant; page = 1; renderSaved(); });
   backdrop.querySelector(".factor-library-uma-filter").append(umaSearch);
-  backdrop.querySelector(".factor-library-uma-clear").onclick = () => { selectedUma = null; umaSearch.querySelector("input").value = ""; page = 1; renderSaved(); };
-  backdrop.querySelector(".factor-library-filter-toggle").onclick = event => { filters.hidden = !filters.hidden; event.currentTarget.textContent = filters.hidden ? "絞り込み" : "絞り込みを閉じる"; };
-  backdrop.querySelector(".factor-library-filter-reset").onclick = () => { [...tagFilter.options].forEach(o => { o.selected = false; }); factorFilters = []; selectedUma = null; factorInput.value = ""; umaSearch.querySelector("input").value = ""; renderFactorChips(); page = 1; renderSaved(); };
-  tagFilter.addEventListener("change", () => { page = 1; renderSaved(); });
+  backdrop.querySelector(".factor-library-detail-toggle").onclick = event => { filters.hidden = !filters.hidden; event.currentTarget.setAttribute("aria-expanded", String(!filters.hidden)); event.currentTarget.textContent = filters.hidden ? "詳細条件 ▾" : "詳細条件 ▴"; };
+  quickSearch.addEventListener("input", () => { page = 1; renderSaved(); });
+  function resetFilters() {
+    selectedTags = []; factorFilters = []; selectedUma = null;
+    quickSearch.value = ""; tagInput.value = ""; factorInput.value = "";
+    umaSearch.resetSelection(); tagCandidates.hidden = true; factorCandidates.hidden = true;
+    factorMode.value = "any"; filters.hidden = true;
+    const toggle = backdrop.querySelector(".factor-library-detail-toggle");
+    toggle.setAttribute("aria-expanded", "false"); toggle.textContent = "詳細条件 ▾";
+    renderTagChips(); renderFactorChips(); page = 1;
+  }
+  backdrop.querySelector(".factor-library-filter-reset").onclick = () => { resetFilters(); renderSaved(); };
+  function renderTagChips() {
+    tagChips.innerHTML = "";
+    selectedTags.forEach(tag => { const chip = document.createElement("button"); chip.type="button"; chip.className="factor-library-chip"; chip.textContent=`${tag} ×`; chip.setAttribute("aria-label", `${tag}の絞り込みを解除`); chip.onclick=()=>{selectedTags=selectedTags.filter(x=>x!==tag);renderTagChips();page=1;renderSaved();};tagChips.append(chip); });
+  }
+  function renderTagCandidates() {
+    const q=normalize(tagInput.value); const tags=allTags().filter(t=>!selectedTags.includes(t)&&(!q||normalize(t).includes(q)));
+    tagCandidates.innerHTML=""; tags.forEach(tag=>{const button=document.createElement("button");button.type="button";button.textContent=tag;button.onclick=()=>{selectedTags.push(tag);tagInput.value="";tagCandidates.hidden=true;renderTagChips();page=1;renderSaved();};tagCandidates.append(button);});tagCandidates.hidden=!tags.length;
+  }
+  tagInput.addEventListener("focus",renderTagCandidates);tagInput.addEventListener("input",renderTagCandidates);
+  tagInput.addEventListener("keydown",event=>{if(event.key==="Escape")tagCandidates.hidden=true;});
+  tagInput.addEventListener("focusout",()=>setTimeout(()=>{if(!tagInput.parentElement.contains(document.activeElement))tagCandidates.hidden=true;},0));
   factorMode.addEventListener("change", () => { page = 1; renderSaved(); });
   const backupPanel=backdrop.querySelector(".factor-library-backup-panel"), backupFile=backdrop.querySelector(".backup-file");
   backdrop.querySelector(".factor-library-backup-toggle").onclick=()=>{backupPanel.hidden=!backupPanel.hidden;};
@@ -127,12 +150,6 @@ function createFactorLibraryDialog() {
   factorInput.addEventListener("input", renderFactorCandidates);
   factorInput.addEventListener("keydown", event => { if(event.key === "Escape") closeFactorCandidates(); });
   factorInput.addEventListener("focusout", () => setTimeout(() => { if (!factorInput.parentElement.contains(document.activeElement)) closeFactorCandidates(); }, 0));
-
-  function renderTagManager(){
-    const tags=allTags(); tagManager.innerHTML = tags.length ? tags.map(tag => `<div><span>${escapeHtml(tag)}</span><button type="button" class="ghost-button factor-library-tag-delete-all" data-delete-tag="${escapeHtml(tag)}">全保存から削除</button></div>`).join("") : '<span class="factor-library-empty-inline">登録済みタグはありません。</span>';
-    tagManager.querySelectorAll("[data-delete-tag]").forEach(btn => btn.onclick = async () => { const tag=btn.dataset.deleteTag; const affected=entries.filter(e => (e.tags||[]).includes(tag)); if(!confirm(affected.length ? `タグ「${tag}」を ${affected.length}件の保存データから削除しますか？` : `未使用のタグ「${tag}」を削除しますか？`)) return; for(const entry of affected){ entry.tags=(entry.tags||[]).filter(x=>x!==tag); entry.updatedAt=new Date().toISOString(); await putFactorEntry(entry); } await deleteFactorTag(tag); persistentTags=persistentTags.filter(x=>x!==tag); showToast(`タグ「${tag}」を削除しました。`); await renderSaved(); renderTagManager(); });
-  }
-  backdrop.querySelector(".factor-library-tag-manage").onclick = event => { tagManager.hidden=!tagManager.hidden; event.currentTarget.textContent=tagManager.hidden ? "タグを削除" : "削除一覧を閉じる"; if(!tagManager.hidden) renderTagManager(); };
 
   function renderPagination(total) {
     const pages = Math.max(1, Math.ceil(total / PAGE_SIZE)); page = Math.min(page, pages); pagination.innerHTML = ""; if (pages <= 1) return;
@@ -172,12 +189,6 @@ function createFactorLibraryDialog() {
     requestAnimationFrame(()=>{ detailBackdrop.scrollTop=0; detailDialog.scrollTop=0; detailContent.scrollTop=0; });
   }
 
-  function updateFilterOptions() {
-    const selectedTags = new Set([...tagFilter.selectedOptions].map(o => o.value));
-    const tags = allTags();
-    tagFilter.innerHTML = tags.length ? tags.map(tag => `<option value="${escapeHtml(tag)}"${selectedTags.has(tag) ? " selected" : ""}>${escapeHtml(tag)}</option>`).join("") : '<option disabled>タグなし</option>';
-  }
-
   function createTagPicker(initialTags = []) {
     const root=document.createElement("div"); root.className="factor-library-tag-picker"; let selected=[...new Set(initialTags)];
     root.innerHTML='<div class="factor-library-tag-picker-field"><div class="factor-library-tag-picker-chips"></div><button type="button" class="factor-library-tag-picker-open">タグを追加</button></div><div class="factor-library-tag-picker-menu" hidden><div class="factor-library-tag-picker-options"></div><button type="button" class="text-button create-tag">＋ 新しいタグを作成</button></div>';
@@ -192,10 +203,15 @@ function createFactorLibraryDialog() {
   }
 
   async function renderSaved() {
-    entries = (await listFactorEntries()).sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))); persistentTags = await listFactorTags(); updateFilterOptions();
-    const selectedTags = [...tagFilter.selectedOptions].map(o => o.value);
+    entries = (await listFactorEntries()).sort((a,b) => String(b.createdAt || "").localeCompare(String(a.createdAt || ""))); persistentTags = await listFactorTags();
+    const q = normalize(quickSearch.value);
     const shown = entries.filter(entry => {
-      if (selectedTags.length && !selectedTags.every(tag => (entry.tags || []).includes(tag))) return false;
+      if (q) {
+        const textMatch = [entry.displayName, entry.characterNameSnapshot, entry.variantNameSnapshot, entry.memo, ...(entry.tags||[])].some(v=>normalize(v).includes(q));
+        const characterMatch = !!entry.characterId && searchCharacterVariants(quickSearch.value.trim(), 500).some(v=>v.characterId===entry.characterId);
+        if (!textMatch && !characterMatch) return false;
+      }
+      if (selectedTags.length && !selectedTags.some(tag => (entry.tags || []).includes(tag))) return false;
       if (selectedUma && entry.characterId !== selectedUma.characterId) return false;
       if (factorFilters.length) {
         const ids = new Set((entry.factors || []).map(f => f.factorId));
@@ -211,6 +227,16 @@ function createFactorLibraryDialog() {
       const card = document.createElement("article"); card.className = "factor-library-card"; if (entry.id === highlightId) card.classList.add("is-highlighted");
       const memoText = entry.memo?.trim() || "メモなし"; const tags = (entry.tags || []).map(tag => `<span class="factor-library-tag">${escapeHtml(tag)}</span>`).join("");
       card.innerHTML = `<div class="factor-library-card-summary"><div class="factor-library-card-title"><strong>${escapeHtml(entry.displayName)}</strong><span>${entry.factors.length}因子${entry.unresolvedFactors?.length ? ` / 要確認${entry.unresolvedFactors.length}件` : ""}</span><div class="factor-library-card-tags">${tags}</div><small>${escapeHtml(memoText)}</small><small>${entry.createdAt ? `保存 ${escapeHtml(formatDateTime(entry.createdAt))}` : ""}</small></div><div class="factor-library-card-actions"><button type="button" class="ghost-button details">詳細</button><button type="button" class="ghost-button edit">編集</button><button type="button" class="danger-button delete">削除</button></div></div><div class="factor-library-edit-slot"></div>`;
+      if (pickerMode) {
+        card.classList.add("is-picker");
+        const disabled = pickerMode.conflict?.(entry) || "";
+        const actions = card.querySelector(".factor-library-card-actions");
+        actions.innerHTML = `<button type="button" class="primary-button select" ${disabled?"disabled":""}>選択</button>${disabled?`<small class="factor-library-picker-conflict">${escapeHtml(disabled)}</small>`:""}`;
+        actions.querySelector(".select").onclick = () => { pickerMode.onSelect(entry); close(); };
+        if (!disabled) card.querySelector(".factor-library-card-title").style.cursor="pointer";
+        if (!disabled) card.querySelector(".factor-library-card-title").onclick=()=>{pickerMode.onSelect(entry);close();};
+        list.appendChild(card); return;
+      }
       card.querySelector(".details").onclick = () => openDetails(entry);
       card.querySelector(".delete").onclick = async () => { if (confirm(`「${entry.displayName}」を因子ライブラリから削除しますか？`)) { await deleteFactorEntry(entry.id); showToast("削除しました。"); await renderSaved(); } };
       card.querySelector(".edit").onclick = () => {
@@ -227,6 +253,14 @@ function createFactorLibraryDialog() {
     renderPagination(shown.length); if (highlightId) setTimeout(() => list.querySelector(".is-highlighted")?.scrollIntoView({ block: "nearest" }), 0);
   }
 
-  return { open: async () => { page = 1; await renderSaved(); backdrop.hidden = false; document.body.classList.add("factor-library-modal-open"); modal.focus(); }, close, refresh: renderSaved };
+  const openDialog = async (picker = null) => {
+    resetFilters(); pickerMode = picker; page = 1;
+    backdrop.querySelector("#factor-library-title").textContent = picker ? `${picker.label}：因子ライブラリから選択` : "因子ライブラリ";
+    backdrop.querySelector(".factor-library-modal header p").textContent = picker ? "保存済みデータから選択します。" : "保存した因子データを共通で管理します。";
+    backdrop.querySelector(".factor-library-backup-toggle").hidden = !!picker;
+    backdrop.querySelector(".factor-library-backup-panel").hidden = true;
+    await renderSaved(); backdrop.hidden = false; document.body.classList.add("factor-library-modal-open"); modal.focus();
+  };
+  return { open: () => openDialog(), openPicker: options => openDialog(options), close, refresh: renderSaved };
 }
 export { PAGE_SIZE, createFactorLibraryDialog };

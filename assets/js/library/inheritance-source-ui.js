@@ -1,3 +1,4 @@
+import { openFactorLibraryPicker } from "./factor-library-ui.js";
 import { members, MEMBER_ORDER } from "../config.js";
 import { listFactorEntries } from "./factor-library-storage.js";
 import { listFactorSets } from "./factor-set-storage.js";
@@ -82,8 +83,7 @@ function createPicker(title, items, onPick) {
   backdrop.querySelector(".inheritance-source-close").onclick=()=>backdrop.remove(); backdrop.onpointerdown=e=>{if(e.target===backdrop)backdrop.remove();}; document.body.append(backdrop);
 }
 async function chooseEntry(memberId) {
-  const entries=(await listFactorEntries()).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
-  createPicker(`${members[memberId].label}：因子ライブラリから選択`, entries.map(entry=>{const disabled=conflictMessage(memberId,entry);return {value:entry,disabled,html:`<strong>${esc(entry.displayName)}</strong><span>${entry.factors?.length??0}因子${entry.tags?.length?` / ${esc(entry.tags.join("・"))}`:""}</span>${entry.memo?`<small>${esc(entry.memo)}</small>`:""}${disabled?`<small class="inheritance-source-conflict">${esc(disabled)}</small>`:""}`};}), entry=>setLibraryEntry(memberId,entry));
+  await openFactorLibraryPicker({label: members[memberId].label, conflict: entry => conflictMessage(memberId, entry), onSelect: entry => setLibraryEntry(memberId, entry)});
 }
 async function chooseFactorSet() {
   const [sets,entries]=await Promise.all([listFactorSets(),listFactorEntries()]); const byId=new Map(entries.map(e=>[e.id,e]));
